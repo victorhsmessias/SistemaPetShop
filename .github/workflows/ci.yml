@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Credenciais descartáveis: o Postgres abaixo só existe dentro do runner, durante o job.
+env:
+  PGHOST: localhost
+  PGUSER: postgres
+  PGPASSWORD: ci-postgres
+  DATABASE_URL: postgres://app:ci-app@localhost:5432/banho_e_tosa
+  DATABASE_URL_PLATAFORMA: postgres://plataforma:ci-plataforma@localhost:5432/banho_e_tosa
+  DATABASE_URL_MIGRADOR: postgres://migrador:ci-migrador@localhost:5432/banho_e_tosa
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: ci-postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cria os papéis e o banco
+        run: >-
+          psql -v ON_ERROR_STOP=1 -d postgres
+          -v senha_migrador=ci-migrador -v senha_app=ci-app -v senha_plataforma=ci-plataforma
+          -f db/preparacao/papeis.sql
+
+      - name: Migrations (como migrador)
+        run: npm run db:migrate
+
+      - run: npm run lint
+      - run: npm run typecheck
+
+      - name: Testes, incluindo os de isolamento
+        run: npm test
