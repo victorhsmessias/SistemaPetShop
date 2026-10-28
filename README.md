@@ -7,7 +7,8 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 
 ## Requisitos
 
-- Node.js 22.12 ou mais novo (com npm)
+- Node.js 22.12 ou mais novo, com npm 11.6.2 ou mais novo (`npm install -g npm@11.6.2`; o npm 10 que vem
+  com o Node 22 não aceita o `package-lock.json`)
 - Docker com Docker Compose
 
 ## Rodar do zero

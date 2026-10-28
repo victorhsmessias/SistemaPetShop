@@ -38,6 +38,10 @@ jobs:
           node-version: 22
           cache: npm
 
+      # Mesmo npm que gera o package-lock.json (packageManager no package.json); o npm 10 do Node 22
+      # resolve as dependências opcionais de outro jeito e recusa o lockfile.
+      - run: npm install -g npm@11.6.2
+
       - run: npm ci
 
       - name: Cria os papéis e o banco
