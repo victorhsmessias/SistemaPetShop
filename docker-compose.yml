@@ -1,0 +1,25 @@
+# Postgres de desenvolvimento. As senhas vêm do .env (veja .env.example).
+name: banho-e-tosa
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      SENHA_MIGRADOR: ${SENHA_MIGRADOR:?defina SENHA_MIGRADOR no .env}
+      SENHA_APP: ${SENHA_APP:?defina SENHA_APP no .env}
+      SENHA_PLATAFORMA: ${SENHA_PLATAFORMA:?defina SENHA_PLATAFORMA no .env}
+    ports:
+      - "${PORTA_POSTGRES:-5435}:5432"
+    volumes:
+      - dados:/var/lib/postgresql
+      - ./db/preparacao/docker-init.sh:/docker-entrypoint-initdb.d/01-papeis.sh:ro
+      - ./db/preparacao/papeis.sql:/preparacao/papeis.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d banho_e_tosa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dados:
