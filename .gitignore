@@ -1,0 +1,18 @@
+# dependências
+/node_modules
+
+# Next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# variáveis de ambiente: nunca versionar valores
+.env
+.env*.local
+
+# sistema e editores
+.DS_Store
+Thumbs.db
+*.log
