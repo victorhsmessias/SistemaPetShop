@@ -156,8 +156,19 @@ describe("estrutura do banco", () => {
       `select t as tabela from unnest($1::text[]) t
         where has_table_privilege('plataforma', 'public.' || quote_ident(t),
                                   'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')`,
-      [tabelasDeNegocio],
+      [tabelasDeNegocio.filter((t) => t !== "auditoria")],
     );
     expect(rows.map((r) => r.tabela)).toEqual([]);
+  });
+
+  it("auditoria é imutável: app só lê e cria; plataforma só cria", async () => {
+    const { rows } = await cliente.query<{ permissao: string }>(
+      `select papel || ':' || p as permissao
+         from unnest(array['app', 'plataforma']) papel
+        cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) p
+        where has_table_privilege(papel, 'public.auditoria', p)
+        order by 1`,
+    );
+    expect(rows.map((r) => r.permissao)).toEqual(["app:INSERT", "app:SELECT", "plataforma:INSERT"]);
   });
 });

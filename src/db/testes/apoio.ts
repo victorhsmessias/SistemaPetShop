@@ -9,6 +9,7 @@ import { bancoPlataforma } from "@/db/clientes";
 import { comEmpresa } from "@/db/com-empresa";
 import { auth } from "@/modules/acesso/auth";
 import { user } from "@/modules/acesso/schema";
+import { auditoria } from "@/modules/auditoria/schema";
 import { pet, tutor } from "@/modules/cadastros/schema";
 import { empresa } from "@/modules/empresas/schema";
 
@@ -56,6 +57,7 @@ export async function apagarEmpresas(empresaIds: string[]): Promise<void> {
       await tx.delete(pet).where(inArray(pet.empresaId, empresaIds));
       await tx.delete(tutor).where(inArray(tutor.empresaId, empresaIds));
       await tx.delete(user).where(inArray(user.empresaId, empresaIds)); // session e account em cascata
+      await tx.delete(auditoria).where(inArray(auditoria.empresaId, empresaIds));
       await tx.delete(empresa).where(inArray(empresa.id, empresaIds));
     });
   } finally {
@@ -68,7 +70,11 @@ export async function apagarUsuarias(emails: string[]): Promise<void> {
   if (emails.length === 0) return;
   const { pool, banco } = conexaoMigrador();
   try {
-    await banco.delete(user).where(inArray(user.email, emails));
+    await banco.transaction(async (tx) => {
+      const usuarias = await tx.delete(user).where(inArray(user.email, emails)).returning({ id: user.id });
+      const ids = usuarias.map((u) => u.id);
+      if (ids.length > 0) await tx.delete(auditoria).where(inArray(auditoria.registroId, ids));
+    });
   } finally {
     await pool.end();
   }

@@ -2,6 +2,7 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 import * as acesso from "@/modules/acesso/schema";
+import * as auditoria from "@/modules/auditoria/schema";
 import * as cadastros from "@/modules/cadastros/schema";
 import * as empresas from "@/modules/empresas/schema";
 
@@ -9,7 +10,7 @@ import * as empresas from "@/modules/empresas/schema";
 // - bancoApp: só dentro de src/db/. O resto do código usa comEmpresa.
 // - bancoPlataforma: só no módulo de administração e nos testes.
 
-const schema = { ...empresas, ...cadastros, ...acesso };
+const schema = { ...empresas, ...cadastros, ...acesso, ...auditoria };
 
 export type Banco = NodePgDatabase<typeof schema>;
 export type Transacao = Parameters<Parameters<Banco["transaction"]>[0]>[0];
