@@ -41,7 +41,7 @@ const restringir = (...padroes) => ({
 });
 
 const testes = ["**/*.test.ts", "src/db/**"];
-const administracao = ["src/modules/administracao/**/*.{ts,tsx}", "scripts/criar-admin.ts"];
+const administracao = ["src/modules/administracao/**/*.{ts,tsx}", "scripts/criar-admin.mts"];
 const acesso = "src/modules/acesso/**/*.{ts,tsx}";
 const betterAuth = "src/modules/acesso/auth.ts";
 
@@ -49,7 +49,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
+    files: ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,mts}"],
     ignores: [...testes, ...administracao, acesso],
     rules: restringir(proibir.bancoApp, proibir.bancoPlataforma, proibir.comPlataforma, proibir.comEmpresa),
   },

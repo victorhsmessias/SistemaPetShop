@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "criar-admin": "tsx scripts/criar-admin.mts"
   },
   "dependencies": {
     "better-auth": "1.7.14",
