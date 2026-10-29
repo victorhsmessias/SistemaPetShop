@@ -1,8 +1,11 @@
-export default function Inicio() {
-  return (
-    <main>
-      <h1>banho-e-tosa</h1>
-      <p>Em construção.</p>
-    </main>
-  );
+import { redirect } from "next/navigation";
+
+import { cabecalhosDaRequisicao } from "@/app/requisicao";
+import { obterSessao } from "@/modules/acesso/sessao";
+
+// Depois do login: o administrador vai para /admin e a dona para a página da empresa dela.
+export default async function Inicio() {
+  const sessao = await obterSessao(await cabecalhosDaRequisicao());
+  if (!sessao) redirect("/login");
+  redirect(sessao.role === "admin" ? "/admin" : "/empresa");
 }

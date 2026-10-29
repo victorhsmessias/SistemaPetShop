@@ -60,7 +60,7 @@ afterAll(async () => {
 describe("contexto da sessão", () => {
   it("devolve usuarioId, empresaId e role da dona", async () => {
     const sessao = await obterSessao(comCookie(await entrar(emailDonaA, SENHA)));
-    expect(sessao).toEqual({ usuarioId: donaAId, empresaId: a.empresaId, role: "user" });
+    expect(sessao).toEqual({ usuarioId: donaAId, nome: "Dona de teste", empresaId: a.empresaId, role: "user" });
   });
 
   it("sem cookie não há sessão", async () => {

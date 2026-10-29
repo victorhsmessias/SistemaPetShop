@@ -31,6 +31,21 @@ export const FUSOS_HORARIOS = [
   "America/Noronha",
 ] as const;
 
+export const NOMES_DOS_FUSOS: Record<(typeof FUSOS_HORARIOS)[number], string> = {
+  "America/Sao_Paulo": "São Paulo, Rio, Minas, Sul (Brasília)",
+  "America/Bahia": "Bahia",
+  "America/Fortaleza": "Ceará, Maranhão, Piauí, RN, Paraíba",
+  "America/Recife": "Pernambuco",
+  "America/Belem": "Pará, Amapá",
+  "America/Manaus": "Amazonas",
+  "America/Cuiaba": "Mato Grosso",
+  "America/Campo_Grande": "Mato Grosso do Sul",
+  "America/Porto_Velho": "Rondônia",
+  "America/Boa_Vista": "Roraima",
+  "America/Rio_Branco": "Acre",
+  "America/Noronha": "Fernando de Noronha",
+};
+
 export type EmpresaDoPainel = {
   id: string;
   nome: string;

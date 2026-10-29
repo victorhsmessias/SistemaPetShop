@@ -4,6 +4,7 @@ import { auth } from "@/modules/acesso/auth";
 
 export type Sessao = {
   usuarioId: string;
+  nome: string;
   /** null só para o administrador da plataforma. */
   empresaId: string | null;
   role: "admin" | "user";
@@ -30,6 +31,7 @@ export async function obterSessao(cabecalhos: Headers): Promise<Sessao | null> {
   const { user } = resultado;
   return {
     usuarioId: user.id,
+    nome: user.name,
     empresaId: user.empresaId ?? null,
     role: user.role === "admin" ? "admin" : "user",
   };
