@@ -40,6 +40,13 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": ["error", { paths: conexaoDireta, patterns: [restricaoBancoApp] }],
     },
   },
+  {
+    // O Better Auth usa o papel app nas próprias tabelas (user, session, account, verification), fora do RLS.
+    files: ["src/modules/acesso/auth.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: conexaoDireta, patterns: [restricaoBancoPlataforma] }],
+    },
+  },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);
 

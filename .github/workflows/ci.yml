@@ -13,6 +13,7 @@ env:
   DATABASE_URL: postgres://app:ci-app@localhost:5432/banho_e_tosa
   DATABASE_URL_PLATAFORMA: postgres://plataforma:ci-plataforma@localhost:5432/banho_e_tosa
   DATABASE_URL_MIGRADOR: postgres://migrador:ci-migrador@localhost:5432/banho_e_tosa
+  BETTER_AUTH_URL: http://localhost:3000
 
 jobs:
   verificar:
@@ -43,6 +44,9 @@ jobs:
       - run: npm install -g npm@11.6.2
 
       - run: npm ci
+
+      - name: Segredo do Better Auth, gerado só para este job
+        run: echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Cria os papéis e o banco
         run: >-

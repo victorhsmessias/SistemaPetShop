@@ -9,6 +9,13 @@ import { problemasDoPapel, situacaoDoPapel } from "@/db/verificar-papeis";
 /** Únicas tabelas de negócio em que o app pode apagar (modelo de dados, "Permissões por tabela"). */
 const PODE_APAGAR = new Set(["atendimento_item"]);
 
+/**
+ * Tabelas do Better Auth: ficam fora do RLS por decisão do modelo de dados, porque o login acontece
+ * antes de haver empresa na transação. `user` tem empresa_id e mesmo assim não é tabela de negócio.
+ * Só o Better Auth (papel app) escreve nelas; a plataforma só lê `user`. Não acrescente outras aqui.
+ */
+const TABELAS_BETTER_AUTH = ["user", "session", "account", "verification"];
+
 /** `nullif(current_setting('app.empresa_id', true), '')::uuid` como o Postgres a exibe. */
 const EXPRESSAO_EMPRESA = "(NULLIF(current_setting('app.empresa_id'::text, true), ''::text))::uuid";
 
@@ -24,7 +31,9 @@ beforeAll(async () => {
        join pg_namespace n on n.oid = c.relnamespace
        join pg_attribute a on a.attrelid = c.oid and a.attname = 'empresa_id' and not a.attisdropped
       where n.nspname = 'public' and c.relkind in ('r', 'p')
+        and c.relname <> all ($1)
       order by 1`,
+    [TABELAS_BETTER_AUTH],
   );
   tabelasDeNegocio = rows.map((r) => r.tabela);
 });
@@ -119,6 +128,27 @@ describe("estrutura do banco", () => {
       [tabelasDeNegocio],
     );
     expect(rows.map((r) => r.tabela).filter((t) => !PODE_APAGAR.has(t))).toEqual([]);
+  });
+
+  it("entre as tabelas do Better Auth, plataforma só lê user", async () => {
+    const { rows } = await cliente.query<{ permissao: string }>(
+      `select t || ':' || p as permissao
+         from unnest($1::text[]) t
+        cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) p
+        where has_table_privilege('plataforma', 'public.' || quote_ident(t), p)
+        order by 1`,
+      [TABELAS_BETTER_AUTH],
+    );
+    expect(rows.map((r) => r.permissao)).toEqual(["user:SELECT"]);
+  });
+
+  it("as tabelas do Better Auth existem (a lista de exclusão não está desatualizada)", async () => {
+    const { rows } = await cliente.query<{ tabela: string }>(
+      `select c.relname as tabela from pg_class c
+        where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' and c.relname = any ($1)`,
+      [TABELAS_BETTER_AUTH],
+    );
+    expect(rows.map((r) => r.tabela).sort()).toEqual([...TABELAS_BETTER_AUTH].sort());
   });
 
   it("plataforma não tem nenhuma permissão nas tabelas de negócio", async () => {
