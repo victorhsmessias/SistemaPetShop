@@ -7,8 +7,8 @@ import * as cadastros from "@/modules/cadastros/schema";
 import * as empresas from "@/modules/empresas/schema";
 
 // Acesso restrito pelo ESLint (eslint.config.mjs):
-// - bancoApp: só dentro de src/db/. O resto do código usa comEmpresa.
-// - bancoPlataforma: só no módulo de administração e nos testes.
+// - bancoApp: só dentro de src/db/ e no Better Auth (src/modules/acesso/auth.ts).
+// - bancoPlataforma: só em src/db/ (comPlataforma) e nos testes.
 
 const schema = { ...empresas, ...cadastros, ...acesso, ...auditoria };
 
