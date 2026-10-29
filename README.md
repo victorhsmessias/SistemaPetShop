@@ -39,6 +39,14 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
    DATABASE_URL_MIGRADOR=postgres://migrador:<SENHA_MIGRADOR>@localhost:5435/banho_e_tosa
    ```
 
+   Preencha também o Better Auth:
+
+   ```
+   BETTER_AUTH_SECRET=<64 caracteres hex: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
+   BETTER_AUTH_URL=http://localhost:3000
+   BETTER_AUTH_TRUSTED_PROXIES=
+   ```
+
    O `.env` nunca vai para o git.
 
 3. **Suba o Postgres**
@@ -64,7 +72,16 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 
    São testes de integração contra o Postgres local: incluem os testes de isolamento entre empresas.
 
-6. **Suba o app**
+6. **Crie o administrador da plataforma**
+
+   ```bash
+   npm run criar-admin
+   ```
+
+   O comando pede e-mail e senha no terminal (a senha não aparece enquanto você digita). Não existe rota
+   pública para criar administrador, nem cadastro público: as donas são criadas pelo painel.
+
+7. **Suba o app**
 
    ```bash
    npm run dev
@@ -73,6 +90,13 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
    Abra <http://localhost:3000>. Ao iniciar, o app confere os papéis de `DATABASE_URL` e
    `DATABASE_URL_PLATAFORMA` e se recusa a subir se algum for superusuário, tiver `BYPASSRLS` ou puder agir
    como dono de alguma tabela, explicando o motivo no terminal.
+
+8. **Primeiro uso**
+   - Entre com o administrador: você cai em `/admin`.
+   - Em "Nova empresa", crie a empresa junto com a dona e uma senha provisória.
+   - A dona entra com essa senha e cai na página inicial da empresa dela. Para trocar a senha, use
+     "Redefinir senha" no painel (ainda não há e-mail transacional).
+   - Login: no máximo 5 tentativas por minuto por IP.
 
 ## Scripts
 
@@ -85,14 +109,15 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 | `npm test` | Testes (Vitest) contra o Postgres |
 | `npm run db:generate -- --name=<descricao>` | Gera uma migration a partir dos schemas |
 | `npm run db:migrate` | Aplica as migrations como `migrador` |
+| `npm run criar-admin` | Cria o administrador da plataforma (pede e-mail e senha) |
 
 ## Papéis do banco
 
 | Papel | Variável | Uso |
 |---|---|---|
 | `migrador` | `DATABASE_URL_MIGRADOR` | Dono das tabelas; só migrations. O app não usa. |
-| `app` | `DATABASE_URL` | App. Só enxerga a empresa da transação (RLS). |
-| `plataforma` | `DATABASE_URL_PLATAFORMA` | Futuro painel do administrador. Só a tabela `empresa`. |
+| `app` | `DATABASE_URL` | App e Better Auth. Nas tabelas de negócio, só a empresa da transação (RLS). |
+| `plataforma` | `DATABASE_URL_PLATAFORMA` | Painel do administrador: empresas, leitura de `user` e criação na auditoria. |
 
 Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejamento/modelo-de-dados.md`.
 
@@ -104,7 +129,23 @@ Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejament
 - **O app não sobe e fala em "permissão demais":** alguma URL aponta para `migrador` ou `postgres`. Use os
   papéis `app` e `plataforma`.
 
+- **Login falha com erro de origem (403) ou o cookie não aparece:** `BETTER_AUTH_URL` precisa ser exatamente
+  a URL aberta no navegador (protocolo, host e porta).
+
+## Pendências do deploy
+
+- **Proxy do EasyPanel e limite de tentativas:** em produção o app fica atrás do proxy. Preencha
+  `BETTER_AUTH_TRUSTED_PROXIES` com o IP (ou faixa CIDR) do proxy. Sem isso, o Better Auth não identifica o IP
+  de cada cliente e todos dividem o mesmo limite: 5 senhas erradas de qualquer pessoa bloqueiam o login de
+  todo mundo por um minuto. Confirme no log que o aviso "could not determine a client IP" não aparece.
+- **`criar-admin` dentro do container de produção:** o comando precisa rodar onde estão as variáveis de
+  produção, com o `tsx` e o código-fonte disponíveis na imagem (por exemplo, pelo console do serviço no
+  EasyPanel: `npm run criar-admin`). Definir isso ao montar a imagem.
+- `BETTER_AUTH_URL` com `https://` e o domínio de produção; `BETTER_AUTH_SECRET` novo, só no EasyPanel. Em
+  produção o cookie de sessão sai com `Secure` e `HttpOnly`.
+
 ## CI
 
 O GitHub Actions (`.github/workflows/ci.yml`) sobe um Postgres descartável, roda o script dos papéis e as
-migrations e depois lint, checagem de tipos e testes. Se um teste de isolamento falhar, o build falha.
+migrations e depois lint, checagem de tipos e testes. Se um teste de isolamento falhar, o build falha. O segredo
+do Better Auth é gerado na hora, só para o job.
