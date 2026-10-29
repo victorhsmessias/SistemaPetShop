@@ -1,6 +1,6 @@
 # Modelo de dados — Marco 1
 
-Versão 1 · 28/10/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria) e 0010 (login).
+Versão 1.2 · 28/10/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria) e 0010 (login).
 
 ## Convenções
 
@@ -28,11 +28,14 @@ Versão 1 · 28/10/2026 · Detalha a seção 3 do planejamento para as tabelas d
 
 - **Criação:** pela CLI do Better Auth, com o plugin admin ([plugin admin](https://www.better-auth.com/docs/plugins/admin)). A senha fica em `account.password`, com hash da própria biblioteca.
 - **Campos do plugin admin:** em `user`, `role`, `banned`, `banReason` e `banExpires`; em `session`, `impersonatedBy`.
-- **Campo próprio:** `empresa_id` em `user` (uuid, referência a `empresa`), declarado em `additionalFields` com `input: false`. Assim nenhuma chamada pública grava o campo; só o painel do administrador.
-- **`role`:** `admin` para o administrador da plataforma, que não tem empresa, e `user` para a dona. Restrição: `role = 'admin' or empresa_id is not null`.
-- **Cadastro público bloqueado:** pelo gancho `databaseHooks.user.create.before`, como recomenda a documentação ([cadastro desligado](https://www.better-auth.com/docs/errors/signup_disabled)). Só a criação feita pelo painel passa, com `createUser`. Conferir na implementação como o gancho reconhece a chamada do painel.
+- **Campo próprio:** `empresa_id` em `user` (uuid, referência a `empresa`), declarado em `additionalFields` com `input: false`. Nenhuma chamada do navegador grava o campo. O painel grava na criação da dona, pelo `createUser` chamado no servidor, que aceita o campo.
+- **`role`:** `admin` para o administrador da plataforma, que não tem empresa, e `user` para a dona. Restrição: `role = 'admin' or empresa_id is not null`. Por isso a dona já nasce com a empresa.
+- **Cadastro público bloqueado:** por `emailAndPassword.disableSignUp: true` ([e-mail e senha](https://www.better-auth.com/docs/authentication/email-password)). Como segunda barreira, o gancho `databaseHooks.user.create.before` só aceita criações vindas do painel, reconhecidas pelo caminho da chamada, e do comando de criar administrador.
+- **Criar empresa e dona:** a empresa é gravada primeiro e a dona depois, em passos separados. Antes, o painel confere se o e-mail está livre. Se a dona falhar, a empresa fica sem usuária e o painel oferece criar a dona.
+- **Limite de tentativas:** 5 logins por minuto por IP, contados em memória, já que há uma instância só. O login passa pela rota HTTP do Better Auth, porque chamadas `auth.api` feitas no servidor não contam no limite ([limite de tentativas](https://better-auth.com/docs/concepts/rate-limit)). Atrás do proxy do EasyPanel, `advanced.ipAddress.trustedProxies` precisa apontar para o proxy; senão o limite pode não separar os clientes.
 - **Ações do administrador:** redefine senha com `setUserPassword`. Para suporte, entra como a usuária com `impersonateUser`, que grava o id do administrador em `session.impersonatedBy`; o app usa esse id como autor na auditoria.
-- **Fora do RLS:** o login acontece antes de existir empresa no contexto. Só o Better Auth e o painel mexem nessas tabelas.
+- **Auditoria das ações de login (ADR 0011):** o Better Auth grava pela própria conexão, então esses eventos ficam fora da transação da ação. A redefinição de senha grava um evento antes e outro com o resultado. A criação de usuária grava o evento logo depois e, se essa gravação falhar, a usuária é removida. Nenhum evento leva dado de senha.
+- **Fora do RLS:** o login acontece antes de existir empresa no contexto. Só o Better Auth escreve nessas tabelas; o papel `plataforma` apenas lê `user`. Como `user` tem `empresa_id` e mesmo assim fica fora do RLS, os testes de estrutura excluem as quatro tabelas do Better Auth por uma lista explícita.
 
 ### tutor
 
@@ -155,7 +158,7 @@ Restrições:
 | Coluna | Tipo | Regra |
 |---|---|---|
 | id | bigint | gerado em sequência |
-| empresa_id | uuid | empresa afetada |
+| empresa_id | uuid | empresa afetada; nulo só em eventos da plataforma, como criar o administrador |
 | usuario_id | uuid | quem fez; em acesso de suporte, o administrador |
 | tabela | text | obrigatório |
 | registro_id | uuid | obrigatório |
@@ -178,7 +181,7 @@ Restrições:
 |---|---|---|
 | `migrador` | migrations | dono das tabelas; nunca usado com o app rodando |
 | `app` | telas, API e Better Auth | tabelas de negócio só da empresa da transação (RLS); `empresa`, só a própria; tabelas do Better Auth, sem RLS |
-| `plataforma` | painel do administrador e despacho das tarefas | todas as empresas e as tabelas do Better Auth; nenhum acesso às tabelas de negócio |
+| `plataforma` | painel do administrador e despacho das tarefas | todas as empresas e leitura de `user`; nenhum acesso às tabelas de negócio |
 
 Nenhum desses papéis é superusuário ou tem `BYPASSRLS`, e só o `migrador` é dono de tabelas. O app confere isso ao iniciar e não sobe se estiver errado.
 
@@ -188,7 +191,7 @@ Nenhum desses papéis é superusuário ou tem `BYPASSRLS`, e só o `migrador` é
 2. **Empresa da transação:** é dada por `nullif(current_setting('app.empresa_id', true), '')::uuid`. O `nullif` evita erro quando a variável fica vazia numa conexão reaproveitada. Sem empresa definida, nenhuma linha aparece e nenhuma gravação passa.
 3. **Valor padrão:** `empresa_id` usa essa mesma expressão como padrão. O código não informa a empresa ao inserir e, se tentar informar outra, a política barra.
 4. **Chaves compostas:** chaves estrangeiras entre tabelas de negócio incluem `empresa_id`, por exemplo `(empresa_id, tutor_id)` → `tutor (empresa_id, id)`. A checagem de chave estrangeira não passa pelo RLS; sem a chave composta, um registro poderia apontar para outra empresa.
-5. **Um único caminho até o banco:** toda operação de negócio passa por uma função do app que abre a transação, define `app.empresa_id` e `app.usuario_id` com `set_config(..., true)` e executa o trabalho. O `true` limita os valores à transação, o que é seguro com pool de conexões. Nenhum módulo acessa o banco por fora dela.
+5. **Um único caminho até o banco:** toda operação de negócio passa por uma função do app que abre a transação, define `app.empresa_id` e `app.usuario_id` com `set_config(..., true)` e executa o trabalho. O `true` limita os valores à transação, o que é seguro com pool de conexões. Nenhum módulo acessa o banco por fora dela. Uma regra do ESLint impede importar `comEmpresa` fora do módulo de sessão e dos testes; as tarefas agendadas do M3 vão entrar como exceção.
 6. **Empresa suspensa:** a função recusa empresa suspensa. Ao suspender, o painel também chama `banUser` nas usuárias da empresa, o que derruba as sessões abertas.
 
 Padrão aplicado a cada tabela de negócio (exemplo com `tutor`):
@@ -215,7 +218,9 @@ Na tabela `empresa`, a política do `app` compara `id`, e não `empresa_id`. O p
 | tutor, pet, servico, atendimento, forma_pagamento, categoria, lancamento | ler, criar e alterar; nunca apagar | sem acesso |
 | atendimento_item | ler, criar, alterar e apagar | sem acesso |
 | auditoria | criar e ler | criar |
-| user, session, account, verification | tudo, pelo Better Auth | ler e alterar |
+| user, session, account, verification | tudo, pelo Better Auth | ler `user`; nada nas outras |
+
+O `plataforma` não escreve nas tabelas do Better Auth: toda escrita passa pela biblioteca, e `account` guarda o hash das senhas.
 
 Nada é apagado, exceto itens de atendimento:
 
@@ -272,10 +277,11 @@ Dois toques quase simultâneos em "concluir" podem passar juntos pelo passo 1. O
 
 **Verificações de estrutura**, que pegam uma tabela nova esquecida:
 
-5. Toda tabela com `empresa_id` tem RLS ligado e política para `app`.
+5. Toda tabela com `empresa_id` tem RLS ligado e política para `app`, exceto as tabelas do Better Auth, excluídas por uma lista explícita.
 6. Toda chave estrangeira entre tabelas com `empresa_id` inclui `empresa_id`.
 7. `app` e `plataforma` não são superusuários, não têm `BYPASSRLS` e não são donos de nenhuma tabela.
 8. `app` não apaga em nenhuma tabela de negócio, exceto `atendimento_item`, nem altera ou apaga a auditoria.
+9. Entre as tabelas do Better Auth, `plataforma` só tem permissão de leitura em `user`.
 
 ## Próximos marcos
 

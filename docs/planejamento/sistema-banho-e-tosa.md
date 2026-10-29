@@ -1,6 +1,6 @@
 # Sistema de gestão para banho e tosa — Planejamento
 
-Versão 2 · 28/10/2026 · ADRs aprovados. Situação: pronto para codar o Marco 1, com as tabelas detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
+Versão 2.1 · 28/10/2026 · Situação: Marco 1 em andamento. A base está pronta; login e painel do administrador estão na sessão 02. As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
 
 ## Resumo executivo
 
@@ -303,6 +303,7 @@ flowchart LR
 | 0008 | Trilha de auditoria: saldo calculado e lançamentos sem exclusão | aceito |
 | 0009 | Notificações da dona por Web Push no app instalado | aceito |
 | 0010 | Login com e-mail e senha usando Better Auth | aceito |
+| 0011 | Auditoria das ações de login fora da transação | proposto |
 
 ## 5. Segurança e acesso
 
@@ -451,6 +452,6 @@ Não há sistema anterior: a agenda é de memória, e o cadastro cresce a cada a
 - [x] Autenticação, permissões, auditoria e pontos de LGPD estão decididos. Os documentos legais ficam para antes da 2ª empresa.
 - [x] Existe plano de deploy, backup e monitoramento, com custo estimado.
 - [x] Os marcos de entrega, riscos e estratégia de testes estão listados.
-- [x] Toda decisão relevante tem um ADR (0001 a 0010).
+- [x] Toda decisão relevante tem um ADR (0001 a 0011).
 
 **Conclusão:** pronto para codar o M1. O M2 espera a resposta da pergunta 1.
