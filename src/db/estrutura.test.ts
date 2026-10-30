@@ -142,6 +142,47 @@ describe("estrutura do banco", () => {
     expect(rows.map((r) => r.permissao)).toEqual(["user:SELECT"]);
   });
 
+  // Edições feitas à mão no schema gerado pela CLI (cabeçalho de src/modules/acesso/schema.ts).
+  // Se o schema for gerado de novo sem elas, estes testes falham.
+  describe("edições à mão no schema do Better Auth", () => {
+    it("user.empresa_id tem chave estrangeira para empresa(id)", async () => {
+      const { rows } = await cliente.query<{ definicao: string }>(
+        `select pg_get_constraintdef(oid) as definicao from pg_constraint
+          where conrelid = 'public."user"'::regclass and contype = 'f'`,
+      );
+      expect(rows.map((r) => r.definicao)).toContain("FOREIGN KEY (empresa_id) REFERENCES empresa(id)");
+    });
+
+    it("user tem a restrição de role: admin sem empresa, dona sempre com empresa", async () => {
+      const { rows } = await cliente.query<{ definicao: string }>(
+        `select pg_get_constraintdef(oid) as definicao from pg_constraint
+          where conrelid = 'public."user"'::regclass and conname = 'user_role_empresa_check'`,
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.definicao).toContain("role = 'admin'::text) OR (empresa_id IS NOT NULL)");
+      expect(rows[0]!.definicao).toContain("ARRAY['admin'::text, 'user'::text]");
+    });
+
+    it("toda data das tabelas do Better Auth é timestamptz", async () => {
+      const { rows } = await cliente.query<{ coluna: string }>(
+        `select table_name || '.' || column_name as coluna from information_schema.columns
+          where table_schema = 'public' and table_name = any ($1)
+            and data_type in ('timestamp without time zone', 'date', 'time without time zone')
+          order by 1`,
+        [TABELAS_BETTER_AUTH],
+      );
+      expect(rows.map((r) => r.coluna)).toEqual([]);
+    });
+
+    it("user.empresa_id é uuid", async () => {
+      const { rows } = await cliente.query<{ tipo: string }>(
+        `select data_type as tipo from information_schema.columns
+          where table_schema = 'public' and table_name = 'user' and column_name = 'empresa_id'`,
+      );
+      expect(rows[0]?.tipo).toBe("uuid");
+    });
+  });
+
   it("as tabelas do Better Auth existem (a lista de exclusão não está desatualizada)", async () => {
     const { rows } = await cliente.query<{ tabela: string }>(
       `select c.relname as tabela from pg_class c

@@ -7,7 +7,9 @@ import {
   criarUsuaria,
   DadosInvalidosError,
   emailEmUso,
+  encerrarSessoesDaUsuaria,
   redefinirSenhaDaUsuaria,
+  type ResultadoRedefinicao,
   validarNovaUsuaria,
   type NovaUsuaria,
 } from "@/modules/administracao/usuarias";
@@ -159,7 +161,16 @@ async function criarDonaNaEmpresa(
   return criada.id;
 }
 
-export async function redefinirSenha(cabecalhos: Headers, usuarioId: string, novaSenha: string): Promise<void> {
+export async function redefinirSenha(
+  cabecalhos: Headers,
+  usuarioId: string,
+  novaSenha: string,
+): Promise<ResultadoRedefinicao> {
   const admin = await exigirAdmin(cabecalhos);
-  await redefinirSenhaDaUsuaria(admin, cabecalhos, usuarioId, novaSenha);
+  return redefinirSenhaDaUsuaria(admin, cabecalhos, usuarioId, novaSenha);
+}
+
+export async function encerrarSessoes(cabecalhos: Headers, usuarioId: string): Promise<void> {
+  const admin = await exigirAdmin(cabecalhos);
+  await encerrarSessoesDaUsuaria(admin, cabecalhos, usuarioId);
 }

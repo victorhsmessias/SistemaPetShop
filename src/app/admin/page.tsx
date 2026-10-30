@@ -1,6 +1,7 @@
 import { conferirAdminOuRedirecionar } from "@/app/admin/conferir-admin";
 import {
   FormularioCriarDona,
+  FormularioEncerrarSessoes,
   FormularioNovaEmpresa,
   FormularioRedefinirSenha,
 } from "@/app/admin/formularios";
@@ -53,6 +54,10 @@ export default async function PaginaAdmin() {
                     <details>
                       <summary>Redefinir senha</summary>
                       <FormularioRedefinirSenha usuarioId={usuaria.id} />
+                    </details>
+                    <details>
+                      <summary>Encerrar sessões</summary>
+                      <FormularioEncerrarSessoes usuarioId={usuaria.id} />
                     </details>
                   </div>
                 ))

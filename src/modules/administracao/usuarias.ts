@@ -87,33 +87,47 @@ export async function criarUsuaria({ autorId, cabecalhos, dados, role, empresaId
   return { id: criada.id, nome, email };
 }
 
+async function buscarAlvo(autorId: string, usuarioId: string) {
+  const [alvo] = await comPlataforma(autorId, (tx) =>
+    tx.select({ id: user.id, empresaId: user.empresaId }).from(user).where(eq(user.id, usuarioId)),
+  );
+  if (!alvo) throw new DadosInvalidosError("Usuária não encontrada.");
+  return alvo;
+}
+
+type EventoDeLogin = "redefinicao_de_senha" | "encerramento_de_sessoes";
+
+function registradorDe(autorId: string, alvo: { id: string; empresaId: string | null }, evento: EventoDeLogin) {
+  return (situacao: "iniciada" | "concluida" | "falhou", extra: Record<string, unknown> = {}) =>
+    comPlataforma(autorId, (tx) =>
+      registrarEvento(tx, {
+        empresaId: alvo.empresaId,
+        tabela: "user",
+        registroId: alvo.id,
+        acao: "alterou",
+        depois: { evento, situacao, ...extra },
+      }),
+    );
+}
+
+export type ResultadoRedefinicao = { sessoesEncerradas: boolean };
+
 /**
- * Redefine a senha pelo setUserPassword (exige a sessão do administrador). Grava um evento antes
- * e outro com o resultado, para nenhuma redefinição bem-sucedida ficar sem registro (ADR 0011).
+ * Redefine a senha pelo setUserPassword (exige a sessão do administrador) e encerra as sessões
+ * abertas da usuária com revokeUserSessions, que o setUserPassword não encerra. Grava um evento
+ * antes e outro com o resultado, para nenhuma redefinição bem-sucedida ficar sem registro (ADR 0011).
+ * Se só o encerramento falhar, a senha já mudou: devolve sessoesEncerradas false, e o painel oferece
+ * "Encerrar sessões" em vez de redefinir de novo.
  */
 export async function redefinirSenhaDaUsuaria(
   admin: { usuarioId: string },
   cabecalhos: Headers,
   usuarioId: string,
   novaSenha: string,
-): Promise<void> {
+): Promise<ResultadoRedefinicao> {
   validarSenha(novaSenha);
-
-  const [alvo] = await comPlataforma(admin.usuarioId, (tx) =>
-    tx.select({ id: user.id, empresaId: user.empresaId }).from(user).where(eq(user.id, usuarioId)),
-  );
-  if (!alvo) throw new DadosInvalidosError("Usuária não encontrada.");
-
-  const registrar = (situacao: "iniciada" | "concluida" | "falhou") =>
-    comPlataforma(admin.usuarioId, (tx) =>
-      registrarEvento(tx, {
-        empresaId: alvo.empresaId,
-        tabela: "user",
-        registroId: alvo.id,
-        acao: "alterou",
-        depois: { evento: "redefinicao_de_senha", situacao },
-      }),
-    );
+  const alvo = await buscarAlvo(admin.usuarioId, usuarioId);
+  const registrar = registradorDe(admin.usuarioId, alvo, "redefinicao_de_senha");
 
   // Sem o registro de início, a senha não é redefinida.
   await registrar("iniciada");
@@ -125,7 +139,37 @@ export async function redefinirSenhaDaUsuaria(
     throw erro;
   }
 
-  await registrar("concluida").catch((e) =>
+  let sessoesEncerradas = true;
+  try {
+    await auth.api.revokeUserSessions({ body: { userId: alvo.id }, headers: cabecalhos });
+  } catch (erro) {
+    sessoesEncerradas = false;
+    console.error(`Senha redefinida, mas as sessões não foram encerradas (usuária ${alvo.id}).`, erro);
+  }
+
+  await registrar("concluida", { sessoesEncerradas }).catch((e) =>
     console.error(`Senha redefinida, mas a auditoria do resultado falhou (usuária ${alvo.id}).`, e),
+  );
+  return { sessoesEncerradas };
+}
+
+/** Encerra todas as sessões abertas da usuária, com evento antes e outro com o resultado. */
+export async function encerrarSessoesDaUsuaria(
+  admin: { usuarioId: string },
+  cabecalhos: Headers,
+  usuarioId: string,
+): Promise<void> {
+  const alvo = await buscarAlvo(admin.usuarioId, usuarioId);
+  const registrar = registradorDe(admin.usuarioId, alvo, "encerramento_de_sessoes");
+
+  await registrar("iniciada");
+  try {
+    await auth.api.revokeUserSessions({ body: { userId: alvo.id }, headers: cabecalhos });
+  } catch (erro) {
+    await registrar("falhou").catch((e) => console.error(`Auditoria do resultado falhou (usuária ${alvo.id}).`, e));
+    throw erro;
+  }
+  await registrar("concluida").catch((e) =>
+    console.error(`Sessões encerradas, mas a auditoria do resultado falhou (usuária ${alvo.id}).`, e),
   );
 }

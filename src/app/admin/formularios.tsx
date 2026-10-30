@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import {
   criarDonaAcao,
   criarEmpresaAcao,
+  encerrarSessoesAcao,
   redefinirSenhaAcao,
   type EstadoFormulario,
 } from "@/app/admin/acoes";
@@ -132,6 +133,21 @@ export function FormularioRedefinirSenha({ usuarioId }: { usuarioId: string }) {
       <Mensagem estado={estado} />
       <button type="submit" className="botao-primario" disabled={enviando}>
         {enviando ? "Redefinindo…" : "Redefinir senha"}
+      </button>
+    </form>
+  );
+}
+
+export function FormularioEncerrarSessoes({ usuarioId }: { usuarioId: string }) {
+  const [estado, acao, enviando] = useActionState(encerrarSessoesAcao, inicial);
+
+  return (
+    <form action={acao} className="formulario">
+      <input type="hidden" name="usuarioId" value={usuarioId} />
+      <p className="dica">Desconecta a usuária de todos os aparelhos. Ela continua com a mesma senha.</p>
+      <Mensagem estado={estado} />
+      <button type="submit" className="botao-secundario" disabled={enviando}>
+        {enviando ? "Encerrando…" : "Encerrar sessões"}
       </button>
     </form>
   );

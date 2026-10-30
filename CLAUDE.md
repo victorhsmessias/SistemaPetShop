@@ -47,8 +47,9 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 2. **O `empresaId` só vem da sessão.** Rotas e ações da dona usam `comEmpresaDaSessao(cabecalhos, fn)`
    (`src/modules/acesso/sessao.ts`), nunca um `empresaId` do corpo, da URL ou de formulário. `comEmpresa` só é
    importada pelo módulo `acesso` (exceção futura: tarefas agendadas do M3). O ESLint barra; não desligue.
-3. **`/admin` confere `role = 'admin'` no servidor** em toda página (`conferirAdminOuRedirecionar`; layout e
-   página rodam em paralelo) e em toda operação (`exigirAdmin` no início de cada função do módulo).
+3. **Acesso conferido em cada página e em cada ação do servidor, nunca só no layout.** O Next.js renderiza
+   layout e página em paralelo, e o layout não roda nas Server Actions. Em `/admin`: `conferirAdminOuRedirecionar`
+   em toda página e `exigirAdmin` no início de cada função do módulo `administracao`.
 4. **Cliente `plataforma`** só por `comPlataforma(usuarioId, fn)`, que grava o autor para a auditoria, e só no
    módulo `administracao` e no comando `criar-admin`. `bancoApp` só em `src/db` e no `auth.ts`.
 5. **Cadastro público bloqueado.** Usuárias só nascem pelo `createUser` do plugin admin (painel ou

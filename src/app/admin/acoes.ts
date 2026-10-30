@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { cabecalhosDaRequisicao } from "@/app/requisicao";
 import { NaoAutenticadoError } from "@/modules/acesso/sessao";
-import { criarDona, criarEmpresaComDona, redefinirSenha } from "@/modules/administracao/empresas";
+import { criarDona, criarEmpresaComDona, encerrarSessoes, redefinirSenha } from "@/modules/administracao/empresas";
 import { AcessoNegadoError } from "@/modules/administracao/guarda";
 import { DadosInvalidosError } from "@/modules/administracao/usuarias";
 
@@ -55,9 +55,28 @@ export async function criarDonaAcao(_anterior: EstadoFormulario, dados: FormData
 
 export async function redefinirSenhaAcao(_anterior: EstadoFormulario, dados: FormData): Promise<EstadoFormulario> {
   try {
-    await redefinirSenha(await cabecalhosDaRequisicao(), texto(dados, "usuarioId"), texto(dados, "novaSenha"));
-    return { tipo: "ok", mensagem: "Senha redefinida. Passe a nova senha para a usuária." };
+    const { sessoesEncerradas } = await redefinirSenha(
+      await cabecalhosDaRequisicao(),
+      texto(dados, "usuarioId"),
+      texto(dados, "novaSenha"),
+    );
+    if (!sessoesEncerradas) {
+      return {
+        tipo: "erro",
+        mensagem: "Senha redefinida, mas as sessões abertas não foram encerradas. Use \"Encerrar sessões\".",
+      };
+    }
+    return { tipo: "ok", mensagem: "Senha redefinida e sessões abertas encerradas. Passe a nova senha para a usuária." };
   } catch (erro) {
     return falha(erro, "redefinir a senha");
+  }
+}
+
+export async function encerrarSessoesAcao(_anterior: EstadoFormulario, dados: FormData): Promise<EstadoFormulario> {
+  try {
+    await encerrarSessoes(await cabecalhosDaRequisicao(), texto(dados, "usuarioId"));
+    return { tipo: "ok", mensagem: "Sessões encerradas. A usuária precisa entrar de novo." };
+  } catch (erro) {
+    return falha(erro, "encerrar as sessões");
   }
 }

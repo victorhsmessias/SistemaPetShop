@@ -1,6 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { auth } from "@/modules/acesso/auth";
+import { obterSessao } from "@/modules/acesso/sessao";
+
 import { encerrarConexoes } from "@/db/clientes";
 import {
   apagarEmpresas,
@@ -126,5 +129,18 @@ describe("auditoria falha ao redefinir a senha", () => {
 
     await entrar(emailDona, "nova-senha-789");
     expect(await situacoes()).toEqual(["iniciada"]);
+  });
+
+  it("se o encerramento das sessões falhar, a senha muda e a auditoria registra sessoesEncerradas false", async () => {
+    const sessaoAberta = new Headers({ cookie: await entrar(emailDona, "nova-senha-789") });
+    const espiao = vi.spyOn(auth.api, "revokeUserSessions").mockRejectedValueOnce(new Error("falha simulada"));
+
+    const resultado = await redefinirSenha(cabecalhosAdmin, donaId, "mais-nova-321");
+    espiao.mockRestore();
+
+    expect(resultado).toEqual({ sessoesEncerradas: false });
+    await entrar(emailDona, "mais-nova-321");
+    expect(await obterSessao(sessaoAberta)).not.toBeNull(); // continua aberta: o painel oferece "Encerrar sessões"
+    expect((await situacoes()).slice(-2)).toEqual(["iniciada", "concluida"]);
   });
 });

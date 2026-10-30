@@ -21,6 +21,7 @@ import { auditoria } from "@/modules/auditoria/schema";
 import {
   criarDona,
   criarEmpresaComDona,
+  encerrarSessoes,
   listarEmpresas,
   redefinirSenha,
   type ResultadoCriacao,
@@ -182,9 +183,15 @@ describe("criar dona para empresa sem usuária", () => {
 });
 
 describe("redefinir senha", () => {
-  it("troca a senha e registra início e conclusão, sem dado de senha", async () => {
+  it("troca a senha, encerra as sessões abertas e registra início e conclusão, sem dado de senha", async () => {
     const novaSenha = "nova-senha-456";
-    await redefinirSenha(cabecalhosAdmin, criada.donaId, novaSenha);
+    const sessaoAberta = new Headers({ cookie: await entrar(emailDona, SENHA_PROVISORIA) });
+    expect(await obterSessao(sessaoAberta)).not.toBeNull();
+
+    expect(await redefinirSenha(cabecalhosAdmin, criada.donaId, novaSenha)).toEqual({ sessoesEncerradas: true });
+
+    // A sessão aberta antes da redefinição deixa de valer.
+    expect(await obterSessao(sessaoAberta)).toBeNull();
 
     const antiga = await requisicaoAuth("/sign-in/email", { email: emailDona, password: SENHA_PROVISORIA });
     expect(antiga.status).toBe(401);
@@ -199,9 +206,28 @@ describe("redefinir senha", () => {
     );
     expect(eventos.map((e) => [e.usuarioId, e.empresaId, e.depois])).toEqual([
       [adminId, criada.empresaId, { evento: "redefinicao_de_senha", situacao: "iniciada" }],
-      [adminId, criada.empresaId, { evento: "redefinicao_de_senha", situacao: "concluida" }],
+      [adminId, criada.empresaId, { evento: "redefinicao_de_senha", situacao: "concluida", sessoesEncerradas: true }],
     ]);
     expect(JSON.stringify(eventos)).not.toContain(novaSenha);
+  });
+
+  it("encerrar sessões derruba a sessão aberta, mantém a senha e fica na auditoria", async () => {
+    const senhaAtual = "nova-senha-456";
+    const sessaoAberta = new Headers({ cookie: await entrar(emailDona, senhaAtual) });
+    expect(await obterSessao(sessaoAberta)).not.toBeNull();
+
+    await encerrarSessoes(cabecalhosAdmin, criada.donaId);
+
+    expect(await obterSessao(sessaoAberta)).toBeNull();
+    await entrar(emailDona, senhaAtual);
+    const eventos = await comoMigrador((banco) =>
+      banco.select({ depois: auditoria.depois, autor: auditoria.usuarioId }).from(auditoria)
+        .where(eq(auditoria.registroId, criada.donaId)).orderBy(auditoria.id),
+    );
+    expect(eventos.slice(-2)).toEqual([
+      { autor: adminId, depois: { evento: "encerramento_de_sessoes", situacao: "iniciada" } },
+      { autor: adminId, depois: { evento: "encerramento_de_sessoes", situacao: "concluida" } },
+    ]);
   });
 
   it("senha curta é recusada antes de qualquer registro", async () => {
@@ -224,6 +250,7 @@ describe("a dona não usa o painel", () => {
     ).rejects.toThrow(AcessoNegadoError);
     await expect(criarDona(cabecalhosDona, semDona.empresaId, dona)).rejects.toThrow(AcessoNegadoError);
     await expect(redefinirSenha(cabecalhosDona, criada.donaId, "invasao-123")).rejects.toThrow(AcessoNegadoError);
+    await expect(encerrarSessoes(cabecalhosDona, criada.donaId)).rejects.toThrow(AcessoNegadoError);
   });
 
   it("sem sessão, nenhuma ação do painel roda", async () => {
