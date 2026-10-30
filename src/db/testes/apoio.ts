@@ -11,11 +11,12 @@ import { auth } from "@/modules/acesso/auth";
 import { user } from "@/modules/acesso/schema";
 import { auditoria } from "@/modules/auditoria/schema";
 import { pet, tutor } from "@/modules/cadastros/schema";
+import { servico } from "@/modules/catalogo/schema";
 import { empresa } from "@/modules/empresas/schema";
 
 // Apoio aos testes de integração. Roda contra o Postgres de verdade (docker compose ou CI).
 
-export type DadosEmpresa = { empresaId: string; tutorId: string; petId: string };
+export type DadosEmpresa = { empresaId: string; tutorId: string; petId: string; servicoId: string };
 
 /** Conexão como migrador, dono das tabelas: só para ler o catálogo e limpar o que os testes criaram. */
 export function conexaoMigrador() {
@@ -27,7 +28,7 @@ export function conexaoMigrador() {
 
 export const usuarioTeste = randomUUID();
 
-/** Cria uma empresa (pela plataforma) com um tutor e um pet (pelo app, dentro de comEmpresa). */
+/** Cria uma empresa (pela plataforma) com um tutor, um pet e um serviço (pelo app, dentro de comEmpresa). */
 export async function criarEmpresaComDados(nome: string): Promise<DadosEmpresa> {
   const [criada] = await bancoPlataforma()
     .insert(empresa)
@@ -44,7 +45,11 @@ export async function criarEmpresaComDados(nome: string): Promise<DadosEmpresa> 
       .insert(pet)
       .values({ tutorId: t!.id, nome: `Pet ${nome}`, porte: "M" })
       .returning({ id: pet.id });
-    return { empresaId, tutorId: t!.id, petId: p!.id };
+    const [s] = await tx
+      .insert(servico)
+      .values({ nome: `Banho ${nome}`, precoCentavos: 5000, duracaoMin: 60 })
+      .returning({ id: servico.id });
+    return { empresaId, tutorId: t!.id, petId: p!.id, servicoId: s!.id };
   });
 }
 
@@ -56,6 +61,7 @@ export async function apagarEmpresas(empresaIds: string[]): Promise<void> {
     await banco.transaction(async (tx) => {
       await tx.delete(pet).where(inArray(pet.empresaId, empresaIds));
       await tx.delete(tutor).where(inArray(tutor.empresaId, empresaIds));
+      await tx.delete(servico).where(inArray(servico.empresaId, empresaIds));
       await tx.delete(user).where(inArray(user.empresaId, empresaIds)); // session e account em cascata
       await tx.delete(auditoria).where(inArray(auditoria.empresaId, empresaIds));
       await tx.delete(empresa).where(inArray(empresa.id, empresaIds));
