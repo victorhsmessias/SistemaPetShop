@@ -7,6 +7,7 @@ import { expect } from "vitest";
 
 import { bancoPlataforma } from "@/db/clientes";
 import { comEmpresa } from "@/db/com-empresa";
+import { codigoPgDe as codigoPg } from "@/db/erros";
 import { auth } from "@/modules/acesso/auth";
 import { user } from "@/modules/acesso/schema";
 import { auditoria } from "@/modules/auditoria/schema";
@@ -136,15 +137,7 @@ export async function entrar(email: string, senha: string): Promise<string> {
     .join("; ");
 }
 
-/** Código SQLSTATE do erro do Postgres, mesmo quando o Drizzle o embrulha em outro erro. */
-export function codigoPg(erro: unknown): string | undefined {
-  let atual: unknown = erro;
-  while (atual instanceof Error) {
-    if ("code" in atual && typeof atual.code === "string") return atual.code;
-    atual = atual.cause;
-  }
-  return undefined;
-}
+export { codigoPgDe as codigoPg } from "@/db/erros";
 
 /** Espera que a operação falhe com um dos códigos SQLSTATE informados. */
 export async function esperarErroPg(operacao: Promise<unknown>, ...codigos: string[]): Promise<void> {
