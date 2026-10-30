@@ -1,6 +1,6 @@
 # 0011 — Auditoria das ações de login fora da transação
 
-- Status: proposto
+- Status: aceito
 - Contexto: o ADR 0008 manda gravar a auditoria na mesma transação da alteração. O Better Auth grava usuárias e senhas pela própria conexão, então criar usuária e redefinir senha não cabem numa transação junto com o registro na auditoria.
 - Decisão:
   - Para ações feitas pelo Better Auth, a auditoria é gravada fora da transação da ação.

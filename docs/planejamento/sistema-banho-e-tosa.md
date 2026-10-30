@@ -1,6 +1,6 @@
 # Sistema de gestão para banho e tosa — Planejamento
 
-Versão 2.1 · 28/10/2026 · Situação: Marco 1 em andamento. A base está pronta; login e painel do administrador estão na sessão 02. As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
+Versão 2.3 · 30/10/2026 · Situação: Marco 1 em andamento. Prontos: a base (sessão 01) e o login com o painel do administrador (sessão 02). Próxima: tutores, pets e serviços (sessão 03). As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
 
 ## Resumo executivo
 
@@ -303,7 +303,7 @@ flowchart LR
 | 0008 | Trilha de auditoria: saldo calculado e lançamentos sem exclusão | aceito |
 | 0009 | Notificações da dona por Web Push no app instalado | aceito |
 | 0010 | Login com e-mail e senha usando Better Auth | aceito |
-| 0011 | Auditoria das ações de login fora da transação | proposto |
+| 0011 | Auditoria das ações de login fora da transação | aceito |
 
 ## 5. Segurança e acesso
 
@@ -422,10 +422,12 @@ Cada marco termina em produção e em uso pela piloto.
 - **Antes de codar:** computador, conta no GitHub e repositório privado próprios (ver riscos), com Node e Docker instalados.
 - **Antes de o M1 ir para produção:**
   - nome do produto e domínio (pergunta 2);
-  - Postgres do produto no EasyPanel, em homologação e produção, com os três usuários do banco;
+  - Postgres do produto no EasyPanel, em homologação e produção, com os três usuários do banco. Usar a versão 18, a mesma do desenvolvimento e do CI: a busca depende da extensão `unaccent`, criada pelo `migrador` como dono do banco;
   - bucket do backup no Cloudflare R2 e monitor externo configurados;
   - acordo simples com a piloto, cobrindo o tratamento dos dados dos clientes dela, antes de ela cadastrar clientes reais;
-  - lista de serviços da piloto, com preço e duração, para o catálogo e os testes.
+  - lista de serviços da piloto, com preço e duração, para o catálogo e os testes;
+  - `BETTER_AUTH_TRUSTED_PROXIES` apontando para o proxy do EasyPanel. Sem isso, cinco senhas erradas de qualquer pessoa bloqueiam o login de todas por um minuto;
+  - um jeito de rodar o `criar-admin` em produção: compilar o comando no build ou levar o `tsx` e o código-fonte para a imagem.
 - **Antes do M2:** regras dos pacotes (pergunta 1).
 - **Antes da 2ª empresa:** CNPJ, termos de uso e política de privacidade (pergunta 3).
 
