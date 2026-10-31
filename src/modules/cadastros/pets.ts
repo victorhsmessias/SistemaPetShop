@@ -13,6 +13,15 @@ export const NOMES_DAS_ESPECIES: Record<(typeof ESPECIES)[number], string> = {
   outro: "Outro",
 };
 export const PORTES = ["P", "M", "G", "GG"] as const;
+export const NOMES_DOS_PORTES: Record<(typeof PORTES)[number], string> = {
+  P: "Pequeno (P)",
+  M: "Médio (M)",
+  G: "Grande (G)",
+  GG: "Gigante (GG)",
+};
+
+export const opcoesDeEspecie = ESPECIES.map((valor) => ({ valor, nome: NOMES_DAS_ESPECIES[valor] }));
+export const opcoesDePorte = PORTES.map((valor) => ({ valor, nome: NOMES_DOS_PORTES[valor] }));
 
 export type EntradaPet = {
   nome?: string;

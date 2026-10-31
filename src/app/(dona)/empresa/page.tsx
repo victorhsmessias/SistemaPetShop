@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BotaoSair } from "@/app/botao-sair";
@@ -31,7 +32,8 @@ async function carregar(): Promise<Situacao> {
   }
 }
 
-// Página inicial provisória da dona. A agenda e os cadastros chegam nas próximas sessões.
+// Página inicial provisória da dona. Confere a sessão por conta própria (não usa naEmpresaDaDona porque
+// é o destino da empresa suspensa: mostra o aviso em vez de redirecionar).
 export default async function PaginaEmpresa() {
   const situacao = await carregar();
   if (situacao.tipo === "sem-sessao") redirect("/login");
@@ -59,9 +61,17 @@ export default async function PaginaEmpresa() {
       </header>
       <h1>Olá, {situacao.nomeDona}!</h1>
       <p className="suave">{situacao.nomeEmpresa}</p>
+      <div className="acoes" style={{ marginBottom: 16 }}>
+        <Link href="/clientes" className="botao-link botao-primario">
+          Clientes
+        </Link>
+        <Link href="/servicos" className="botao-link botao-secundario">
+          Serviços
+        </Link>
+      </div>
       <section className="cartao">
         <h2>Em construção</h2>
-        <p className="suave">A agenda, os tutores e pets e o financeiro aparecem aqui nas próximas versões.</p>
+        <p className="suave">A agenda e o financeiro aparecem aqui nas próximas versões.</p>
       </section>
     </main>
   );
