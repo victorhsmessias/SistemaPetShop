@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { bancoApp } from "@/db/clientes";
 import { comEmpresa, EmpresaIndisponivelError } from "@/db/com-empresa";
+import { urlUsaHttps } from "@/modules/acesso/configuracao";
 import { account, session, user, verification } from "@/modules/acesso/schema";
 
 /** Único caminho que cria usuárias: o createUser do plugin admin (painel e comando criar-admin). */
@@ -91,7 +92,9 @@ export const auth = betterAuth({
   },
   advanced: {
     database: { generateId: "uuid" },
-    useSecureCookies: process.env.NODE_ENV === "production",
+    // Secure quando o app é servido por https. Em produção, instrumentation.ts exige https
+    // (só localhost fica de fora, para testar o build de produção na máquina).
+    useSecureCookies: urlUsaHttps(process.env.BETTER_AUTH_URL),
     // Atrás do proxy do EasyPanel: sem isso, todos os clientes dividem o mesmo limite de tentativas.
     ipAddress: { trustedProxies: proxiesConfiaveis() },
   },

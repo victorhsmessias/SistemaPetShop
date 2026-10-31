@@ -16,3 +16,9 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 *.log
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
