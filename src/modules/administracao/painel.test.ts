@@ -111,11 +111,14 @@ describe("comando criar-admin", () => {
     expect(JSON.stringify(evento)).not.toContain(SENHA_ADMIN);
   });
 
-  it("recusa senhas que não conferem e e-mail repetido", () => {
+  // Cada um roda o comando de verdade, num processo próprio: com a suíte inteira em paralelo, passa de 15 s.
+  it("recusa senhas que não conferem", { timeout: 60_000 }, () => {
     const diferente = rodarCriarAdmin(emailTeste("admin"), SENHA_ADMIN, "outra-senha-123");
     expect(diferente.status).toBe(1);
     expect(diferente.stderr).toContain("As senhas não conferem");
+  });
 
+  it("recusa e-mail repetido", { timeout: 60_000 }, () => {
     const repetido = rodarCriarAdmin(emailAdmin, SENHA_ADMIN);
     expect(repetido.status).toBe(1);
     expect(repetido.stderr).toContain("já está em uso");

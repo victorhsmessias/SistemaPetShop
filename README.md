@@ -70,7 +70,16 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
    npm test
    ```
 
-   São testes de integração contra o Postgres local: incluem os testes de isolamento entre empresas.
+   São testes unitários e de integração contra o Postgres local: incluem os testes de isolamento entre empresas.
+
+   O teste de ponta a ponta usa o Playwright com tela de iPhone e o WebKit (motor do Safari). Na primeira vez,
+   instale o navegador; depois rode o teste, que faz o build e sobe o app na porta 3000 (ou reaproveita um
+   `npm run dev` já no ar):
+
+   ```bash
+   npx playwright install webkit
+   npm run test:e2e
+   ```
 
 6. **Crie o administrador da plataforma**
 
@@ -94,8 +103,10 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 8. **Primeiro uso**
    - Entre com o administrador: você cai em `/admin`.
    - Em "Nova empresa", crie a empresa junto com a dona e uma senha provisória.
-   - A dona entra com essa senha e cai na página inicial da empresa dela. Para trocar a senha, use
-     "Redefinir senha" no painel (ainda não há e-mail transacional).
+   - A dona entra com essa senha e cai na página inicial da empresa dela, com a navegação Início, Clientes e
+     Serviços: cadastra tutores e pets, busca por tutor, pet ou telefone e mantém o catálogo de serviços.
+   - Para trocar a senha da dona, use "Redefinir senha" no painel (ainda não há e-mail transacional). As sessões
+     abertas dela são encerradas junto; "Encerrar sessões" desconecta sem trocar a senha.
    - Login: no máximo 5 tentativas por minuto por IP.
 
 ## Scripts
@@ -107,6 +118,7 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Checagem de tipos (`tsc --noEmit`) |
 | `npm test` | Testes (Vitest) contra o Postgres |
+| `npm run test:e2e` | Ponta a ponta (Playwright, iPhone/WebKit) contra o build de produção |
 | `npm run db:generate -- --name=<descricao>` | Gera uma migration a partir dos schemas |
 | `npm run db:migrate` | Aplica as migrations como `migrador` |
 | `npm run criar-admin` | Cria o administrador da plataforma (pede e-mail e senha) |
@@ -131,6 +143,10 @@ Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejament
 
 - **Login falha com erro de origem (403) ou o cookie não aparece:** `BETTER_AUTH_URL` precisa ser exatamente
   a URL aberta no navegador (protocolo, host e porta).
+- **`npm run test:e2e` diz que a porta 3000 está em uso:** um `next dev` antigo pode ter ficado no ar. Pare-o
+  ou deixe-o: o Playwright reaproveita o servidor da porta 3000 fora do CI.
+- **O app de produção não sobe e fala em https:** em produção, `BETTER_AUTH_URL` precisa ser https (só
+  localhost fica de fora), para o cookie de sessão sair com `Secure`.
 
 ## Pendências do deploy
 
@@ -141,11 +157,15 @@ Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejament
 - **`criar-admin` dentro do container de produção:** o comando precisa rodar onde estão as variáveis de
   produção, com o `tsx` e o código-fonte disponíveis na imagem (por exemplo, pelo console do serviço no
   EasyPanel: `npm run criar-admin`). Definir isso ao montar a imagem.
-- `BETTER_AUTH_URL` com `https://` e o domínio de produção; `BETTER_AUTH_SECRET` novo, só no EasyPanel. Em
-  produção o cookie de sessão sai com `Secure` e `HttpOnly`.
+- `BETTER_AUTH_URL` com `https://` e o domínio de produção; `BETTER_AUTH_SECRET` novo (32+ caracteres), só no
+  EasyPanel. O cookie de sessão sai com `Secure` porque a URL é https, e o app se recusa a subir em produção
+  com uma URL sem https.
+- **Extensão `unaccent`:** a migration a cria com o papel `migrador`, dono do banco. O Postgres do EasyPanel
+  precisa ser 13 ou mais novo (extensão "trusted") e ter as extensões do contrib, como a imagem oficial.
 
 ## CI
 
 O GitHub Actions (`.github/workflows/ci.yml`) sobe um Postgres descartável, roda o script dos papéis e as
-migrations e depois lint, checagem de tipos e testes. Se um teste de isolamento falhar, o build falha. O segredo
-do Better Auth é gerado na hora, só para o job.
+migrations e depois lint, checagem de tipos, testes e o ponta a ponta com tela de iPhone (WebKit). Se um teste
+de isolamento falhar, o build falha. O segredo do Better Auth é gerado na hora, só para o job. Se o ponta a
+ponta falhar, o relatório do Playwright fica nos artefatos da execução por 7 dias.

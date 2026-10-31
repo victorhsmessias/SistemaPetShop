@@ -22,6 +22,9 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 - Better Auth 1.7 (e-mail e senha + plugin admin). Código-fonte em `node_modules/better-auth/dist` quando a
   documentação não bastar. Schema das tabelas gerado pela CLI oficial (cabeçalho de `acesso/schema.ts`).
 - Vitest 5 com Postgres de verdade, sem mocks de banco. `tsx` roda os comandos em `scripts/` (`.mts`).
+- Playwright 1.64 (`e2e/`): perfil iPhone 15 com WebKit, contra o build de produção (`next build && next start`).
+- Busca sem acento com a extensão `unaccent` (criada pelo `migrador`). Validação de formulário sem biblioteca
+  (`compartilhado/validacao.ts`); se começar a se repetir, reavaliar.
 - TypeScript fica na 6.0 e ESLint na 9 porque `typescript-eslint` e plugins do `eslint-config-next` ainda
   não aceitam TS 7 / ESLint 10.
 - Não instale bibliotecas fora da stack dos ADRs sem perguntar.
@@ -29,13 +32,17 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 ## Organização
 
 - `src/modules/<modulo>/`: código por domínio. Cada módulo é dono das suas tabelas (`schema.ts`).
-  - `empresas`, `cadastros` (tutor, pet);
+  - `empresas`; `cadastros` (tutor, pet, telefone); `catalogo` (servico); `compartilhado` (dinheiro, validação);
   - `acesso`: Better Auth (`auth.ts`), tabelas do login, sessão (`sessao.ts`), cliente do navegador;
   - `auditoria`: tabela e `registrarEvento`;
   - `administracao`: painel do administrador (`exigirAdmin`, empresas, usuárias, criar administrador).
 - `src/db/`: `clientes.ts` (pools), `com-empresa.ts`, `com-plataforma.ts`, `rls.ts`, `verificar-papeis.ts`,
   `testes/apoio.ts`.
 - `src/app/`: telas e Server Actions; regra de negócio fica nos módulos. `scripts/criar-admin.mts`.
+  - `(dona)/`: telas da dona (Início, Clientes, Serviços). Toda página e toda ação começam por
+    `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`); o layout do grupo é só visual.
+  - Operações dos módulos recebem a transação (`tx`) e nunca o `empresaId`; ids de registros vindos da URL ou do
+    formulário são conferidos com `ehUuid`, e o RLS faz o de outra empresa voltar como "não encontrado".
 - `drizzle/`: migrations (geradas e SQL próprias). `db/preparacao/papeis.sql`: cria papéis e banco.
 - Crie só o que a tarefa usa.
 
@@ -44,12 +51,13 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 1. **Papéis.** `migrador` é dono das tabelas e só roda migrations. `app` (DATABASE_URL) é sujeito ao RLS e é o
    papel do Better Auth. `plataforma` administra empresas, só lê `user`, só cria na `auditoria` e não tem
    acesso às tabelas de negócio. Nenhum é superusuário nem tem BYPASSRLS. O app não lê `DATABASE_URL_MIGRADOR`.
-2. **O `empresaId` só vem da sessão.** Rotas e ações da dona usam `comEmpresaDaSessao(cabecalhos, fn)`
-   (`src/modules/acesso/sessao.ts`), nunca um `empresaId` do corpo, da URL ou de formulário. `comEmpresa` só é
+2. **O `empresaId` só vem da sessão.** Páginas e ações da dona usam `naEmpresaDaDona(fn)`, que chama
+   `comEmpresaDaSessao` (`src/modules/acesso/sessao.ts`), nunca um `empresaId` do corpo, da URL ou de formulário. `comEmpresa` só é
    importada pelo módulo `acesso` (exceção futura: tarefas agendadas do M3). O ESLint barra; não desligue.
 3. **Acesso conferido em cada página e em cada ação do servidor, nunca só no layout.** O Next.js renderiza
-   layout e página em paralelo, e o layout não roda nas Server Actions. Em `/admin`: `conferirAdminOuRedirecionar`
-   em toda página e `exigirAdmin` no início de cada função do módulo `administracao`.
+   layout e página em paralelo, e o layout não roda nas Server Actions. Telas da dona: `naEmpresaDaDona` em
+   cada página e ação. Em `/admin`: `conferirAdminOuRedirecionar` em toda página e `exigirAdmin` no início de
+   cada função do módulo `administracao`. Toda ação nova ganha um teste chamando-a direto, sem sessão.
 4. **Cliente `plataforma`** só por `comPlataforma(usuarioId, fn)`, que grava o autor para a auditoria, e só no
    módulo `administracao` e no comando `criar-admin`. `bancoApp` só em `src/db` e no `auth.ts`.
 5. **Cadastro público bloqueado.** Usuárias só nascem pelo `createUser` do plugin admin (painel ou
@@ -60,14 +68,22 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
    isolamento. Se o modelo de dados manda auditá-la, ganha a trigger na mesma migration (checklist abaixo).
 8. **Nada é apagado** nas tabelas de negócio: desativar (`ativo`/`ativa`), cancelar (com motivo) ou anonimizar.
    O `app` não recebe `DELETE`. A única exceção prevista é `atendimento_item`. A auditoria é imutável.
-9. **Dinheiro** em centavos, `integer`, nunca negativo (`check`). Nada de float.
+9. **Dinheiro** em centavos, `integer`, nunca negativo (`check`). Nada de float. Entrada e exibição em reais
+   só por `src/modules/compartilhado/dinheiro.ts` (`reaisParaCentavos`, `centavosParaTexto`, `formatarReais`).
 10. **Datas** em `timestamptz` (UTC no banco), exibidas no fuso da empresa (`empresa.fuso_horario`).
     O dia de um lançamento é `date`, calculado no fuso da empresa.
 11. **Status e tipos** em `text` com `check`, nunca `enum`. Nomes em português, singular, snake_case no banco;
     camelCase nas chaves do Drizzle. Toda tabela tem `criado_em` e `atualizado_em` (`colunasDeData()`).
-12. **Nenhum segredo no repositório.** Valores só no `.env` (ignorado) ou nas variáveis do EasyPanel.
-13. **Ações do Better Auth** (criar usuária, redefinir senha) auditam fora da transação (ADR 0011): criação
-    com evento logo depois e remoção se ele falhar; redefinição com evento antes e outro com o resultado.
+12. **Telefone** sempre por `normalizarTelefone` (`cadastros/telefone.ts`): guardado como `+55` + DDD + número,
+    único na empresa. No M3 ele recebe lembretes: nada de afrouxar a validação.
+13. **Telas para o celular:** alvos de toque de 48 px (mínimo 44), campos de 16 px, `noValidate` nos formulários
+    (as mensagens em português vêm do servidor) e dados mantidos quando o formulário volta com erro.
+14. **Cookie de sessão** com `Secure` quando `BETTER_AUTH_URL` é https; em produção o servidor não sobe sem https
+    (exceto localhost, para o teste de ponta a ponta).
+15. **Nenhum segredo no repositório.** Valores só no `.env` (ignorado) ou nas variáveis do EasyPanel.
+16. **Ações do Better Auth** (criar usuária, redefinir senha, encerrar sessões) auditam fora da transação
+    (ADR 0011): criação com evento logo depois e remoção se ele falhar; as outras com evento antes e outro com
+    o resultado. Redefinir senha também encerra as sessões (`revokeUserSessions`).
 
 ## Checklist: nova tabela de negócio
 
@@ -86,8 +102,8 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 5. Teste de isolamento do módulo (`src/modules/<modulo>/isolamento.test.ts`, modelo em `cadastros`): com A na
    transação só aparece A; inserir com `empresa_id` de B falha; apontar para registro de B falha; alterar
    linha de B atinge 0 linhas; sem empresa nada aparece e inserir falha; `plataforma` recebe erro de permissão.
-6. Inclua a tabela na limpeza de `apagarEmpresas` (`src/db/testes/apoio.ts`), na ordem das chaves
-   (a `auditoria` é apagada logo antes de `empresa`).
+6. Inclua a tabela na limpeza de `apagarEmpresas` (`src/db/testes/apoio.ts`) e de `apagarEmpresa`
+   (`e2e/apoio.ts`), na ordem das chaves (a `auditoria` é apagada logo antes de `empresa`).
 7. Os testes de estrutura (`src/db/estrutura.test.ts`) pegam a tabela sozinhos. Se falharem, corrija a
    tabela, não o teste. Exceções só com base no modelo de dados (`PODE_APAGAR`, `TABELAS_BETTER_AUTH`).
 
@@ -103,7 +119,9 @@ npm run criar-admin           # cria o administrador da plataforma (pede e-mail 
 npm run dev                   # app em http://localhost:3000 (recusa subir com papel privilegiado)
 npm run lint
 npm run typecheck
-npm test                      # integração contra o Postgres local; exige banco no ar e migrado
+npm test                      # unitários e integração contra o Postgres local; exige banco no ar e migrado
+npm run test:e2e              # ponta a ponta (iPhone/WebKit); faz o build e sobe na porta 3000
+npx playwright install webkit # uma vez por máquina, antes do primeiro test:e2e
 docker compose down -v        # apaga o banco local (o próximo `up` recria do zero)
 ```
 
@@ -118,3 +136,5 @@ Postgres local na porta 5435 (`PORTA_POSTGRES` no `.env`). Conexões e Better Au
   isolamento nunca é "flaky": é vazamento.
 - Testes criam dados com prefixo `[teste]` e e-mails `@teste.banho-e-tosa.local` e apagam o que criaram.
 - Confira a documentação oficial da versão instalada em vez de confiar na memória.
+- Servidor de desenvolvimento em segundo plano: ao parar, confira se a porta 3000 ficou livre (o processo
+  filho do `next dev` pode sobreviver).
