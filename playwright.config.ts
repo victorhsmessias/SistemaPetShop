@@ -6,7 +6,8 @@ import { defineConfig, devices } from "@playwright/test";
 // Localmente as conexões vêm do .env; no CI, das variáveis do workflow.
 if (existsSync(".env")) process.loadEnvFile(".env");
 
-const porta = 3000;
+// PORTA_E2E: para rodar com outro app ocupando a 3000 (localmente, um servidor já no ar é reaproveitado).
+const porta = Number(process.env.PORTA_E2E ?? 3000);
 const baseURL = `http://localhost:${porta}`;
 const ci = Boolean(process.env.CI);
 
@@ -27,9 +28,9 @@ export default defineConfig({
   },
   projects: [{ name: "iphone", use: { ...devices["iPhone 15"] } }],
   webServer: {
-    command: "npm run build && npm run start",
+    command: `npm run build && npm run start -- -p ${porta}`,
     url: `${baseURL}/login`,
-    // Localmente reaproveita um servidor já no ar na porta 3000 (por exemplo, o npm run dev).
+    // Localmente reaproveita um servidor já no ar na porta (por exemplo, o npm run dev).
     reuseExistingServer: !ci,
     timeout: 240_000,
     env: { BETTER_AUTH_URL: baseURL },

@@ -1,18 +1,29 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
-import { apagarEmpresa, criarEmpresaEDona } from "./apoio";
+import { apagarEmpresa, criarCadastrosDaAgenda, criarEmpresaEDona, encerrarConexoes } from "./apoio";
 
-// Antes dos testes: cria uma empresa com a dona, como o painel faz. Depois: apaga tudo o que foi criado.
+// Antes dos testes: uma empresa com a dona para cada arquivo de teste, como o painel faz, para um não
+// depender dos dados do outro. Depois: apaga tudo o que foi criado.
 // As credenciais vão para os testes pelo ambiente (o Playwright repassa o process.env aos workers).
-export default async function preparar() {
+async function novaDona(nome: string) {
   const email = `dona-e2e-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`;
   const senha = `e2e-${randomBytes(9).toString("hex")}`;
-  const { empresaId } = await criarEmpresaEDona("Ponta a ponta", email, senha);
+  return criarEmpresaEDona(nome, email, senha);
+}
 
-  process.env.E2E_EMAIL = email;
-  process.env.E2E_SENHA = senha;
+export default async function preparar() {
+  const cadastro = await novaDona("Ponta a ponta");
+  process.env.E2E_EMAIL = cadastro.email;
+  process.env.E2E_SENHA = cadastro.senha;
+
+  const agenda = await novaDona("Ponta a ponta agenda");
+  await criarCadastrosDaAgenda(agenda.empresaId);
+  process.env.E2E_AGENDA_EMAIL = agenda.email;
+  process.env.E2E_AGENDA_SENHA = agenda.senha;
+  await encerrarConexoes();
 
   return async () => {
-    await apagarEmpresa(empresaId);
+    await apagarEmpresa(cadastro.empresaId);
+    await apagarEmpresa(agenda.empresaId);
   };
 }
