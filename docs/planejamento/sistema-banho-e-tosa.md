@@ -1,6 +1,6 @@
 # Sistema de gestão para banho e tosa — Planejamento
 
-Versão 2.3 · 30/10/2026 · Situação: Marco 1 em andamento. Prontos: a base (sessão 01) e o login com o painel do administrador (sessão 02). Próxima: tutores, pets e serviços (sessão 03). As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
+Versão 2.5 · 01/11/2026 · Situação: Marco 1 em andamento. Prontos: a base (sessão 01), o login com o painel do administrador (sessão 02) e tutores, pets e serviços (sessão 03). Em andamento: a agenda (sessão 04). As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
 
 ## Resumo executivo
 
@@ -111,10 +111,10 @@ Aceite: a venda gera uma receita, paga ou a receber. O pet mostra o pacote ativo
 Aceite: duração e preço vêm do catálogo e podem ser editados. Horário ocupado gera aviso, não bloqueio. Se o pet tem pacote ativo, o atendimento já vem vinculado a ele. Dá para agendar todas as sessões do pacote de uma vez, a partir do intervalo sugerido.
 
 **H6.** Como dona, quero ver a agenda do dia e da semana no celular.
-Aceite: cada atendimento ocupa um bloco do tamanho da sua duração e mostra pet, serviços, status e observações de cuidado.
+Aceite: cada atendimento ocupa um bloco do tamanho da sua duração e mostra pet, serviços, status e observações de cuidado. Atendimentos no mesmo horário ficam lado a lado. Cancelados e faltas saem da grade e ficam numa lista à parte. Na semana, os blocos mostram a ocupação, e tocar num dia abre a agenda desse dia.
 
 **H7.** Como dona, quero acompanhar o atendimento até o fim.
-Aceite: status agendado → confirmado → em atendimento → pronto → concluído, ou cancelado e faltou. Ela pode concluir a partir de qualquer status ativo, sem passar por todos. Concluir um atendimento avulso pede a forma de pagamento. Concluir uma sessão de pacote só consome a sessão.
+Aceite: status agendado → confirmado → em atendimento → pronto → concluído, ou cancelado e faltou. Ela pode concluir a partir de qualquer status ativo, sem passar por todos. Um toque errado pode ser desfeito: o status volta ao anterior. Reabrir um cancelado ou uma falta também é desfazer: volta a confirmado se o tutor já tinha confirmado, senão a agendado. Concluir um atendimento avulso pede a forma de pagamento. Concluir uma sessão de pacote só consome a sessão.
 
 **H8.** Como dona, quero lembrar o tutor e avisar que o pet está pronto com um toque.
 Aceite: lista "lembrar amanhã". O botão abre o WhatsApp com a mensagem pronta para o número do tutor e registra o envio. Ela marca "confirmado" quando o tutor responder.
@@ -200,7 +200,7 @@ Toda tabela de negócio tem `empresa_id`. Colunas, restrições e isolamento das
 2. A venda do pacote gera a receita. Sessão de pacote não gera receita.
 3. Atendimento avulso concluído gera uma receita com a soma dos itens, na forma de pagamento escolhida. "A receber" fica pendente até ela marcar como pago.
 4. Preço e duração são copiados do catálogo no agendamento e na venda: mudar o catálogo não altera o passado.
-5. Horário sobreposto gera aviso, não bloqueio.
+5. Horário sobreposto com outro atendimento gera aviso, não bloqueio. Cancelados e faltas não ocupam horário.
 6. Lançamento não é apagado. O cancelamento exige motivo e fica no histórico.
 7. Despesa fixa vira lançamento no dia do mês configurado.
 8. O pacote fica "vencido" quando passa da validade com saldo e "encerrado" quando o saldo chega a zero.
@@ -230,6 +230,7 @@ stateDiagram-v2
   faltou --> [*]
 ```
 
+- **Correção de toque errado:** o atendimento volta ao status anterior, deduzido sem coluna nova (regras no modelo de dados). Reabrir um cancelado ou uma falta é o mesmo que desfazer. Toda mudança fica na auditoria.
 - **Pacote vendido:** ativo → encerrado (saldo zero), vencido (passou da validade) ou cancelado.
 - **Lançamento:** a receber → pago. Qualquer um → cancelado, com motivo.
 
@@ -426,8 +427,10 @@ Cada marco termina em produção e em uso pela piloto.
   - bucket do backup no Cloudflare R2 e monitor externo configurados;
   - acordo simples com a piloto, cobrindo o tratamento dos dados dos clientes dela, antes de ela cadastrar clientes reais;
   - lista de serviços da piloto, com preço e duração, para o catálogo e os testes;
+  - `BETTER_AUTH_URL` com https em homologação e produção, porque o app não sobe sem isso;
   - `BETTER_AUTH_TRUSTED_PROXIES` apontando para o proxy do EasyPanel. Sem isso, cinco senhas erradas de qualquer pessoa bloqueiam o login de todas por um minuto;
-  - um jeito de rodar o `criar-admin` em produção: compilar o comando no build ou levar o `tsx` e o código-fonte para a imagem.
+  - um jeito de rodar o `criar-admin` em produção: compilar o comando no build ou levar o `tsx` e o código-fonte para a imagem;
+  - a mesma versão do Node em desenvolvimento, CI e produção. O CI usa o Node 22, que perde suporte em 30/04/2027. Recomendação: Node 26, LTS com suporte até 30/04/2029, adotado depois que o CI passar inteiro com ele ([endoflife.date](https://endoflife.date/nodejs)).
 - **Antes do M2:** regras dos pacotes (pergunta 1).
 - **Antes da 2ª empresa:** CNPJ, termos de uso e política de privacidade (pergunta 3).
 

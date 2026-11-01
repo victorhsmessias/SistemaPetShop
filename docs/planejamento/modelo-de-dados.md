@@ -1,6 +1,6 @@
 # Modelo de dados — Marco 1
 
-Versão 1.4 · 30/10/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria) e 0010 (login).
+Versão 1.6 · 01/11/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria) e 0010 (login).
 
 ## Convenções
 
@@ -33,6 +33,7 @@ Versão 1.4 · 30/10/2026 · Detalha a seção 3 do planejamento para as tabelas
 - **Cadastro público bloqueado:** por `emailAndPassword.disableSignUp: true` ([e-mail e senha](https://www.better-auth.com/docs/authentication/email-password)). Como segunda barreira, o gancho `databaseHooks.user.create.before` só aceita criações vindas do painel, reconhecidas pelo caminho da chamada, e do comando de criar administrador.
 - **Criar empresa e dona:** a empresa é gravada primeiro e a dona depois, em passos separados. Antes, o painel confere se o e-mail está livre. Se a dona falhar, a empresa fica sem usuária e o painel oferece criar a dona.
 - **Limite de tentativas:** 5 logins por minuto por IP, contados em memória, já que há uma instância só. O login passa pela rota HTTP do Better Auth, porque chamadas `auth.api` feitas no servidor não contam no limite ([limite de tentativas](https://better-auth.com/docs/concepts/rate-limit)). Atrás do proxy do EasyPanel, `advanced.ipAddress.trustedProxies` precisa apontar para o proxy; senão o limite pode não separar os clientes.
+- **Cookie e segredo:** o cookie de sessão sai `Secure` quando `BETTER_AUTH_URL` é https, e não pelo `NODE_ENV`, porque o Safari descarta cookie `Secure` em `http://localhost`. Em produção, o app não sobe sem https (localhost fica de fora, para o teste de ponta a ponta) nem com `BETTER_AUTH_SECRET` curto.
 - **Ações do administrador:** redefine senha com `setUserPassword` e, em seguida, encerra as sessões abertas da usuária com `revokeUserSessions`, porque o `setUserPassword` não faz isso sozinho ([plugin admin](https://www.better-auth.com/docs/plugins/admin)). Se o encerramento falhar, o painel oferece a ação "Encerrar sessões", também registrada na auditoria, sem precisar redefinir a senha de novo. Para suporte, entra como a usuária com `impersonateUser`, que grava o id do administrador em `session.impersonatedBy`; o app usa esse id como autor na auditoria.
 - **Auditoria das ações de login (ADR 0011):** o Better Auth grava pela própria conexão, então esses eventos ficam fora da transação da ação. A redefinição de senha grava um evento antes e outro com o resultado. A criação de usuária grava o evento logo depois e, se essa gravação falhar, a usuária é removida. Nenhum evento leva dado de senha.
 - **Fora do RLS:** o login acontece antes de existir empresa no contexto. Só o Better Auth escreve nessas tabelas; o papel `plataforma` apenas lê `user`. Como `user` tem `empresa_id` e mesmo assim fica fora do RLS, os testes de estrutura excluem as quatro tabelas do Better Auth por uma lista explícita.
@@ -88,11 +89,20 @@ Versão 1.4 · 30/10/2026 · Detalha a seção 3 do planejamento para as tabelas
 | fim | timestamptz | depois de `inicio`; vem da soma das durações e pode ser ajustado |
 | status | text | `agendado`, `confirmado`, `em_atendimento`, `pronto`, `concluido`, `cancelado` ou `faltou` |
 | observacoes | text | opcional |
-| confirmado_em | timestamptz | opcional |
+| confirmado_em | timestamptz | gravado ao confirmar; obrigatório quando `confirmado` e vazio quando `agendado` |
 | concluido_em | timestamptz | obrigatório quando `concluido` |
 | lembrete_enviado_em | timestamptz | usado no M3 |
 
 Índices: (empresa_id, inicio) para a agenda e (empresa_id, pet_id). O vínculo com pacote (`pacote_venda_id`) entra no M2.
+
+**Desfazer um toque errado.** O status anterior é deduzido, sem coluna nova. Reabrir um cancelado ou uma falta é o mesmo que desfazer:
+
+- `confirmado` volta para `agendado` e limpa `confirmado_em`;
+- `em_atendimento`, `cancelado` e `faltou` voltam para `confirmado` se `confirmado_em` estiver preenchido, senão para `agendado`;
+- `pronto` volta para `em_atendimento`;
+- desfazer `concluido` fica para quando o pagamento entrar, porque envolve cancelar a receita.
+
+**Horário ocupado.** No aviso de sobreposição, `cancelado` e `faltou` não ocupam horário.
 
 ### atendimento_item
 
@@ -105,6 +115,8 @@ Versão 1.4 · 30/10/2026 · Detalha a seção 3 do planejamento para as tabelas
 | descricao | text | nome do serviço, copiado no agendamento |
 | preco_centavos | integer | copiado do catálogo; editável |
 | duracao_min | integer | copiado do catálogo; editável |
+
+Índice: único em (empresa_id, atendimento_id, servico_id), porque cada serviço aparece uma vez no atendimento. Ao trocar os serviços, os mantidos são alterados, os novos são inseridos e os retirados são apagados.
 
 ### forma_pagamento
 
@@ -162,12 +174,12 @@ Restrições:
 | usuario_id | uuid | quem fez; em acesso de suporte, o administrador |
 | tabela | text | obrigatório |
 | registro_id | uuid | obrigatório |
-| acao | text | `criou` ou `alterou` |
+| acao | text | `criou`, `alterou` ou `removeu` |
 | antes | jsonb | vazio ao criar |
-| depois | jsonb | obrigatório |
+| depois | jsonb | obrigatório; `{}` ao remover |
 | quando | timestamptz | padrão `now()` |
 
-- **Gravação:** por trigger em `lancamento`, `atendimento`, `atendimento_item` e `empresa` (e em `pacote_venda` no M2). A trigger lê o autor em `app.usuario_id`. Assim nenhuma alteração escapa por esquecimento no código.
+- **Gravação:** por trigger em `lancamento`, `atendimento`, `atendimento_item` e `empresa` (e em `pacote_venda` no M2), ao criar e ao alterar. Em `atendimento_item`, a única tabela de negócio em que se apaga, a trigger também registra a remoção. A trigger lê o autor em `app.usuario_id`. Assim nenhuma alteração escapa por esquecimento no código.
 - **Eventos sem alteração de tabela**, como o início de um acesso de suporte, são inseridos pelo próprio app.
 - **Imutável:** ninguém altera nem apaga linhas da auditoria.
 
@@ -238,14 +250,20 @@ Nada é apagado, exceto itens de atendimento:
 - motivo em todo cancelamento de lançamento;
 - nada apagado, exceto itens de atendimento;
 - valores nunca negativos e fim depois do início;
-- auditoria de toda alteração no financeiro e nos atendimentos.
+- um item por serviço em cada atendimento;
+- `confirmado_em` coerente com o status;
+- auditoria de toda alteração no financeiro e nos atendimentos, inclusive a remoção de itens.
 
 **O app garante:**
 
-- transições de status;
-- itens alterados só antes de concluir;
-- aviso de horário ocupado;
-- telefone normalizado para +55… e conferido: DDD sem zero e celular de 11 dígitos começando com 9;
+- transições de status e o status anterior para desfazer;
+- mudança de status gravada só se o status ainda for o que a tela mostrava, o que barra toque duplo e página desatualizada;
+- itens alterados só enquanto o atendimento não estiver concluído, cancelado ou com falta;
+- aviso de horário ocupado, sem contar cancelados e faltas;
+- telefone normalizado para +55… e conferido: sem zero na frente, DDD sem zero e celular de 11 dígitos começando com 9;
+- todo atendimento com pelo menos um serviço;
+- `fim` do atendimento recalculado quando os serviços mudam, com ajuste à mão permitido depois;
+- datas e horas digitadas e exibidas no fuso da empresa, nunca no fuso do servidor;
 - cópia de preço e duração do catálogo;
 - dia do lançamento no fuso da empresa;
 - acesso conferido em cada página e ação do servidor, nunca só no layout, porque o Next.js renderiza layout e página em paralelo.
@@ -270,7 +288,7 @@ Dois toques quase simultâneos em "concluir" podem passar juntos pelo passo 1. O
 1. Listar devolve só linhas de A.
 2. Inserir com `empresa_id` de B falha.
 3. Inserir em A apontando para um registro de B (por exemplo, pet com tutor de B) falha.
-4. Alterar uma linha de B não atinge nenhuma linha.
+4. Alterar uma linha de B não atinge nenhuma linha. Apagar um item de atendimento de B também não.
 
 **Sem empresa na transação:** listar não devolve nada e inserir falha.
 
