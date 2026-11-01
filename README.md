@@ -103,8 +103,13 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 8. **Primeiro uso**
    - Entre com o administrador: você cai em `/admin`.
    - Em "Nova empresa", crie a empresa junto com a dona e uma senha provisória.
-   - A dona entra com essa senha e cai na página inicial da empresa dela, com a navegação Início, Clientes e
-     Serviços: cadastra tutores e pets, busca por tutor, pet ou telefone e mantém o catálogo de serviços.
+   - A dona entra com essa senha e cai na agenda do dia, com a navegação Agenda, Clientes e Serviços:
+     cadastra tutores e pets, busca por tutor, pet ou telefone e mantém o catálogo de serviços.
+   - Na agenda: tocar num horário vazio (ou em "Novo agendamento"), buscar o pet, marcar os serviços e agendar.
+     Se o pet ainda não existe, "Cadastrar tutor e pet" volta para o agendamento com ele escolhido. Horário
+     ocupado gera aviso, não bloqueio. No atendimento: confirmar, começar, marcar como pronto, cancelar ou
+     marcar falta; um toque errado se desfaz pelo botão "Desfazer". A semana (segunda a domingo) mostra a
+     ocupação; tocar num dia abre a agenda dele. Datas e horas seguem o fuso da empresa.
    - Para trocar a senha da dona, use "Redefinir senha" no painel (ainda não há e-mail transacional). As sessões
      abertas dela são encerradas junto; "Encerrar sessões" desconecta sem trocar a senha.
    - Login: no máximo 5 tentativas por minuto por IP.
@@ -144,7 +149,8 @@ Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejament
 - **Login falha com erro de origem (403) ou o cookie não aparece:** `BETTER_AUTH_URL` precisa ser exatamente
   a URL aberta no navegador (protocolo, host e porta).
 - **`npm run test:e2e` diz que a porta 3000 está em uso:** um `next dev` antigo pode ter ficado no ar. Pare-o
-  ou deixe-o: o Playwright reaproveita o servidor da porta 3000 fora do CI.
+  ou deixe-o: o Playwright reaproveita o servidor da porta 3000 fora do CI. Se for outro app, rode em outra
+  porta: `PORTA_E2E=3002 npm run test:e2e` (sem isso, o teste rodaria contra o outro app).
 - **O app de produção não sobe e fala em https:** em produção, `BETTER_AUTH_URL` precisa ser https (só
   localhost fica de fora), para o cookie de sessão sair com `Secure`.
 

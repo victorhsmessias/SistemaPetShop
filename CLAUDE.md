@@ -32,15 +32,20 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 ## Organização
 
 - `src/modules/<modulo>/`: código por domínio. Cada módulo é dono das suas tabelas (`schema.ts`).
-  - `empresas`; `cadastros` (tutor, pet, telefone); `catalogo` (servico); `compartilhado` (dinheiro, validação);
+  - `empresas` (e `fusoDaEmpresa`); `cadastros` (tutor, pet, telefone); `catalogo` (servico);
+    `compartilhado` (dinheiro, validação);
+  - `agenda`: atendimento e itens (`atendimentos.ts`), fuso (`fuso.ts`), fim, sobreposição e colunas
+    (`calculos.ts`), transições e desfazer (`status.ts`);
   - `acesso`: Better Auth (`auth.ts`), tabelas do login, sessão (`sessao.ts`), cliente do navegador;
   - `auditoria`: tabela e `registrarEvento`;
   - `administracao`: painel do administrador (`exigirAdmin`, empresas, usuárias, criar administrador).
 - `src/db/`: `clientes.ts` (pools), `com-empresa.ts`, `com-plataforma.ts`, `rls.ts`, `verificar-papeis.ts`,
   `testes/apoio.ts`.
 - `src/app/`: telas e Server Actions; regra de negócio fica nos módulos. `scripts/criar-admin.mts`.
-  - `(dona)/`: telas da dona (Início, Clientes, Serviços). Toda página e toda ação começam por
-    `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`); o layout do grupo é só visual.
+  - `(dona)/`: telas da dona (Agenda, que é a tela inicial; Clientes; Serviços). Toda página e toda ação
+    começam por `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`); o layout do grupo é só visual.
+    `/empresa` só mostra o aviso de empresa suspensa. O atalho `?agendar=` do cadastro de tutor e pet volta
+    para o agendamento por uma URL montada em `(dona)/agenda/retorno.ts`, nunca vinda do navegador.
   - Operações dos módulos recebem a transação (`tx`) e nunca o `empresaId`; ids de registros vindos da URL ou do
     formulário são conferidos com `ehUuid`, e o RLS faz o de outra empresa voltar como "não encontrado".
 - `drizzle/`: migrations (geradas e SQL próprias). `db/preparacao/papeis.sql`: cria papéis e banco.
@@ -66,11 +71,15 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 6. **Nenhum dado de senha** vai para a auditoria nem para os logs (`registrarEvento` recusa campos de senha).
 7. **Toda tabela de negócio nova** tem `empresa_id`, RLS no padrão, chaves compostas e entra no teste de
    isolamento. Se o modelo de dados manda auditá-la, ganha a trigger na mesma migration (checklist abaixo).
-8. **Nada é apagado** nas tabelas de negócio: desativar (`ativo`/`ativa`), cancelar (com motivo) ou anonimizar.
-   O `app` não recebe `DELETE`. A única exceção prevista é `atendimento_item`. A auditoria é imutável.
+8. **Nada é apagado** nas tabelas de negócio: desativar (`ativo`/`ativa`), cancelar ou anonimizar. O motivo
+   obrigatório é só do cancelamento de lançamento; cancelar atendimento não pede motivo. O `app` não recebe
+   `DELETE`. A única exceção é `atendimento_item`, cuja remoção a trigger registra (`removeu`). A auditoria é
+   imutável.
 9. **Dinheiro** em centavos, `integer`, nunca negativo (`check`). Nada de float. Entrada e exibição em reais
    só por `src/modules/compartilhado/dinheiro.ts` (`reaisParaCentavos`, `centavosParaTexto`, `formatarReais`).
-10. **Datas** em `timestamptz` (UTC no banco), exibidas no fuso da empresa (`empresa.fuso_horario`).
+10. **Datas** em `timestamptz` (UTC no banco), digitadas e exibidas no fuso da empresa (`empresa.fuso_horario`),
+    nunca no do servidor nem no do navegador: só por `agenda/fuso.ts` (`instanteNoFuso`, `noFuso`,
+    `hojeNoFuso`, `inicioDoDia`), que usa `Intl`, sem biblioteca. "Hoje" é `hojeNoFuso`, não `new Date()` local.
     O dia de um lançamento é `date`, calculado no fuso da empresa.
 11. **Status e tipos** em `text` com `check`, nunca `enum`. Nomes em português, singular, snake_case no banco;
     camelCase nas chaves do Drizzle. Toda tabela tem `criado_em` e `atualizado_em` (`colunasDeData()`).
@@ -81,7 +90,12 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 14. **Cookie de sessão** com `Secure` quando `BETTER_AUTH_URL` é https; em produção o servidor não sobe sem https
     (exceto localhost, para o teste de ponta a ponta).
 15. **Nenhum segredo no repositório.** Valores só no `.env` (ignorado) ou nas variáveis do EasyPanel.
-16. **Ações do Better Auth** (criar usuária, redefinir senha, encerrar sessões) auditam fora da transação
+16. **Atendimento.** Status só por `mudarStatus` (`agenda/atendimentos.ts`), com as transições de
+    `agenda/status.ts`; a tela envia o status que mostrava e nada é gravado se ele mudou (toque duplo, página
+    desatualizada). Desfazer volta ao anterior, deduzido de `confirmado_em` (sem coluna nova); reabrir
+    cancelado ou falta é desfazer. Itens e horário só mudam com o atendimento ativo; o `fim` é recalculado
+    quando os serviços mudam. Horário ocupado é aviso, nunca bloqueio, e cancelados e faltas não ocupam.
+17. **Ações do Better Auth** (criar usuária, redefinir senha, encerrar sessões) auditam fora da transação
     (ADR 0011): criação com evento logo depois e remoção se ele falhar; as outras com evento antes e outro com
     o resultado. Redefinir senha também encerra as sessões (`revokeUserSessions`).
 
@@ -99,6 +113,7 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
    `drizzle/0001_permissoes.sql`: `REVOKE ALL ... FROM PUBLIC` e `GRANT SELECT, INSERT, UPDATE ... TO app`.
    Nada para `plataforma`. Se a tabela é auditada (modelo de dados, seção auditoria), na mesma migration:
    `CREATE TRIGGER <tabela>_auditoria AFTER INSERT OR UPDATE ON <tabela> FOR EACH ROW EXECUTE FUNCTION auditar('empresa_id');`
+   Só numa tabela em que o `app` apaga (hoje, `atendimento_item`), também `OR DELETE`: `auditar()` grava `removeu`.
 5. Teste de isolamento do módulo (`src/modules/<modulo>/isolamento.test.ts`, modelo em `cadastros`): com A na
    transação só aparece A; inserir com `empresa_id` de B falha; apontar para registro de B falha; alterar
    linha de B atinge 0 linhas; sem empresa nada aparece e inserir falha; `plataforma` recebe erro de permissão.
@@ -120,7 +135,7 @@ npm run dev                   # app em http://localhost:3000 (recusa subir com p
 npm run lint
 npm run typecheck
 npm test                      # unitários e integração contra o Postgres local; exige banco no ar e migrado
-npm run test:e2e              # ponta a ponta (iPhone/WebKit); faz o build e sobe na porta 3000
+npm run test:e2e              # ponta a ponta (iPhone/WebKit); faz o build e sobe na porta 3000 (PORTA_E2E muda)
 npx playwright install webkit # uma vez por máquina, antes do primeiro test:e2e
 docker compose down -v        # apaga o banco local (o próximo `up` recria do zero)
 ```
@@ -137,4 +152,8 @@ Postgres local na porta 5435 (`PORTA_POSTGRES` no `.env`). Conexões e Better Au
 - Testes criam dados com prefixo `[teste]` e e-mails `@teste.banho-e-tosa.local` e apagam o que criaram.
 - Confira a documentação oficial da versão instalada em vez de confiar na memória.
 - Servidor de desenvolvimento em segundo plano: ao parar, confira se a porta 3000 ficou livre (o processo
-  filho do `next dev` pode sobreviver).
+  filho do `next dev` pode sobreviver). Antes de encerrar um processo na porta, confira a linha de comando: pode
+  ser outro projeto. Com a 3000 ocupada, use `next dev -p 3001` com `BETTER_AUTH_URL` na mesma porta e
+  `PORTA_E2E` no ponta a ponta (fora do CI, o Playwright reaproveita o que estiver na porta).
+- Ponta a ponta: cada arquivo tem a própria empresa e dona (`e2e/preparar.ts`); datas fixas abertas por
+  `?dia=`, nunca "hoje".
