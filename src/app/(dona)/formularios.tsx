@@ -19,13 +19,15 @@ function BotaoSalvar({ enviando, rotulo }: { enviando: boolean; rotulo: string }
   );
 }
 
-export function FormularioTutor({ id, valores }: { id?: string; valores?: Valores }) {
+/** `agendar`: dia e hora do agendamento para onde a dona volta depois do cadastro (agenda/retorno.ts). */
+export function FormularioTutor({ id, valores, agendar }: { id?: string; valores?: Valores; agendar?: string }) {
   const [estado, acao, enviando] = useActionState(salvarTutorAcao, inicial(valores));
   const v = estado.valores;
 
   return (
     <form action={acao} className="formulario" noValidate>
       {id && <input type="hidden" name="id" value={id} />}
+      {agendar && <input type="hidden" name="agendar" value={agendar} />}
       <ErroGeral erro={estado.erros.geral} />
       <Campo nome="nome" rotulo="Nome do tutor" erro={estado.erros.nome}>
         {(props) => <input {...props} defaultValue={v.nome} autoComplete="off" autoCapitalize="words" />}
@@ -54,8 +56,10 @@ export function FormularioPet({
   valores,
   especies,
   portes,
+  agendar,
 }: {
   tutorId: string;
+  agendar?: string;
   petId?: string;
   valores?: Valores;
   especies: OpcaoPet[];
@@ -68,6 +72,7 @@ export function FormularioPet({
     <form action={acao} className="formulario" noValidate>
       <input type="hidden" name="tutorId" value={tutorId} />
       {petId && <input type="hidden" name="petId" value={petId} />}
+      {agendar && <input type="hidden" name="agendar" value={agendar} />}
       <ErroGeral erro={estado.erros.geral} />
       <Campo nome="nome" rotulo="Nome do pet" erro={estado.erros.nome}>
         {(props) => <input {...props} defaultValue={v.nome} autoComplete="off" autoCapitalize="words" />}

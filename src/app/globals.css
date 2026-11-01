@@ -444,3 +444,364 @@ a {
   white-space: nowrap;
   border: 0;
 }
+
+/* Agenda (H5 a H7). A grade usa 2 px por minuto no dia e 1 px na semana (agenda/grade.tsx). */
+
+:root {
+  --status-agendado: #64748b;
+  --status-confirmado: #2563eb;
+  --status-em-atendimento: #d97706;
+  --status-pronto: #16a34a;
+  --status-encerrado: #9ca3af;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --status-agendado: #94a3b8;
+    --status-confirmado: #60a5fa;
+    --status-em-atendimento: #fbbf24;
+    --status-pronto: #4ade80;
+    --status-encerrado: #6b7280;
+  }
+}
+
+.status-agendado {
+  --cor-status: var(--status-agendado);
+}
+
+.status-confirmado {
+  --cor-status: var(--status-confirmado);
+}
+
+.status-em_atendimento {
+  --cor-status: var(--status-em-atendimento);
+}
+
+.status-pronto,
+.status-concluido {
+  --cor-status: var(--status-pronto);
+}
+
+.status-cancelado,
+.status-faltou {
+  --cor-status: var(--status-encerrado);
+}
+
+.botao-largo,
+.botao-link.botao-largo {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.rodape {
+  margin-top: 24px;
+}
+
+.navegacao-dias {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.navegacao-dias > a {
+  flex: 0 0 var(--toque);
+  height: var(--toque);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  font-size: 1.6rem;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--texto);
+  background: var(--superficie);
+}
+
+.navegacao-dias-atual {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.navegacao-dias-atual .titulo {
+  font-weight: 600;
+}
+
+.navegacao-dias-atual a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.fora-da-grade summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--toque);
+  margin: 0;
+}
+
+.fora-da-grade .lista-toque {
+  margin: 12px 0 0;
+}
+
+/* Grade do dia: horários vazios tocáveis por baixo, blocos por cima. */
+.grade {
+  display: flex;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 12px 8px 12px 0;
+}
+
+.grade-horas {
+  position: relative;
+  flex: 0 0 48px;
+}
+
+.grade-horas span {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+}
+
+.grade-corpo {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.horario-vazio {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--borda);
+  touch-action: manipulation;
+}
+
+.horario-vazio.hora-cheia {
+  border-top-style: solid;
+}
+
+.horario-vazio:active,
+.horario-vazio:hover {
+  background: var(--fundo);
+}
+
+.bloco {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--cor-status, var(--borda));
+  background: var(--superficie);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  color: var(--texto);
+  text-decoration: none;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  touch-action: manipulation;
+}
+
+.bloco-linha {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bloco-status {
+  font-weight: 600;
+  color: var(--cor-status);
+}
+
+.bloco-cuidado {
+  background: var(--aviso-fundo);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+/* Semana: um link por dia, com blocos compactos só para mostrar a ocupação. */
+.grade-semana {
+  display: grid;
+  grid-template-columns: 40px repeat(7, minmax(0, 1fr));
+  padding: 8px 4px 12px 0;
+}
+
+.grade-semana .grade-horas {
+  flex: none;
+}
+
+.grade-semana-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.grade-semana-dia {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid var(--borda);
+  color: var(--texto);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.grade-semana-dia.hoje .grade-semana-cabecalho {
+  color: var(--primaria);
+}
+
+.grade-semana-dia .grade-corpo {
+  display: block;
+  flex: none;
+  /* Uma linha por hora: 60 px a 1 px por minuto. */
+  background-image: repeating-linear-gradient(to bottom, var(--borda) 0 1px, transparent 1px 60px);
+}
+
+.grade-semana-dia:active .grade-corpo,
+.grade-semana-dia:hover .grade-corpo {
+  background-color: var(--fundo);
+}
+
+.bloco-compacto {
+  display: block;
+  padding: 1px 2px;
+  border-left-width: 3px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  line-height: 1.2;
+  /* Quebra só entre palavras; num bloco estreito o texto é cortado, e o bloco mostra só a ocupação. */
+  overflow-wrap: normal;
+  word-break: normal;
+  box-shadow: none;
+}
+
+/* Formulário de agendamento. */
+.campos-lado-a-lado {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.servicos {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.servicos legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.lista-servicos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lista-servicos li {
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+}
+
+.lista-servicos li.marcado {
+  border-color: var(--primaria);
+}
+
+.opcao-servico {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.opcao-servico input {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  margin: 0;
+  accent-color: var(--primaria);
+}
+
+.opcao-servico .titulo {
+  display: block;
+  font-weight: 600;
+}
+
+.opcao-servico .detalhe {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.ajuste-servico {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+
+.ajuste-servico label {
+  font-size: 0.85rem;
+}
+
+.lista-aviso {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+/* Página do atendimento. */
+.etiqueta-status {
+  border-color: var(--cor-status);
+  color: var(--cor-status);
+  white-space: nowrap;
+}
+
+.lista-itens {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+.lista-itens li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--borda);
+}
+
+.total {
+  font-weight: 600;
+  text-align: right;
+}
+
+.botao-desfazer {
+  margin-top: 8px;
+}

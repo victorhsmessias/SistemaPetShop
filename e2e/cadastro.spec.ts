@@ -8,7 +8,7 @@ async function entrar(page: Page) {
   await page.getByLabel("E-mail").fill(process.env.E2E_EMAIL!);
   await page.getByLabel("Senha").fill(process.env.E2E_SENHA!);
   await page.getByRole("button", { name: "Entrar" }).tap();
-  await expect(page).toHaveURL(/\/empresa$/);
+  await expect(page).toHaveURL(/\/agenda$/);
 }
 
 async function cadastrarPet(

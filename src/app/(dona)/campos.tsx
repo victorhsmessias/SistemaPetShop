@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 type PropsCampo = {
   nome: string;
-  rotulo: string;
+  rotulo: ReactNode;
   erro?: string;
   dica?: string;
   children: (props: { id: string; name: string; "aria-invalid"?: true; "aria-describedby"?: string }) => ReactNode;
