@@ -10,6 +10,7 @@ import { comEmpresa } from "@/db/com-empresa";
 import { codigoPgDe as codigoPg } from "@/db/erros";
 import { auth } from "@/modules/acesso/auth";
 import { user } from "@/modules/acesso/schema";
+import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { auditoria } from "@/modules/auditoria/schema";
 import { pet, tutor } from "@/modules/cadastros/schema";
 import { servico } from "@/modules/catalogo/schema";
@@ -17,7 +18,14 @@ import { empresa } from "@/modules/empresas/schema";
 
 // Apoio aos testes de integração. Roda contra o Postgres de verdade (docker compose ou CI).
 
-export type DadosEmpresa = { empresaId: string; tutorId: string; petId: string; servicoId: string };
+export type DadosEmpresa = {
+  empresaId: string;
+  tutorId: string;
+  petId: string;
+  servicoId: string;
+  atendimentoId: string;
+  itemId: string;
+};
 
 /** Conexão como migrador, dono das tabelas: só para ler o catálogo e limpar o que os testes criaram. */
 export function conexaoMigrador() {
@@ -29,7 +37,10 @@ export function conexaoMigrador() {
 
 export const usuarioTeste = randomUUID();
 
-/** Cria uma empresa (pela plataforma) com um tutor, um pet e um serviço (pelo app, dentro de comEmpresa). */
+/**
+ * Cria uma empresa (pela plataforma) com um tutor, um pet, um serviço e um atendimento com um item
+ * (pelo app, dentro de comEmpresa).
+ */
 export async function criarEmpresaComDados(nome: string): Promise<DadosEmpresa> {
   const [criada] = await bancoPlataforma()
     .insert(empresa)
@@ -50,7 +61,15 @@ export async function criarEmpresaComDados(nome: string): Promise<DadosEmpresa> 
       .insert(servico)
       .values({ nome: `Banho ${nome}`, precoCentavos: 5000, duracaoMin: 60 })
       .returning({ id: servico.id });
-    return { empresaId, tutorId: t!.id, petId: p!.id, servicoId: s!.id };
+    const [at] = await tx
+      .insert(atendimento)
+      .values({ petId: p!.id, inicio: new Date("2026-11-10T13:00:00Z"), fim: new Date("2026-11-10T14:00:00Z") })
+      .returning({ id: atendimento.id });
+    const [item] = await tx
+      .insert(atendimentoItem)
+      .values({ atendimentoId: at!.id, servicoId: s!.id, descricao: `Banho ${nome}`, precoCentavos: 5000, duracaoMin: 60 })
+      .returning({ id: atendimentoItem.id });
+    return { empresaId, tutorId: t!.id, petId: p!.id, servicoId: s!.id, atendimentoId: at!.id, itemId: item!.id };
   });
 }
 
@@ -60,6 +79,8 @@ export async function apagarEmpresas(empresaIds: string[]): Promise<void> {
   const { pool, banco } = conexaoMigrador();
   try {
     await banco.transaction(async (tx) => {
+      await tx.delete(atendimentoItem).where(inArray(atendimentoItem.empresaId, empresaIds));
+      await tx.delete(atendimento).where(inArray(atendimento.empresaId, empresaIds));
       await tx.delete(pet).where(inArray(pet.empresaId, empresaIds));
       await tx.delete(tutor).where(inArray(tutor.empresaId, empresaIds));
       await tx.delete(servico).where(inArray(servico.empresaId, empresaIds));

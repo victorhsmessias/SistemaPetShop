@@ -2,6 +2,7 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 import * as acesso from "@/modules/acesso/schema";
+import * as agenda from "@/modules/agenda/schema";
 import * as auditoria from "@/modules/auditoria/schema";
 import * as cadastros from "@/modules/cadastros/schema";
 import * as catalogo from "@/modules/catalogo/schema";
@@ -11,7 +12,7 @@ import * as empresas from "@/modules/empresas/schema";
 // - bancoApp: só dentro de src/db/ e no Better Auth (src/modules/acesso/auth.ts).
 // - bancoPlataforma: só em src/db/ (comPlataforma) e nos testes.
 
-const schema = { ...empresas, ...cadastros, ...catalogo, ...acesso, ...auditoria };
+const schema = { ...empresas, ...cadastros, ...catalogo, ...agenda, ...acesso, ...auditoria };
 
 export type Banco = NodePgDatabase<typeof schema>;
 export type Transacao = Parameters<Parameters<Banco["transaction"]>[0]>[0];

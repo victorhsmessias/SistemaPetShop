@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import { encerrarConexoes } from "@/db/clientes";
 import { comPlataforma } from "@/db/com-plataforma";
 import { user } from "@/modules/acesso/schema";
+import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { auditoria } from "@/modules/auditoria/schema";
 import { criarUsuaria } from "@/modules/administracao/usuarias";
 import { pet, tutor } from "@/modules/cadastros/schema";
@@ -39,6 +40,9 @@ export async function apagarEmpresa(empresaId: string): Promise<void> {
   const ids = [empresaId];
   try {
     await banco.transaction(async (tx) => {
+      // A trigger grava a remoção dos itens na auditoria, que é apagada logo antes da empresa.
+      await tx.delete(atendimentoItem).where(inArray(atendimentoItem.empresaId, ids));
+      await tx.delete(atendimento).where(inArray(atendimento.empresaId, ids));
       await tx.delete(pet).where(inArray(pet.empresaId, ids));
       await tx.delete(tutor).where(inArray(tutor.empresaId, ids));
       await tx.delete(servico).where(inArray(servico.empresaId, ids));

@@ -26,7 +26,8 @@ export const auditoria = pgTable(
     quando: timestamp("quando", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    check("auditoria_acao_check", sql`acao in ('criou', 'alterou')`),
+    // removeu: só em atendimento_item, a única tabela de negócio em que se apaga.
+    check("auditoria_acao_check", sql`acao in ('criou', 'alterou', 'removeu')`),
     index("auditoria_empresa_id_quando_idx").on(t.empresaId, t.quando),
     politicaDeIsolamento("auditoria"),
     pgPolicy("auditoria_plataforma", {
