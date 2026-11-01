@@ -122,7 +122,12 @@ describe("comPlataforma", () => {
 
     const { pool, banco } = conexaoMigrador();
     try {
-      const eventos = await banco.select().from(auditoria).where(eq(auditoria.empresaId, b.empresaId));
+      // Sem order by, o Postgres não garante a ordem: o último evento é o de maior id.
+      const eventos = await banco
+        .select()
+        .from(auditoria)
+        .where(eq(auditoria.empresaId, b.empresaId))
+        .orderBy(auditoria.id);
       expect(eventos.at(-1)).toMatchObject({ acao: "alterou", usuarioId: autor });
     } finally {
       await pool.end();
