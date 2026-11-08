@@ -150,6 +150,8 @@ Postgres local na porta 5435 (`PORTA_POSTGRES` no `.env`). Conexões e Better Au
 - Antes de concluir algo que toque o banco ou o login, rode os testes de isolamento. Build vermelho por
   isolamento nunca é "flaky": é vazamento.
 - Testes criam dados com prefixo `[teste]` e e-mails `@teste.banho-e-tosa.local` e apagam o que criaram.
+- Consulta em teste sempre ordena (`orderBy`, na auditoria por `auditoria.id`): sem isso a ordem das linhas
+  não é garantida e o teste falha às vezes.
 - Confira a documentação oficial da versão instalada em vez de confiar na memória.
 - Servidor de desenvolvimento em segundo plano: ao parar, confira se a porta 3000 ficou livre (o processo
   filho do `next dev` pode sobreviver). Antes de encerrar um processo na porta, confira a linha de comando: pode
