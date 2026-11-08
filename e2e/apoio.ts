@@ -17,6 +17,7 @@ import { criarTutor } from "@/modules/cadastros/tutores";
 import { servico } from "@/modules/catalogo/schema";
 import { criarServico } from "@/modules/catalogo/servicos";
 import { empresa } from "@/modules/empresas/schema";
+import { categoria, formaPagamento, lancamento } from "@/modules/financeiro/schema";
 
 // Dados do teste de ponta a ponta: uma empresa com a dona, criadas como o painel faz, e apagadas no fim
 // pelo migrador (dono das tabelas). Prefixo [teste] e e-mail @teste.banho-e-tosa.local, como os outros testes.
@@ -73,11 +74,14 @@ export async function apagarEmpresa(empresaId: string): Promise<void> {
   try {
     await banco.transaction(async (tx) => {
       // A trigger grava a remoção dos itens na auditoria, que é apagada logo antes da empresa.
+      await tx.delete(lancamento).where(inArray(lancamento.empresaId, ids));
       await tx.delete(atendimentoItem).where(inArray(atendimentoItem.empresaId, ids));
       await tx.delete(atendimento).where(inArray(atendimento.empresaId, ids));
       await tx.delete(pet).where(inArray(pet.empresaId, ids));
       await tx.delete(tutor).where(inArray(tutor.empresaId, ids));
       await tx.delete(servico).where(inArray(servico.empresaId, ids));
+      await tx.delete(formaPagamento).where(inArray(formaPagamento.empresaId, ids));
+      await tx.delete(categoria).where(inArray(categoria.empresaId, ids));
       await tx.delete(user).where(inArray(user.empresaId, ids));
       await tx.delete(auditoria).where(inArray(auditoria.empresaId, ids));
       await tx.delete(empresa).where(inArray(empresa.id, ids));

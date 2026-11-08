@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { expect } from "vitest";
@@ -15,6 +15,7 @@ import { auditoria } from "@/modules/auditoria/schema";
 import { pet, tutor } from "@/modules/cadastros/schema";
 import { servico } from "@/modules/catalogo/schema";
 import { empresa } from "@/modules/empresas/schema";
+import { categoria, formaPagamento, lancamento } from "@/modules/financeiro/schema";
 
 // Apoio aos testes de integração. Roda contra o Postgres de verdade (docker compose ou CI).
 
@@ -25,6 +26,12 @@ export type DadosEmpresa = {
   servicoId: string;
   atendimentoId: string;
   itemId: string;
+  /** Pix, criada com a empresa pela trigger empresa_dados_padrao. */
+  formaPagamentoId: string;
+  /** "Atendimentos", criada com a empresa. */
+  categoriaId: string;
+  /** Receita manual, que não ocupa o índice único da receita do atendimento. */
+  lancamentoId: string;
 };
 
 /** Conexão como migrador, dono das tabelas: só para ler o catálogo e limpar o que os testes criaram. */
@@ -38,8 +45,8 @@ export function conexaoMigrador() {
 export const usuarioTeste = randomUUID();
 
 /**
- * Cria uma empresa (pela plataforma) com um tutor, um pet, um serviço e um atendimento com um item
- * (pelo app, dentro de comEmpresa).
+ * Cria uma empresa (pela plataforma) com um tutor, um pet, um serviço, um atendimento com um item e uma
+ * receita manual (pelo app, dentro de comEmpresa). Formas de pagamento e categorias nascem com a empresa.
  */
 export async function criarEmpresaComDados(nome: string): Promise<DadosEmpresa> {
   const [criada] = await bancoPlataforma()
@@ -69,7 +76,35 @@ export async function criarEmpresaComDados(nome: string): Promise<DadosEmpresa> 
       .insert(atendimentoItem)
       .values({ atendimentoId: at!.id, servicoId: s!.id, descricao: `Banho ${nome}`, precoCentavos: 5000, duracaoMin: 60 })
       .returning({ id: atendimentoItem.id });
-    return { empresaId, tutorId: t!.id, petId: p!.id, servicoId: s!.id, atendimentoId: at!.id, itemId: item!.id };
+    const [pix] = await tx.select({ id: formaPagamento.id }).from(formaPagamento).where(eq(formaPagamento.nome, "Pix"));
+    const [atendimentos] = await tx
+      .select({ id: categoria.id })
+      .from(categoria)
+      .where(and(eq(categoria.tipo, "receita"), eq(categoria.nome, "Atendimentos")));
+    const [l] = await tx
+      .insert(lancamento)
+      .values({
+        tipo: "receita",
+        descricao: "Receita de teste",
+        valorCentavos: 1000,
+        data: "2026-11-10",
+        status: "pago",
+        origem: "manual",
+        formaPagamentoId: pix!.id,
+        categoriaId: atendimentos!.id,
+      })
+      .returning({ id: lancamento.id });
+    return {
+      empresaId,
+      tutorId: t!.id,
+      petId: p!.id,
+      servicoId: s!.id,
+      atendimentoId: at!.id,
+      itemId: item!.id,
+      formaPagamentoId: pix!.id,
+      categoriaId: atendimentos!.id,
+      lancamentoId: l!.id,
+    };
   });
 }
 
@@ -79,11 +114,14 @@ export async function apagarEmpresas(empresaIds: string[]): Promise<void> {
   const { pool, banco } = conexaoMigrador();
   try {
     await banco.transaction(async (tx) => {
+      await tx.delete(lancamento).where(inArray(lancamento.empresaId, empresaIds));
       await tx.delete(atendimentoItem).where(inArray(atendimentoItem.empresaId, empresaIds));
       await tx.delete(atendimento).where(inArray(atendimento.empresaId, empresaIds));
       await tx.delete(pet).where(inArray(pet.empresaId, empresaIds));
       await tx.delete(tutor).where(inArray(tutor.empresaId, empresaIds));
       await tx.delete(servico).where(inArray(servico.empresaId, empresaIds));
+      await tx.delete(formaPagamento).where(inArray(formaPagamento.empresaId, empresaIds));
+      await tx.delete(categoria).where(inArray(categoria.empresaId, empresaIds));
       await tx.delete(user).where(inArray(user.empresaId, empresaIds)); // session e account em cascata
       await tx.delete(auditoria).where(inArray(auditoria.empresaId, empresaIds));
       await tx.delete(empresa).where(inArray(empresa.id, empresaIds));

@@ -202,6 +202,21 @@ describe("estrutura do banco", () => {
     expect(rows.map((r) => r.tabela)).toEqual([]);
   });
 
+  // ADR 0012: a única função que roda com os poderes do dono das tabelas cria os dados padrão da empresa.
+  // Uma nova exige um ADR; e toda função nossa fixa o search_path, para não ser enganada por outra tabela.
+  it("a única função SECURITY DEFINER é criar_dados_padrao_da_empresa, e toda função fixa o search_path", async () => {
+    const { rows } = await cliente.query<{ funcao: string; definer: boolean; searchPath: boolean }>(
+      `select p.proname as funcao, p.prosecdef as definer,
+              coalesce(exists (select 1 from unnest(p.proconfig) c where c like 'search_path=%'), false) as "searchPath"
+         from pg_proc p
+        where p.pronamespace = 'public'::regnamespace
+          and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+        order by 1`,
+    );
+    expect(rows.filter((r) => r.definer).map((r) => r.funcao)).toEqual(["criar_dados_padrao_da_empresa"]);
+    expect(rows.filter((r) => !r.searchPath).map((r) => r.funcao), "funções sem search_path fixo").toEqual([]);
+  });
+
   it("auditoria é imutável: app só lê e cria; plataforma só cria", async () => {
     const { rows } = await cliente.query<{ permissao: string }>(
       `select papel || ':' || p as permissao
