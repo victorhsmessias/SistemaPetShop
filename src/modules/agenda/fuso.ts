@@ -60,6 +60,17 @@ function doisDigitos(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+// Anos aceitos em ?dia= e ?mes= (ehDia, ehMes). Fora disso o Date.UTC erra (anos 0 a 99 viram 1900 a 1999)
+// ou o ISO sai com seis dígitos (+010000), o que quebraria as contas e a consulta. O limite fica só na
+// entrada: os dias e meses vizinhos dos extremos (2101-01-01, 1999-12) continuam calculados e exibidos, e
+// abri-los pela URL cai em hoje ou no mês atual.
+const ANO_MINIMO = 2000;
+const ANO_MAXIMO = 2100;
+
+function anoAceito(ano: number): boolean {
+  return ano >= ANO_MINIMO && ano <= ANO_MAXIMO;
+}
+
 function lerDia(dia: Dia): { ano: number; mes: number; d: number } | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dia);
   if (!m) return null;
@@ -71,7 +82,9 @@ function lerDia(dia: Dia): { ano: number; mes: number; d: number } | null {
 }
 
 export function ehDia(valor: unknown): valor is Dia {
-  return typeof valor === "string" && lerDia(valor) !== null;
+  if (typeof valor !== "string") return false;
+  const d = lerDia(valor);
+  return d !== null && anoAceito(d.ano);
 }
 
 export function ehHora(valor: unknown): valor is Hora {
@@ -168,15 +181,8 @@ export function rotuloDiaMes(dia: Dia): string {
 // ---------------------------------------------------------------------------------------------------------
 // Meses (Financeiro). Conta em texto, sem fuso: o mês de um instante vem de noFuso(...).dia.
 
-// Anos aceitos em ?mes=. Fora disso o Date.UTC erra (anos 0 a 99 viram 1900 a 1999) ou o ISO sai com seis
-// dígitos (+010000), o que quebraria a consulta. Os meses vizinhos dos extremos caem no mês atual.
-const ANO_MINIMO = 2000;
-const ANO_MAXIMO = 2100;
-
 export function ehMes(valor: unknown): valor is Mes {
-  if (typeof valor !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(valor)) return false;
-  const ano = Number(valor.slice(0, 4));
-  return ano >= ANO_MINIMO && ano <= ANO_MAXIMO;
+  return typeof valor === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(valor) && anoAceito(Number(valor.slice(0, 4)));
 }
 
 export function mesDoDia(dia: Dia): Mes {

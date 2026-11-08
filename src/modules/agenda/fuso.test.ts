@@ -11,6 +11,7 @@ import {
   mesDoDia,
   noFuso,
   primeiroDiaDoMes,
+  rotuloCurtoDoDia,
   rotuloDoDia,
   rotuloDoMes,
   segundaDaSemana,
@@ -116,6 +117,19 @@ describe("dias e semanas", () => {
     expect(ehHora("09:05")).toBe(true);
     expect(ehHora("24:00")).toBe(false);
     expect(ehHora("9:05")).toBe(false);
+  });
+
+  it("recusa dias com ano fora de 2000 a 2100, mas os vizinhos dos extremos continuam calculados", () => {
+    expect(ehDia("2000-01-01")).toBe(true);
+    expect(ehDia("2100-12-31")).toBe(true);
+    expect(ehDia("1999-12-31")).toBe(false);
+    expect(ehDia("2101-01-01")).toBe(false);
+    expect(ehDia("9999-12-31")).toBe(false);
+    expect(ehDia("0000-01-01")).toBe(false);
+    expect(ehDia("0050-05-05")).toBe(false);
+    expect(somarDias("2100-12-31", 1)).toBe("2101-01-01");
+    expect(somarDias("2000-01-01", -1)).toBe("1999-12-31");
+    expect(diasDaSemana("2100-12-31").map(rotuloCurtoDoDia)).toHaveLength(7);
   });
 });
 
