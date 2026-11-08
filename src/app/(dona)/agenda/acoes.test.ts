@@ -191,15 +191,38 @@ describe("sem sessão, toda ação da agenda é recusada e manda para o login", 
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
   });
 
-  it("o administrador é mandado para /admin, sem agendar, concluir nem desfazer", async () => {
+  it("o administrador é mandado para /admin, sem agendar nem concluir", async () => {
     const id = await novoAtendimentoDeA();
     requisicao.cookie = cookieAdmin;
     expect(await destinoDoRedirect(agendarAcao(vazio, agendamento("06:00", { dia: DIA_SEM_SESSAO })))).toBe("/admin");
     expect(await destinoDoRedirect(concluirAcao({}, conclusao(id, a.formaPagamentoId)))).toBe("/admin");
-    expect(await destinoDoRedirect(desfazerConclusaoAcao(semMotivo, formulario({ id, motivo: "x" })))).toBe("/admin");
     expect(await idsDoDia(a, DIA_SEM_SESSAO)).toEqual([]);
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
     expect(await receitasDoAtendimento(a, id)).toEqual([]);
+  });
+
+  it("nem sem sessão nem como administrador a conclusão é desfeita: continua concluido, com a receita paga", async () => {
+    const id = await novoAtendimentoDeA();
+    requisicao.cookie = cookieDonaA;
+    expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({});
+
+    const continuaConcluido = async () => {
+      expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("concluido");
+      expect((await receitasDoAtendimento(a, id)).map((r) => [r.status, r.motivoCancelamento])).toEqual([["pago", null]]);
+    };
+    await continuaConcluido();
+
+    requisicao.cookie = "";
+    expect(await destinoDoRedirect(desfazerConclusaoAcao(semMotivo, formulario({ id, motivo: "sem sessão" })))).toBe(
+      "/login",
+    );
+    await continuaConcluido();
+
+    requisicao.cookie = cookieAdmin;
+    expect(await destinoDoRedirect(desfazerConclusaoAcao(semMotivo, formulario({ id, motivo: "administrador" })))).toBe(
+      "/admin",
+    );
+    await continuaConcluido();
   });
 });
 
