@@ -107,6 +107,17 @@ describe("agendar", () => {
     });
   });
 
+  it.each([["2101-01-01"], ["1999-12-31"], ["9999-12-31"]])(
+    "dia %s, fora de 2000 a 2100, é recusado com a mensagem do limite, sem gravar",
+    async (dia) => {
+      const itens = [item(banhoId, "50,00", "60")];
+      expect(await emA((tx) => agendar(tx, { petId: rexId, dia, hora: "09:00", itens }))).toEqual({
+        ok: false,
+        erros: { dia: "Use um dia entre 2000 e 2100." },
+      });
+    },
+  );
+
   it("preço e duração inválidos apontam para o serviço certo", async () => {
     const resultado = await emA((tx) =>
       agendar(tx, { petId: rexId, dia: DIA, hora: "06:00", itens: [item(banhoId, "50.00", "0")] }),
@@ -292,6 +303,17 @@ describe("serviços, horário e observações do atendimento", () => {
     await emA((tx) => editarItens(tx, id, [item(banhoId, "60,00", "45")]));
     atual = (await emA((tx) => obterAtendimento(tx, id)))!;
     expect(atual.fim.toISOString()).toBe("2026-11-22T14:15:00.000Z");
+  });
+
+  it("mudar o horário para um dia fora de 2000 a 2100 é recusado com a mensagem do limite", async () => {
+    const id = await agendarRex("08:00", undefined, "2026-11-23");
+    const antes = (await emA((tx) => obterAtendimento(tx, id)))!;
+    expect(await emA((tx) => editarHorario(tx, id, { dia: "2101-01-01", hora: "08:00", termino: "09:00" }))).toEqual({
+      ok: false,
+      erros: { dia: "Use um dia entre 2000 e 2100." },
+    });
+    const depois = (await emA((tx) => obterAtendimento(tx, id)))!;
+    expect([depois.inicio, depois.fim]).toEqual([antes.inicio, antes.fim]);
   });
 
   it("término antes do início é recusado", async () => {

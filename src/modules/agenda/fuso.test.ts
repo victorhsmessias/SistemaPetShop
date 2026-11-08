@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   diasDaSemana,
   ehDia,
+  ehDiaForaDosAnosAceitos,
   ehHora,
   ehMes,
   hojeNoFuso,
@@ -130,6 +131,12 @@ describe("dias e semanas", () => {
     expect(somarDias("2100-12-31", 1)).toBe("2101-01-01");
     expect(somarDias("2000-01-01", -1)).toBe("1999-12-31");
     expect(diasDaSemana("2100-12-31").map(rotuloCurtoDoDia)).toHaveLength(7);
+    // Só o dia que existe no calendário, com o ano fora do limite, pede a mensagem do limite.
+    expect(ehDiaForaDosAnosAceitos("2101-01-01")).toBe(true);
+    expect(ehDiaForaDosAnosAceitos("1999-12-31")).toBe(true);
+    expect(ehDiaForaDosAnosAceitos("2026-11-10")).toBe(false);
+    expect(ehDiaForaDosAnosAceitos("2101-02-30")).toBe(false);
+    expect(ehDiaForaDosAnosAceitos("")).toBe(false);
   });
 });
 

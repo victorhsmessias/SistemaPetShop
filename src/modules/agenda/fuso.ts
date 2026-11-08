@@ -64,8 +64,8 @@ function doisDigitos(n: number): string {
 // ou o ISO sai com seis dígitos (+010000), o que quebraria as contas e a consulta. O limite fica só na
 // entrada: os dias e meses vizinhos dos extremos (2101-01-01, 1999-12) continuam calculados e exibidos, e
 // abri-los pela URL cai em hoje ou no mês atual.
-const ANO_MINIMO = 2000;
-const ANO_MAXIMO = 2100;
+export const ANO_MINIMO = 2000;
+export const ANO_MAXIMO = 2100;
 
 function anoAceito(ano: number): boolean {
   return ano >= ANO_MINIMO && ano <= ANO_MAXIMO;
@@ -85,6 +85,13 @@ export function ehDia(valor: unknown): valor is Dia {
   if (typeof valor !== "string") return false;
   const d = lerDia(valor);
   return d !== null && anoAceito(d.ano);
+}
+
+/** Dia que existe no calendário, mas com o ano fora de ANO_MINIMO a ANO_MAXIMO: pede outra mensagem. */
+export function ehDiaForaDosAnosAceitos(valor: unknown): boolean {
+  if (typeof valor !== "string") return false;
+  const d = lerDia(valor);
+  return d !== null && !anoAceito(d.ano);
 }
 
 export function ehHora(valor: unknown): valor is Hora {

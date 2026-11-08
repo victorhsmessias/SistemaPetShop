@@ -3,7 +3,18 @@ import { and, asc, eq, gt, inArray, isNull, lt, notInArray, sql } from "drizzle-
 import type { Transacao } from "@/db/clientes";
 import { codigoPgDe } from "@/db/erros";
 import { calcularFim, conflitos } from "@/modules/agenda/calculos";
-import { ehDia, ehHora, inicioDoDia, instanteNoFuso, noFuso, somarDias, type Dia } from "@/modules/agenda/fuso";
+import {
+  ANO_MAXIMO,
+  ANO_MINIMO,
+  ehDia,
+  ehDiaForaDosAnosAceitos,
+  ehHora,
+  inicioDoDia,
+  instanteNoFuso,
+  noFuso,
+  somarDias,
+  type Dia,
+} from "@/modules/agenda/fuso";
 import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { atendimentoAtivo, avaliarMudanca, ehStatus, NOMES_DOS_STATUS, type StatusAtendimento } from "@/modules/agenda/status";
 import { pet, tutor } from "@/modules/cadastros/schema";
@@ -272,7 +283,8 @@ async function validarItens(
 }
 
 function validarDiaEHora(campos: Campos, dia: string | undefined, hora: string | undefined): void {
-  if (!ehDia(dia)) campos.erro("dia", "Informe o dia.");
+  if (ehDiaForaDosAnosAceitos(dia)) campos.erro("dia", `Use um dia entre ${ANO_MINIMO} e ${ANO_MAXIMO}.`);
+  else if (!ehDia(dia)) campos.erro("dia", "Informe o dia.");
   if (!ehHora(hora)) campos.erro("hora", "Informe a hora, por exemplo 09:30.");
 }
 
