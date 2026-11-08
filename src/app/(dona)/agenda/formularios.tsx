@@ -434,6 +434,7 @@ export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; te
         <Campo
           nome="motivo"
           rotulo="Motivo (fica no cancelamento da receita)"
+          dica="Não escreva nome nem telefone do cliente: o motivo fica guardado no histórico."
           erro={estado.erros.motivo}
         >
           {(props) => <textarea {...props} defaultValue={estado.motivo} maxLength={500} />}

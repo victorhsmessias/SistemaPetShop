@@ -168,8 +168,15 @@ export function rotuloDiaMes(dia: Dia): string {
 // ---------------------------------------------------------------------------------------------------------
 // Meses (Financeiro). Conta em texto, sem fuso: o mês de um instante vem de noFuso(...).dia.
 
+// Anos aceitos em ?mes=. Fora disso o Date.UTC erra (anos 0 a 99 viram 1900 a 1999) ou o ISO sai com seis
+// dígitos (+010000), o que quebraria a consulta. Os meses vizinhos dos extremos caem no mês atual.
+const ANO_MINIMO = 2000;
+const ANO_MAXIMO = 2100;
+
 export function ehMes(valor: unknown): valor is Mes {
-  return typeof valor === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(valor);
+  if (typeof valor !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(valor)) return false;
+  const ano = Number(valor.slice(0, 4));
+  return ano >= ANO_MINIMO && ano <= ANO_MAXIMO;
 }
 
 export function mesDoDia(dia: Dia): Mes {

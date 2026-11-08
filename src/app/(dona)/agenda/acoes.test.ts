@@ -16,6 +16,7 @@ import {
 import { auth } from "@/modules/acesso/auth";
 import { listarAgenda, obterAtendimento } from "@/modules/agenda/atendimentos";
 import { MENSAGEM_JA_CONCLUIDO } from "@/modules/agenda/conclusao";
+import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { auditoria } from "@/modules/auditoria/schema";
 import { criarServico } from "@/modules/catalogo/servicos";
 import { lancamento } from "@/modules/financeiro/schema";
@@ -39,9 +40,13 @@ const {
   mudarStatusAcao,
 } = await import("@/app/(dona)/agenda/acoes");
 const { salvarPetAcao, salvarTutorAcao } = await import("@/app/(dona)/acoes");
+const { default: PaginaAtendimento } = await import("@/app/(dona)/agenda/[id]/page");
 
 const SENHA = "senha-de-teste-123";
+// Cada teste cria os próprios atendimentos, e os que leem a agenda de um dia usam um dia só deles.
 const DIA = "2026-12-01";
+const DIA_SEM_SESSAO = "2026-12-21";
+const DIA_OCUPADO = "2026-12-02";
 let a: DadosEmpresa;
 let b: DadosEmpresa;
 let donaAId: string;
@@ -109,6 +114,34 @@ async function idsDoDia(dados: DadosEmpresa, dia = DIA) {
   return (await daEmpresa(dados, (tx) => listarAgenda(tx, dia))).atendimentos;
 }
 
+/** Atendimento agendado do pet de A com um item (banho de R$ 50,00 por padrão), gravado direto no banco. */
+async function novoAtendimentoDeA({
+  inicio = "2026-12-10T13:00:00Z",
+  minutos = 60,
+  precoCentavos = 5000,
+}: { inicio?: string; minutos?: number; precoCentavos?: number } = {}): Promise<string> {
+  return daEmpresa(a, async (tx) => {
+    const comeco = new Date(inicio);
+    const [at] = await tx
+      .insert(atendimento)
+      .values({ petId: a.petId, inicio: comeco, fim: new Date(comeco.getTime() + minutos * 60_000) })
+      .returning({ id: atendimento.id });
+    await tx
+      .insert(atendimentoItem)
+      .values({ atendimentoId: at!.id, servicoId: a.servicoId, descricao: "Banho", precoCentavos, duracaoMin: minutos });
+    return at!.id;
+  });
+}
+
+/** O texto de uma árvore JSX devolvida por uma página do servidor (componentes do cliente entram sem texto). */
+function textoDe(no: unknown): string {
+  if (no === null || no === undefined || typeof no === "boolean") return "";
+  if (typeof no === "string" || typeof no === "number") return String(no);
+  if (Array.isArray(no)) return no.map(textoDe).join("");
+  const props = (no as { props?: { children?: unknown } }).props;
+  return props ? textoDe(props.children) : "";
+}
+
 beforeAll(async () => {
   a = await criarEmpresaComDados("Agenda Ações A");
   b = await criarEmpresaComDados("Agenda Ações B");
@@ -147,19 +180,26 @@ describe("sem sessão, toda ação da agenda é recusada e manda para o login", 
   });
 
   it("e nada é agendado", async () => {
-    await destinoDoRedirect(agendarAcao(vazio, agendamento("06:00")));
-    expect(await idsDoDia(a)).toEqual([]);
+    await destinoDoRedirect(agendarAcao(vazio, agendamento("06:00", { dia: DIA_SEM_SESSAO })));
+    expect(await idsDoDia(a, DIA_SEM_SESSAO)).toEqual([]);
   });
 
   it("e nada é concluído", async () => {
-    await destinoDoRedirect(concluirAcao({}, conclusao(a.atendimentoId, a.formaPagamentoId)));
-    expect(await receitasDoAtendimento(a, a.atendimentoId)).toEqual([]);
+    const id = await novoAtendimentoDeA();
+    await destinoDoRedirect(concluirAcao({}, conclusao(id, a.formaPagamentoId)));
+    expect(await receitasDoAtendimento(a, id)).toEqual([]);
+    expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
   });
 
-  it("o administrador é mandado para /admin", async () => {
+  it("o administrador é mandado para /admin, sem agendar, concluir nem desfazer", async () => {
+    const id = await novoAtendimentoDeA();
     requisicao.cookie = cookieAdmin;
-    expect(await destinoDoRedirect(agendarAcao(vazio, agendamento("06:00")))).toBe("/admin");
-    expect(await destinoDoRedirect(concluirAcao({}, conclusao(a.atendimentoId, a.formaPagamentoId)))).toBe("/admin");
+    expect(await destinoDoRedirect(agendarAcao(vazio, agendamento("06:00", { dia: DIA_SEM_SESSAO })))).toBe("/admin");
+    expect(await destinoDoRedirect(concluirAcao({}, conclusao(id, a.formaPagamentoId)))).toBe("/admin");
+    expect(await destinoDoRedirect(desfazerConclusaoAcao(semMotivo, formulario({ id, motivo: "x" })))).toBe("/admin");
+    expect(await idsDoDia(a, DIA_SEM_SESSAO)).toEqual([]);
+    expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
+    expect(await receitasDoAtendimento(a, id)).toEqual([]);
   });
 });
 
@@ -193,24 +233,27 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
   });
 
   it("toque errado: desfaz a confirmação; status desatualizado volta com mensagem", async () => {
-    const [atendimento] = await idsDoDia(a);
-    expect(await mudarStatusAcao({}, formulario({ id: atendimento!.id, de: "confirmado", para: "agendado" }))).toEqual({});
-    const repetido = await mudarStatusAcao({}, formulario({ id: atendimento!.id, de: "confirmado", para: "agendado" }));
+    const id = await novoAtendimentoDeA();
+    expect(await mudarStatusAcao({}, formulario({ id, de: "agendado", para: "confirmado" }))).toEqual({});
+    expect(await mudarStatusAcao({}, formulario({ id, de: "confirmado", para: "agendado" }))).toEqual({});
+    const repetido = await mudarStatusAcao({}, formulario({ id, de: "confirmado", para: "agendado" }));
     expect(repetido.erro).toContain("acabou de ser alterado");
-    expect((await daEmpresa(a, (tx) => obterAtendimento(tx, atendimento!.id)))!.status).toBe("agendado");
+    expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
   });
 
   it("horário ocupado volta como aviso, com os dados digitados; confirmado, agenda", async () => {
-    const aviso = await agendarAcao(vazio, agendamento("10:00", { observacoes: "Chega mais cedo" }));
+    // 09:00–10:30 em São Paulo (fuso padrão da empresa).
+    await novoAtendimentoDeA({ inicio: `${DIA_OCUPADO}T12:00:00Z`, minutos: 90 });
+    const aviso = await agendarAcao(vazio, agendamento("10:00", { dia: DIA_OCUPADO, observacoes: "Chega mais cedo" }));
     expect(aviso.conflitos).toEqual([expect.objectContaining({ horario: "09:00–10:30", petNome: "Pet Agenda Ações A" })]);
     expect(aviso.valores).toMatchObject({ hora: "10:00", observacoes: "Chega mais cedo", [`preco_${tosaId}`]: "40,00" });
     expect(aviso.servicos).toEqual([a.servicoId, tosaId]);
 
     const destino = await destinoDoRedirect(
-      agendarAcao(aviso, agendamento("10:00", { horarioAvisado: aviso.horarioAvisado! })),
+      agendarAcao(aviso, agendamento("10:00", { dia: DIA_OCUPADO, horarioAvisado: aviso.horarioAvisado! })),
     );
-    expect(destino).toBe(`/agenda?dia=${DIA}`);
-    expect(await idsDoDia(a)).toHaveLength(2);
+    expect(destino).toBe(`/agenda?dia=${DIA_OCUPADO}`);
+    expect(await idsDoDia(a, DIA_OCUPADO)).toHaveLength(2);
   });
 
   it("erros voltam por campo, sem perder o que foi digitado", async () => {
@@ -273,7 +316,7 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
   });
 
   it("conclui com a forma tocada; o segundo toque recebe a mensagem; desfazer pede o motivo e cancela a receita", async () => {
-    const id = a.atendimentoId;
+    const id = await novoAtendimentoDeA();
     expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({});
     expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({ erro: MENSAGEM_JA_CONCLUIDO });
     const [receita, ...outras] = await receitasDoAtendimento(a, id);
@@ -312,9 +355,21 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
   });
 
   it("total diferente do que a tela mostrava volta com mensagem, sem concluir", async () => {
-    const r = await concluirAcao({}, conclusao(a.atendimentoId, a.formaPagamentoId, "agendado", "1"));
+    const id = await novoAtendimentoDeA();
+    const r = await concluirAcao({}, conclusao(id, a.formaPagamentoId, "agendado", "1"));
     expect(r.erro).toMatch(/O total mudou para R\$\s50,00/);
-    expect(await receitasDoAtendimento(a, a.atendimentoId)).toHaveLength(1); // só a cancelada do teste anterior
+    expect(await receitasDoAtendimento(a, id)).toEqual([]);
+    expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
+  });
+
+  it("total zero conclui sem forma de pagamento e sem lançamento, e a página avisa que não houve receita", async () => {
+    const id = await novoAtendimentoDeA({ precoCentavos: 0 });
+    expect(await concluirAcao({}, formulario({ id, de: "agendado", total: "0" }))).toEqual({});
+    expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("concluido");
+    expect(await receitasDoAtendimento(a, id)).toEqual([]);
+
+    const pagina = await PaginaAtendimento({ params: Promise.resolve({ id }) });
+    expect(textoDe(pagina).replace(/\s/g, " ")).toContain("Concluído sem receita: o total era R$ 0,00.");
   });
 
   it("não conclui nem desfaz o atendimento da B, mesmo com os ids certos", async () => {
@@ -326,9 +381,11 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
       motivo: "x",
     });
     // A forma de pagamento da B no atendimento da A também não passa.
-    expect(await concluirAcao({}, conclusao(a.atendimentoId, b.formaPagamentoId))).toEqual({
+    const deA = await novoAtendimentoDeA();
+    expect(await concluirAcao({}, conclusao(deA, b.formaPagamentoId))).toEqual({
       erro: "Escolha uma forma de pagamento.",
     });
+    expect(await receitasDoAtendimento(a, deA)).toEqual([]);
     const deB = await daEmpresa(b, (tx) => obterAtendimento(tx, b.atendimentoId));
     expect(deB!.status).toBe("agendado");
     expect(await receitasDoAtendimento(b, b.atendimentoId)).toEqual([]);

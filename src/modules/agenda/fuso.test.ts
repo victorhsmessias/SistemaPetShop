@@ -135,6 +135,18 @@ describe("meses", () => {
     expect(ehMes(undefined)).toBe(false);
   });
 
+  it("recusa anos fora de 2000 a 2100, que quebrariam a conta e a consulta", () => {
+    expect(ehMes("2000-01")).toBe(true);
+    expect(ehMes("2100-12")).toBe(true);
+    expect(ehMes("1999-12")).toBe(false);
+    expect(ehMes("2101-01")).toBe(false);
+    expect(ehMes("9999-12")).toBe(false);
+    expect(ehMes("0000-01")).toBe(false);
+    expect(ehMes("0050-05")).toBe(false);
+    expect(somarMeses("2100-12", 1)).toBe("2101-01");
+    expect(somarMeses("2000-01", -1)).toBe("1999-12");
+  });
+
   it("mês do dia, primeiro dia e navegação atravessando o ano", () => {
     expect(mesDoDia("2026-11-30")).toBe("2026-11");
     expect(primeiroDiaDoMes("2026-11")).toBe("2026-11-01");

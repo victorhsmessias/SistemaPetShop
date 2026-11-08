@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { bancoApp, bancoPlataforma, encerrarConexoes } from "@/db/clientes";
@@ -214,27 +214,31 @@ describe("restrições que o banco garante no lançamento", () => {
   });
 
   it("uma receita válida por atendimento: a segunda é recusada, a cancelada não conta", async () => {
-    const [primeira] = await naEmpresaA((tx) =>
-      tx.insert(lancamento).values(receitaDeA()).returning({ id: lancamento.id }),
-    );
-    await esperarErroPg(naEmpresaA((tx) => tx.insert(lancamento).values(receitaDeA())), "23505");
+    try {
+      const [primeira] = await naEmpresaA((tx) =>
+        tx.insert(lancamento).values(receitaDeA()).returning({ id: lancamento.id }),
+      );
+      await esperarErroPg(naEmpresaA((tx) => tx.insert(lancamento).values(receitaDeA())), "23505");
 
-    await naEmpresaA((tx) =>
-      tx
-        .update(lancamento)
-        .set({ status: "cancelado", motivoCancelamento: "teste" })
-        .where(eq(lancamento.id, primeira!.id)),
-    );
-    const [segunda] = await naEmpresaA((tx) =>
-      tx.insert(lancamento).values(receitaDeA()).returning({ id: lancamento.id }),
-    );
-    expect(segunda!.id).not.toBe(primeira!.id);
-    await naEmpresaA((tx) =>
-      tx
-        .update(lancamento)
-        .set({ status: "cancelado", motivoCancelamento: "teste" })
-        .where(eq(lancamento.id, segunda!.id)),
-    );
+      await naEmpresaA((tx) =>
+        tx
+          .update(lancamento)
+          .set({ status: "cancelado", motivoCancelamento: "teste" })
+          .where(eq(lancamento.id, primeira!.id)),
+      );
+      const [segunda] = await naEmpresaA((tx) =>
+        tx.insert(lancamento).values(receitaDeA()).returning({ id: lancamento.id }),
+      );
+      expect(segunda!.id).not.toBe(primeira!.id);
+    } finally {
+      // Mesmo se o teste falhar, o atendimento de A fica sem receita válida, para não barrar os outros testes.
+      await naEmpresaA((tx) =>
+        tx
+          .update(lancamento)
+          .set({ status: "cancelado", motivoCancelamento: "limpeza do teste" })
+          .where(and(eq(lancamento.atendimentoId, a.atendimentoId), ne(lancamento.status, "cancelado"))),
+      );
+    }
   });
 
   it("criar e cancelar lançamento ficam na auditoria, com o autor da transação", async () => {

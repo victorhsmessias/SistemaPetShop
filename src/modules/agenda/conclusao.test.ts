@@ -38,6 +38,10 @@ const emC = naEmpresa(() => c);
 
 /** 23h30 de 10/11 em Manaus = 03h30 UTC de 11/11. */
 const TARDE_DA_NOITE_EM_MANAUS = instanteNoFuso("2026-11-10", "23:30", "America/Manaus");
+/** 00h30 de 11/11 em Manaus = 04h30 UTC de 11/11. */
+const MADRUGADA_EM_MANAUS = instanteNoFuso("2026-11-11", "00:30", "America/Manaus");
+/** "Agora" fixo dos testes que concluem sem olhar a data: a receita nunca depende do relógio da máquina. */
+const AGORA = instanteNoFuso("2026-11-12", "10:00", "America/Manaus");
 
 /** Atendimento do pet da empresa com um item por preço (o primeiro é o banho do apoio, o segundo a tosa). */
 async function novoAtendimento(
@@ -139,7 +143,7 @@ describe("concluir", () => {
   it.each([["cancelado"], ["faltou"]] as const)("recusa atendimento %s, sem criar receita", async (status) => {
     const id = await novoAtendimento(emA, a, [5000]);
     await passarPor(emA, id, [status]);
-    const resultado = await emA((tx) => concluir(tx, id, { de: status, formaPagamentoId: a.formaPagamentoId }));
+    const resultado = await emA((tx) => concluir(tx, id, { de: status, formaPagamentoId: a.formaPagamentoId }, AGORA));
     expect(resultado.ok).toBe(false);
     expect(!resultado.ok && resultado.erros.geral).toMatch(/não pode ser concluído/);
     expect(await receitasDe(emA, id)).toEqual([]);
@@ -147,8 +151,8 @@ describe("concluir", () => {
 
   it("recusa o já concluído com a mensagem, sem segunda receita", async () => {
     const id = await novoAtendimento(emA, a, [5000]);
-    await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }));
-    const deNovo = await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }));
+    await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }, AGORA));
+    const deNovo = await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }, AGORA));
     expect(deNovo).toEqual({ ok: false, erros: { geral: MENSAGEM_JA_CONCLUIDO } });
     expect(await receitasDe(emA, id)).toHaveLength(1);
   });
@@ -156,7 +160,7 @@ describe("concluir", () => {
   it("duas conclusões ao mesmo tempo geram uma só receita, e a outra recebe a mensagem", async () => {
     const id = await novoAtendimento(emA, a, [5000, 3200]);
     const entrada = { de: "agendado", formaPagamentoId: a.formaPagamentoId, totalVisto: 8200 };
-    const resultados = await Promise.all([emA((tx) => concluir(tx, id, entrada)), emA((tx) => concluir(tx, id, entrada))]);
+    const resultados = await Promise.all([emA((tx) => concluir(tx, id, entrada, AGORA)), emA((tx) => concluir(tx, id, entrada, AGORA))]);
 
     expect(resultados.filter((r) => r.ok)).toHaveLength(1);
     expect(resultados.filter((r) => !r.ok)).toEqual([{ ok: false, erros: { geral: MENSAGEM_JA_CONCLUIDO } }]);
@@ -166,12 +170,12 @@ describe("concluir", () => {
   it("status ou total diferentes do que a tela mostrava: nada é gravado", async () => {
     const id = await novoAtendimento(emA, a, [5000]);
     await passarPor(emA, id, ["confirmado"]);
-    expect(await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }))).toEqual({
+    expect(await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }, AGORA))).toEqual({
       ok: false,
       erros: { geral: MENSAGEM_MUDOU },
     });
     const totalMudou = await emA((tx) =>
-      concluir(tx, id, { de: "confirmado", formaPagamentoId: a.formaPagamentoId, totalVisto: 4000 }),
+      concluir(tx, id, { de: "confirmado", formaPagamentoId: a.formaPagamentoId, totalVisto: 4000 }, AGORA),
     );
     expect(!totalMudou.ok && totalMudou.erros.geral).toMatch(/O total mudou para R\$\s50,00/);
     expect((await atendimentoDe(emA, id))!.status).toBe("confirmado");
@@ -181,7 +185,7 @@ describe("concluir", () => {
   it("forma de pagamento ausente, inativa ou de outra empresa é recusada", async () => {
     const id = await novoAtendimento(emA, a, [5000]);
     for (const formaPagamentoId of [undefined, "x", valeInativoId, b.formaPagamentoId]) {
-      expect(await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId }))).toEqual({
+      expect(await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId }, AGORA))).toEqual({
         ok: false,
         erros: { formaPagamento: "Escolha uma forma de pagamento." },
       });
@@ -191,7 +195,7 @@ describe("concluir", () => {
 
   it("total zero conclui sem receita e sem forma de pagamento; desfazer não pede motivo", async () => {
     const id = await novoAtendimento(emA, a, [0]);
-    const resultado = await emA((tx) => concluir(tx, id, { de: "agendado", totalVisto: 0 }));
+    const resultado = await emA((tx) => concluir(tx, id, { de: "agendado", totalVisto: 0 }, AGORA));
     expect(resultado).toMatchObject({ ok: true, valor: { totalCentavos: 0, receitaId: null } });
     expect((await atendimentoDe(emA, id))!.status).toBe("concluido");
     expect(await receitasDe(emA, id)).toEqual([]);
@@ -204,7 +208,7 @@ describe("desfazer a conclusão", () => {
   it("cancela a receita com o motivo e volta ao status de antes de concluir (pronto)", async () => {
     const id = await novoAtendimento(emA, a, [5000]);
     await passarPor(emA, id, ["em_atendimento", "pronto"]);
-    await emA((tx) => concluir(tx, id, { de: "pronto", formaPagamentoId: a.formaPagamentoId }));
+    await emA((tx) => concluir(tx, id, { de: "pronto", formaPagamentoId: a.formaPagamentoId }, AGORA));
 
     expect(await emA((tx) => desfazerConclusao(tx, id, "  "))).toEqual({
       ok: false,
@@ -229,14 +233,14 @@ describe("desfazer a conclusão", () => {
     const id = await novoAtendimento(emA, a, [5000, 3200]);
     await passarPor(emA, id, ["confirmado"]);
     const confirmadoEm = (await atendimentoDe(emA, id))!.confirmadoEm;
-    await emA((tx) => concluir(tx, id, { de: "confirmado", formaPagamentoId: a.formaPagamentoId }));
+    await emA((tx) => concluir(tx, id, { de: "confirmado", formaPagamentoId: a.formaPagamentoId }, AGORA));
     await emA((tx) => desfazerConclusao(tx, id, "Valor errado"));
     expect(await atendimentoDe(emA, id)).toMatchObject({ status: "confirmado", confirmadoEm, concluidoEm: null });
 
     const [dinheiro] = await emA((tx) =>
       tx.select({ id: formaPagamento.id }).from(formaPagamento).where(eq(formaPagamento.nome, "Dinheiro")),
     );
-    const outra = await emA((tx) => concluir(tx, id, { de: "confirmado", formaPagamentoId: dinheiro!.id }));
+    const outra = await emA((tx) => concluir(tx, id, { de: "confirmado", formaPagamentoId: dinheiro!.id }, AGORA));
     expect(outra.ok).toBe(true);
 
     const receitas = await receitasDe(emA, id);
@@ -246,9 +250,62 @@ describe("desfazer a conclusão", () => {
     ]);
   });
 
+  it("o segundo desfazer volta ao status da segunda conclusão, não ao da primeira", async () => {
+    const id = await novoAtendimento(emA, a, [5000]);
+    await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }, AGORA));
+    expect(await emA((tx) => desfazerConclusao(tx, id, "Primeiro engano"))).toEqual({
+      ok: true,
+      valor: { id, status: "agendado" },
+    });
+
+    await passarPor(emA, id, ["confirmado"]);
+    await emA((tx) => concluir(tx, id, { de: "confirmado", formaPagamentoId: a.formaPagamentoId }, AGORA));
+    expect(await emA((tx) => desfazerConclusao(tx, id, "Segundo engano"))).toEqual({
+      ok: true,
+      valor: { id, status: "confirmado" },
+    });
+    expect(await atendimentoDe(emA, id)).toMatchObject({ status: "confirmado", concluidoEm: null });
+    expect((await receitasDe(emA, id)).map((r) => [r.status, r.motivoCancelamento])).toEqual([
+      ["cancelado", "Primeiro engano"],
+      ["cancelado", "Segundo engano"],
+    ]);
+  });
+
+  it.each([
+    ["sem confirmado_em, volta a agendado", null, "agendado"],
+    ["com confirmado_em, volta a confirmado", new Date("2026-11-09T12:00:00Z"), "confirmado"],
+  ] as const)("sem evento de conclusão na auditoria, deduz por confirmado_em: %s", async (_caso, confirmadoEm, esperado) => {
+    // O atendimento nasce já concluído (como um registro anterior à auditoria da conclusão): o único evento é
+    // o "criou", sem "antes", então o status de antes da conclusão é deduzido de confirmado_em.
+    const id = await emA(async (tx) => {
+      const [at] = await tx
+        .insert(atendimento)
+        .values({
+          petId: a.petId,
+          inicio: new Date("2026-11-10T13:00:00Z"),
+          fim: new Date("2026-11-10T14:00:00Z"),
+          status: "concluido",
+          concluidoEm: AGORA,
+          confirmadoEm,
+        })
+        .returning({ id: atendimento.id });
+      await tx
+        .insert(atendimentoItem)
+        .values({ atendimentoId: at!.id, servicoId: a.servicoId, descricao: "Banho", precoCentavos: 0, duracaoMin: 30 });
+      return at!.id;
+    });
+    const eventos = await emA((tx) =>
+      tx.select().from(auditoria).where(eq(auditoria.registroId, id)).orderBy(asc(auditoria.id)),
+    );
+    expect(eventos.map((e) => e.acao)).toEqual(["criou"]);
+
+    expect(await emA((tx) => desfazerConclusao(tx, id, ""))).toEqual({ ok: true, valor: { id, status: esperado } });
+    expect(await atendimentoDe(emA, id)).toMatchObject({ status: esperado, confirmadoEm, concluidoEm: null });
+  });
+
   it("a conclusão e o desfazer ficam na auditoria, no atendimento e no lançamento, com o autor", async () => {
     const id = await novoAtendimento(emA, a, [5000]);
-    await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }));
+    await emA((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: a.formaPagamentoId }, AGORA));
     await emA((tx) => desfazerConclusao(tx, id, "Engano"));
     const [receita] = await receitasDe(emA, id);
 
@@ -268,10 +325,39 @@ describe("desfazer a conclusão", () => {
   });
 });
 
+describe("contar concluídos no fuso da empresa", () => {
+  // D fica em Manaus e só tem os dois atendimentos deste teste, para a conta ser exata.
+  let d: DadosEmpresa;
+  const emD = naEmpresa(() => d);
+
+  beforeAll(async () => {
+    d = await criarEmpresaComDados("Conclusão D");
+    await bancoPlataforma().update(empresa).set({ fusoHorario: "America/Manaus" }).where(eq(empresa.id, d.empresaId));
+  });
+
+  afterAll(async () => {
+    if (d) await apagarEmpresas([d.empresaId]);
+  });
+
+  it("em Manaus, 23h30 local conta no dia 10 e 00h30 local conta no dia 11 (os dois já são 11/11 em UTC)", async () => {
+    const fuso = "America/Manaus";
+    for (const quando of [TARDE_DA_NOITE_EM_MANAUS, MADRUGADA_EM_MANAUS]) {
+      const id = await novoAtendimento(emD, d, [5000], [d.servicoId]);
+      const r = await emD((tx) => concluir(tx, id, { de: "agendado", formaPagamentoId: d.formaPagamentoId }, quando));
+      if (!r.ok) throw new Error(JSON.stringify(r.erros));
+    }
+    const contar = (dia: string, seguinte: string) =>
+      emD((tx) => contarConcluidos(tx, inicioDoDia(dia, fuso), inicioDoDia(seguinte, fuso)));
+    expect(await contar("2026-11-10", "2026-11-11")).toBe(1);
+    expect(await contar("2026-11-11", "2026-11-12")).toBe(1);
+    expect(await contar("2026-11-09", "2026-11-10")).toBe(0);
+  });
+});
+
 describe("isolamento da conclusão", () => {
   it("a empresa A não conclui nem desfaz o atendimento de B, mesmo com os ids certos", async () => {
     expect(
-      await emA((tx) => concluir(tx, b.atendimentoId, { de: "agendado", formaPagamentoId: b.formaPagamentoId })),
+      await emA((tx) => concluir(tx, b.atendimentoId, { de: "agendado", formaPagamentoId: b.formaPagamentoId }, AGORA)),
     ).toEqual({ ok: false, erros: { geral: MENSAGEM_NAO_ENCONTRADO } });
     expect(await emA((tx) => desfazerConclusao(tx, b.atendimentoId, "x"))).toEqual({
       ok: false,
