@@ -1,6 +1,6 @@
 # Modelo de dados — Marco 1
 
-Versão 1.6 · 01/11/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria) e 0010 (login).
+Versão 1.7 · 07/11/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria), 0010 (login) e 0012 (dados padrão da empresa).
 
 ## Convenções
 
@@ -100,7 +100,7 @@ Versão 1.6 · 01/11/2026 · Detalha a seção 3 do planejamento para as tabelas
 - `confirmado` volta para `agendado` e limpa `confirmado_em`;
 - `em_atendimento`, `cancelado` e `faltou` voltam para `confirmado` se `confirmado_em` estiver preenchido, senão para `agendado`;
 - `pronto` volta para `em_atendimento`;
-- desfazer `concluido` fica para quando o pagamento entrar, porque envolve cancelar a receita.
+- `concluido` volta ao status que o atendimento tinha antes de concluir, lido da auditoria (o `antes` do último evento em que ele passou a `concluido`), e limpa `concluido_em`. Na mesma transação, a receita é cancelada com motivo obrigatório. Concluir de novo cria uma receita nova. Detalhes em "Concluir atendimento".
 
 **Horário ocupado.** No aviso de sobreposição, `cancelado` e `faltou` não ocupam horário.
 
@@ -125,8 +125,10 @@ Versão 1.6 · 01/11/2026 · Detalha a seção 3 do planejamento para as tabelas
 | id | uuid | chave |
 | empresa_id | uuid | da transação |
 | nome | text | Pix, Dinheiro, Débito e Crédito criadas junto com a empresa |
-| taxa_percentual | numeric(5,2) | padrão 0; usado no M3 |
+| taxa_percentual | numeric(5,2) | de 0 a 100; padrão 0; usado no M3 |
 | ativa | boolean | padrão true |
+
+Índices: único em (empresa_id, nome) e único em (empresa_id, id).
 
 ### categoria
 
@@ -138,7 +140,9 @@ Versão 1.6 · 01/11/2026 · Detalha a seção 3 do planejamento para as tabelas
 | tipo | text | `receita` ou `despesa` |
 | ativa | boolean | padrão true |
 
-Criadas junto com a empresa: "Atendimentos" e "Pacotes", do tipo receita. As de despesa entram no M3.
+Criadas junto com a empresa: "Atendimentos" e "Pacotes", do tipo receita. As de despesa entram no M3. Índices: único em (empresa_id, tipo, nome), que deixa a busca de "Atendimentos" sem ambiguidade, e único em (empresa_id, id).
+
+**Dados padrão da empresa (ADR 0012).** A trigger `empresa_dados_padrao`, `AFTER INSERT ON empresa`, chama a função `criar_dados_padrao_da_empresa()`, que cria as formas de pagamento e as categorias acima. A empresa é criada pelo papel `plataforma`, sem acesso às tabelas de negócio, então a função é `SECURITY DEFINER` e pertence ao `migrador`, dono das tabelas, que não passa pelo RLS enquanto as tabelas não tiverem `FORCE ROW LEVEL SECURITY`. Ela tem `search_path` fixo, não recebe entrada além do id da empresa e é a única função desse tipo (teste de estrutura). A criação é atômica com a empresa. A migration que a criou preencheu as empresas existentes.
 
 ### lancamento
 
@@ -155,13 +159,14 @@ Criadas junto com a empresa: "Atendimentos" e "Pacotes", do tipo receita. As de 
 | origem | text | `atendimento`, `pacote`, `despesa_fixa` ou `manual` |
 | atendimento_id | uuid | chave composta → atendimento; obrigatório quando a origem é atendimento |
 | forma_pagamento_id | uuid | chave composta → forma_pagamento; obrigatória em receita paga |
-| categoria_id | uuid | chave composta → categoria |
+| categoria_id | uuid | chave composta → categoria; obrigatório |
 | motivo_cancelamento | text | obrigatório quando cancelado |
 
 Restrições:
 
 - Índice único em `atendimento_id`, só entre lançamentos não cancelados: um atendimento gera no máximo uma receita válida.
-- `check`: cancelado exige motivo; origem atendimento exige `atendimento_id`; receita paga exige forma de pagamento.
+- `check`: cancelado exige motivo (não vazio); origem atendimento exige `atendimento_id`; receita paga exige forma de pagamento.
+- A descrição da receita de atendimento é genérica ("Atendimento"). Nunca leva nome nem telefone do tutor, para a anonimização (H12) não deixar rastro. A tela liga o pet pelo `atendimento_id`.
 
 Índice: (empresa_id, data).
 
@@ -248,6 +253,8 @@ Nada é apagado, exceto itens de atendimento:
 - vínculos sempre dentro da mesma empresa;
 - uma receita válida por atendimento;
 - motivo em todo cancelamento de lançamento;
+- receita paga sempre com forma de pagamento, e receita de atendimento sempre com o atendimento;
+- formas de pagamento e categorias padrão criadas com cada empresa (trigger);
 - nada apagado, exceto itens de atendimento;
 - valores nunca negativos e fim depois do início;
 - um item por serviço em cada atendimento;
@@ -256,7 +263,8 @@ Nada é apagado, exceto itens de atendimento:
 
 **O app garante:**
 
-- transições de status e o status anterior para desfazer;
+- transições de status e o status anterior para desfazer, inclusive o de antes da conclusão, lido da auditoria;
+- conclusão só por uma função, com a forma de pagamento ativa e da empresa, o valor igual à soma dos itens e o dia no fuso da empresa;
 - mudança de status gravada só se o status ainda for o que a tela mostrava, o que barra toque duplo e página desatualizada;
 - itens alterados só enquanto o atendimento não estiver concluído, cancelado ou com falta;
 - aviso de horário ocupado, sem contar cancelados e faltas;
@@ -270,14 +278,18 @@ Nada é apagado, exceto itens de atendimento:
 
 ## Concluir atendimento: a transação mais importante do M1
 
-Tudo numa única transação:
+Só pela função de conclusão do módulo `agenda`. Tudo numa única transação:
 
-1. Confere se o status permite concluir. Vale qualquer status ativo (agendado, confirmado, em atendimento ou pronto), para ela não precisar passar por todos durante o dia.
-2. Grava `status = concluido` e `concluido_em`.
-3. Se o atendimento for avulso, cria a receita: soma dos itens, forma de pagamento escolhida e data de hoje no fuso da empresa.
+1. Confere se o status permite concluir. Vale qualquer status ativo (agendado, confirmado, em atendimento ou pronto), para ela não precisar passar por todos durante o dia. O status e o total precisam ser os que a tela mostrava.
+2. Grava `status = concluido` e `concluido_em`, com o `UPDATE` condicionado ao status lido.
+3. Se o atendimento for avulso, cria a receita: soma dos itens, forma de pagamento escolhida (obrigatória, ativa e da empresa), status `pago`, categoria "Atendimentos" e data de hoje no fuso da empresa.
 4. As triggers registram as alterações na auditoria.
 
-Dois toques quase simultâneos em "concluir" podem passar juntos pelo passo 1. O índice único da receita barra o segundo, e o app avisa que o atendimento já foi concluído.
+**Total zero.** O banco exige valor maior que zero. O atendimento é concluído sem receita e sem pedir forma de pagamento, e a tela avisa que não houve receita.
+
+**Toque duplo.** Dois toques quase simultâneos passam juntos pelo passo 1. No passo 2, o segundo espera a trava da linha e, depois, o status já não é o lido, então nada é gravado. O índice único da receita é a segunda barreira. Nos dois casos, o app avisa "este atendimento já foi concluído", sem erro técnico.
+
+**Desfazer a conclusão.** Também numa única transação: volta ao status que o atendimento tinha antes de concluir (o `antes` do último evento de conclusão na auditoria; sem evento, deduz por `confirmado_em`), limpa `concluido_em` e cancela a receita com motivo obrigatório. Sem receita (total zero), não pede motivo. A receita cancelada fica no histórico. Concluir de novo cria outra.
 
 ## Teste de isolamento (obrigatório no CI)
 

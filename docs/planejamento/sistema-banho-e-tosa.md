@@ -1,6 +1,6 @@
 # Sistema de gestão para banho e tosa — Planejamento
 
-Versão 2.5 · 01/11/2026 · Situação: Marco 1 em andamento. Prontos: a base (sessão 01), o login com o painel do administrador (sessão 02) e tutores, pets e serviços (sessão 03). Em andamento: a agenda (sessão 04). As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
+Versão 2.6 · 07/11/2026 · Situação: Marco 1 em andamento. Prontos: a base (sessão 01), o login com o painel do administrador (sessão 02), tutores, pets e serviços (sessão 03) e a agenda (sessão 04). Em andamento: concluir o atendimento com pagamento e a receita no dia e no mês (sessão 05). As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
 
 ## Resumo executivo
 
@@ -230,7 +230,7 @@ stateDiagram-v2
   faltou --> [*]
 ```
 
-- **Correção de toque errado:** o atendimento volta ao status anterior, deduzido sem coluna nova (regras no modelo de dados). Reabrir um cancelado ou uma falta é o mesmo que desfazer. Toda mudança fica na auditoria.
+- **Correção de toque errado:** o atendimento volta ao status anterior, deduzido sem coluna nova (regras no modelo de dados). Reabrir um cancelado ou uma falta é o mesmo que desfazer. Desfazer uma conclusão cancela a receita com motivo e volta ao status de antes de concluir. Toda mudança fica na auditoria.
 - **Pacote vendido:** ativo → encerrado (saldo zero), vencido (passou da validade) ou cancelado.
 - **Lançamento:** a receber → pago. Qualquer um → cancelado, com motivo.
 
@@ -305,6 +305,7 @@ flowchart LR
 | 0009 | Notificações da dona por Web Push no app instalado | aceito |
 | 0010 | Login com e-mail e senha usando Better Auth | aceito |
 | 0011 | Auditoria das ações de login fora da transação | aceito |
+| 0012 | Dados padrão da empresa criados por trigger com SECURITY DEFINER | aceito |
 
 ## 5. Segurança e acesso
 
@@ -457,6 +458,6 @@ Não há sistema anterior: a agenda é de memória, e o cadastro cresce a cada a
 - [x] Autenticação, permissões, auditoria e pontos de LGPD estão decididos. Os documentos legais ficam para antes da 2ª empresa.
 - [x] Existe plano de deploy, backup e monitoramento, com custo estimado.
 - [x] Os marcos de entrega, riscos e estratégia de testes estão listados.
-- [x] Toda decisão relevante tem um ADR (0001 a 0011).
+- [x] Toda decisão relevante tem um ADR (0001 a 0012).
 
 **Conclusão:** pronto para codar o M1. O M2 espera a resposta da pergunta 1.
