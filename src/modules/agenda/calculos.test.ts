@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calcularFim, conflitos, distribuirEmColunas, seSobrepoem } from "@/modules/agenda/calculos";
+import { calcularFim, conflitos, distribuirEmColunas, seSobrepoem, somarItens } from "@/modules/agenda/calculos";
 import type { StatusAtendimento } from "@/modules/agenda/status";
 
 const as = (hora: string) => new Date(`2026-11-10T${hora}:00Z`);
@@ -91,5 +91,16 @@ describe("blocos lado a lado", () => {
       { id: "curto", coluna: 0, colunas: 2 },
       { id: "seguinte", coluna: 1, colunas: 2 },
     ]);
+  });
+});
+
+describe("total do atendimento", () => {
+  it("é a soma dos preços dos itens, em centavos", () => {
+    expect(somarItens([{ precoCentavos: 5000 }, { precoCentavos: 3200 }, { precoCentavos: 1 }])).toBe(8201);
+  });
+
+  it("sem itens, ou só com itens de cortesia, é zero", () => {
+    expect(somarItens([])).toBe(0);
+    expect(somarItens([{ precoCentavos: 0 }])).toBe(0);
   });
 });

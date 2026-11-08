@@ -52,5 +52,7 @@ describe("centavos para texto", () => {
   it("exibição em reais", () => {
     expect(formatarReais(123456).replace(/\s/g, " ")).toBe("R$ 1.234,56");
     expect(formatarReais(0).replace(/\s/g, " ")).toBe("R$ 0,00");
+    expect(formatarReais(8200).replace(/\s/g, " ")).toBe("R$ 82,00");
+    expect(formatarReais(5).replace(/\s/g, " ")).toBe("R$ 0,05");
   });
 });

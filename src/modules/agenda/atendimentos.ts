@@ -63,8 +63,8 @@ export type ResultadoComAviso<T> = Resultado<T> | AvisoDeHorario;
 
 const MAXIMO_OBSERVACOES = 2000;
 const LIMITE_DA_BUSCA = 50;
-const MENSAGEM_NAO_ENCONTRADO = "Atendimento não encontrado.";
-const MENSAGEM_MUDOU =
+export const MENSAGEM_NAO_ENCONTRADO = "Atendimento não encontrado.";
+export const MENSAGEM_MUDOU =
   "Este atendimento acabou de ser alterado (talvez num toque repetido ou em outra tela). Confira e tente de novo.";
 
 function chaveDoHorario(inicio: Date, fim: Date): string {

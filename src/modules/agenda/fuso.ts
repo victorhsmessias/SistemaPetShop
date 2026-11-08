@@ -6,6 +6,8 @@
 
 export type Dia = string;
 export type Hora = string;
+/** AAAA-MM, como no campo month e no ?mes= do Financeiro. */
+export type Mes = string;
 
 const MINUTO = 60_000;
 const DIA = 24 * 60 * MINUTO;
@@ -161,4 +163,31 @@ export function rotuloCurtoDoDia(dia: Dia): string {
 /** "2 de nov.". */
 export function rotuloDiaMes(dia: Dia): string {
   return formatoDiaMes.format(dataDoDia(dia));
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Meses (Financeiro). Conta em texto, sem fuso: o mês de um instante vem de noFuso(...).dia.
+
+export function ehMes(valor: unknown): valor is Mes {
+  return typeof valor === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(valor);
+}
+
+export function mesDoDia(dia: Dia): Mes {
+  return dia.slice(0, 7);
+}
+
+export function primeiroDiaDoMes(mes: Mes): Dia {
+  return `${mes}-01`;
+}
+
+export function somarMeses(mes: Mes, meses: number): Mes {
+  const [ano, m] = [Number(mes.slice(0, 4)), Number(mes.slice(5, 7))];
+  return new Date(Date.UTC(ano, m - 1 + meses, 1)).toISOString().slice(0, 7);
+}
+
+const formatoDoMes = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", month: "long", year: "numeric" });
+
+/** "novembro de 2026". */
+export function rotuloDoMes(mes: Mes): string {
+  return formatoDoMes.format(dataDoDia(primeiroDiaDoMes(mes)));
 }

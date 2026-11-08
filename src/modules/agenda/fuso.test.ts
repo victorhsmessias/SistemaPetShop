@@ -4,13 +4,18 @@ import {
   diasDaSemana,
   ehDia,
   ehHora,
+  ehMes,
   hojeNoFuso,
   inicioDoDia,
   instanteNoFuso,
+  mesDoDia,
   noFuso,
+  primeiroDiaDoMes,
   rotuloDoDia,
+  rotuloDoMes,
   segundaDaSemana,
   somarDias,
+  somarMeses,
 } from "@/modules/agenda/fuso";
 
 describe("dia e hora digitados → instante", () => {
@@ -111,5 +116,33 @@ describe("dias e semanas", () => {
     expect(ehHora("09:05")).toBe(true);
     expect(ehHora("24:00")).toBe(false);
     expect(ehHora("9:05")).toBe(false);
+  });
+});
+
+describe("dia do lançamento", () => {
+  it("concluir às 23h30 em Manaus lança no dia local, não no dia seguinte do UTC", () => {
+    const concluidoEm = instanteNoFuso("2026-11-10", "23:30", "America/Manaus");
+    expect(concluidoEm.toISOString()).toBe("2026-11-11T03:30:00.000Z");
+    expect(hojeNoFuso("America/Manaus", concluidoEm)).toBe("2026-11-10");
+  });
+});
+
+describe("meses", () => {
+  it("reconhece AAAA-MM", () => {
+    expect(ehMes("2026-11")).toBe(true);
+    expect(ehMes("2026-13")).toBe(false);
+    expect(ehMes("2026-1")).toBe(false);
+    expect(ehMes(undefined)).toBe(false);
+  });
+
+  it("mês do dia, primeiro dia e navegação atravessando o ano", () => {
+    expect(mesDoDia("2026-11-30")).toBe("2026-11");
+    expect(primeiroDiaDoMes("2026-11")).toBe("2026-11-01");
+    expect(somarMeses("2026-12", 1)).toBe("2027-01");
+    expect(somarMeses("2026-01", -1)).toBe("2025-12");
+  });
+
+  it("rótulo em português", () => {
+    expect(rotuloDoMes("2026-11")).toBe("novembro de 2026");
   });
 });

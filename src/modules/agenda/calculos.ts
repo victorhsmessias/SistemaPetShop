@@ -1,8 +1,13 @@
 import type { StatusAtendimento } from "@/modules/agenda/status";
 
-// Contas da agenda, sem banco: fim do atendimento, sobreposição e a distribuição dos blocos em colunas.
+// Contas da agenda, sem banco: fim do atendimento, total, sobreposição e a distribuição dos blocos em colunas.
 
 const MINUTO = 60_000;
+
+/** Total do atendimento em centavos: a soma dos preços dos itens. É o valor da receita ao concluir. */
+export function somarItens(itens: readonly { precoCentavos: number }[]): number {
+  return itens.reduce((soma, item) => soma + item.precoCentavos, 0);
+}
 
 /** Fim = início + soma das durações dos itens (H5). */
 export function calcularFim(inicio: Date, duracoesMin: number[]): Date {
