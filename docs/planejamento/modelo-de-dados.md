@@ -187,9 +187,9 @@ Restrições:
 - **Gravação:** por trigger em `lancamento`, `atendimento`, `atendimento_item` e `empresa` (e em `pacote_venda` no M2), ao criar e ao alterar. Em `atendimento_item`, a única tabela de negócio em que se apaga, a trigger também registra a remoção. A trigger lê o autor em `app.usuario_id`. Assim nenhuma alteração escapa por esquecimento no código.
 - **Eventos sem alteração de tabela**, como o início de um acesso de suporte, são inseridos pelo próprio app.
 - **Imutável:** ninguém altera nem apaga linhas da auditoria.
-- **Texto livre e anonimização (H12).** A tabela `tutor` não é auditada, então nome e telefone do tutor não chegam à auditoria por ela. Os campos de texto livre auditados chegam: `atendimento.observacoes` e `lancamento.motivo_cancelamento` ficam copiados em `antes` e `depois`. A regra tem duas partes:
+- **Texto livre e anonimização (H12).** A tabela `tutor` não é auditada, então nome e telefone do tutor não chegam à auditoria por ela. Os campos de texto livre auditados chegam: `atendimento.observacoes` e `lancamento.motivo_cancelamento` ficam copiados em `antes` e `depois`, e a auditoria continua imutável.
   - **Prevenção:** esses campos são para o serviço e para o motivo, não para dados do tutor. A tela do motivo de desfazer a conclusão avisa para não escrever nome nem telefone do cliente.
-  - **Na anonimização (M4):** o app limpa `observacoes` dos atendimentos do tutor e troca o `motivo_cancelamento` dos lançamentos ligados a esses atendimentos por "[anonimizado]", pelo caminho normal, que gera novos eventos sem o texto. As cópias antigas desses dois campos na auditoria (`antes` e `depois` desses registros) também são trocadas por "[anonimizado]". É a única exceção à imutabilidade: só essas chaves, só nesses registros, por uma função própria decidida num ADR junto com a H12. O resto do evento (quem, quando, status, valores) fica como estava.
+  - **Pendente:** o que a anonimização faz com esse texto na auditoria será decidido num ADR junto com a H12, no M4.
 
 Índice: (empresa_id, quando).
 
