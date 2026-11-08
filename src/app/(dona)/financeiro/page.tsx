@@ -109,7 +109,7 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
         <p className="suave">{quantosConcluidos(dados.concluidosNoMes)}</p>
       </section>
 
-      <section className="cartao" aria-labelledby="titulo-receitas">
+      <section aria-labelledby="titulo-receitas">
         <h2 id="titulo-receitas">Receitas</h2>
         {receitas.validas.length === 0 ? (
           <p className="suave">Nenhuma receita em {rotulo}.</p>
