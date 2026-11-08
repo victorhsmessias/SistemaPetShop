@@ -4,11 +4,14 @@ import { useActionState, useState } from "react";
 
 import {
   agendarAcao,
+  concluirAcao,
+  desfazerConclusaoAcao,
   editarHorarioAcao,
   editarObservacoesAcao,
   editarServicosAcao,
   mudarStatusAcao,
   type EstadoAgenda,
+  type EstadoDesfazer,
 } from "@/app/(dona)/agenda/acoes";
 import { Campo, ErroGeral } from "@/app/(dona)/campos";
 import { ACOES_DOS_STATUS, NOMES_DOS_STATUS, proximosStatus, statusAnterior, type StatusAtendimento } from "@/modules/agenda/status";
@@ -343,6 +346,105 @@ export function BotoesDeStatus({
           {reabrir ? `Reabrir como ${NOMES_DOS_STATUS[anterior]}` : `Desfazer: voltar para ${NOMES_DOS_STATUS[anterior]}`}
         </button>
       )}
+    </form>
+  );
+}
+
+export type OpcaoFormaPagamento = { id: string; nome: string };
+
+/**
+ * Concluir (H7): o botão mostra o total; ao tocar, aparecem as formas de pagamento, e um toque numa delas
+ * conclui. Com total zero, um botão só conclui sem cobrança. `de` e `total` são o que a tela mostra: se
+ * mudaram, o servidor não grava nada. Os botões ficam desabilitados enquanto envia (toque duplo).
+ */
+export function FormularioConcluir({
+  id,
+  status,
+  totalCentavos,
+  formas,
+}: {
+  id: string;
+  status: StatusAtendimento;
+  totalCentavos: number;
+  formas: OpcaoFormaPagamento[];
+}) {
+  const [estado, acao, enviando] = useActionState(concluirAcao, {});
+  const [escolhendo, setEscolhendo] = useState(false);
+  const total = formatarReais(totalCentavos);
+
+  return (
+    <form action={acao} className="formulario" noValidate>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="de" value={status} />
+      <input type="hidden" name="total" value={totalCentavos} />
+      <ErroGeral erro={estado.erro} />
+      {totalCentavos === 0 ? (
+        <>
+          <p className="suave">O total é {total}: o atendimento é concluído sem receita.</p>
+          <button type="submit" className="botao-primario" disabled={enviando}>
+            {enviando ? "Concluindo…" : "Concluir sem cobrança"}
+          </button>
+        </>
+      ) : !escolhendo ? (
+        <button type="button" className="botao-primario" onClick={() => setEscolhendo(true)}>
+          Concluir · {total}
+        </button>
+      ) : (
+        <fieldset className="formas-pagamento" disabled={enviando}>
+          <legend>
+            Recebido {total} em:
+          </legend>
+          {formas.length === 0 && <p className="suave">Nenhuma forma de pagamento ativa.</p>}
+          <div className="formas-pagamento-opcoes">
+            {formas.map((f) => (
+              <button key={f.id} type="submit" name="formaPagamentoId" value={f.id} className="botao-primario">
+                {f.nome}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="botao-secundario" onClick={() => setEscolhendo(false)}>
+            Voltar
+          </button>
+        </fieldset>
+      )}
+    </form>
+  );
+}
+
+/**
+ * Desfazer a conclusão: volta ao status de antes e cancela a receita, com o motivo (obrigatório quando há
+ * receita). O motivo digitado volta com o erro.
+ */
+export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; temReceita: boolean }) {
+  const [estado, acao, enviando] = useActionState(desfazerConclusaoAcao, { erros: {}, motivo: "" } as EstadoDesfazer);
+  const [aberto, setAberto] = useState(false);
+
+  if (!aberto) {
+    return (
+      <button type="button" className="botao-secundario botao-largo" onClick={() => setAberto(true)}>
+        Desfazer conclusão
+      </button>
+    );
+  }
+  return (
+    <form action={acao} className="formulario" noValidate>
+      <input type="hidden" name="id" value={id} />
+      <ErroGeral erro={estado.erros.geral} />
+      {temReceita && (
+        <Campo
+          nome="motivo"
+          rotulo="Motivo (fica no cancelamento da receita)"
+          erro={estado.erros.motivo}
+        >
+          {(props) => <textarea {...props} defaultValue={estado.motivo} maxLength={500} />}
+        </Campo>
+      )}
+      <button type="submit" className="botao-primario" disabled={enviando}>
+        {enviando ? "Desfazendo…" : temReceita ? "Desfazer e cancelar a receita" : "Desfazer conclusão"}
+      </button>
+      <button type="button" className="botao-secundario" onClick={() => setAberto(false)} disabled={enviando}>
+        Voltar
+      </button>
     </form>
   );
 }

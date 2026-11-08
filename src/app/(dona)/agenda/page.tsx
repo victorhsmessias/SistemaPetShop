@@ -9,7 +9,9 @@ import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { ocupaHorario } from "@/modules/agenda/calculos";
 import { ehDia, hojeNoFuso, noFuso, rotuloDoDia, somarDias } from "@/modules/agenda/fuso";
 import { NOMES_DOS_STATUS } from "@/modules/agenda/status";
+import { formatarReais } from "@/modules/compartilhado/dinheiro";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
+import { recebidoNoPeriodo } from "@/modules/financeiro/resumo";
 
 export const metadata: Metadata = { title: "Agenda · banho-e-tosa" };
 
@@ -18,11 +20,17 @@ type Props = { searchParams: Promise<{ dia?: string }> };
 // Tela inicial da dona: a agenda do dia, com navegação entre os dias. O dia de hoje é o do fuso da empresa.
 export default async function PaginaAgenda({ searchParams }: Props) {
   const pedido = (await searchParams).dia;
-  const { dia, hoje, fuso, atendimentos } = await naEmpresaDaDona(async (tx) => {
+  const { dia, hoje, fuso, atendimentos, recebidoHoje } = await naEmpresaDaDona(async (tx) => {
     const fusoEmpresa = await fusoDaEmpresa(tx);
     const hojeEmpresa = hojeNoFuso(fusoEmpresa);
     const diaEscolhido = ehDia(pedido) ? pedido : hojeEmpresa;
-    return { dia: diaEscolhido, hoje: hojeEmpresa, ...(await listarAgenda(tx, diaEscolhido)) };
+    return {
+      dia: diaEscolhido,
+      hoje: hojeEmpresa,
+      // "Recebido hoje" é sempre o dia de hoje no fuso da empresa, qualquer que seja o dia aberto na agenda.
+      recebidoHoje: await recebidoNoPeriodo(tx, hojeEmpresa, somarDias(hojeEmpresa, 1)),
+      ...(await listarAgenda(tx, diaEscolhido)),
+    };
   });
   const foraDaGrade = atendimentos.filter((a) => !ocupaHorario(a.status));
 
@@ -50,6 +58,11 @@ export default async function PaginaAgenda({ searchParams }: Props) {
 
       <Link href={urlDoAgendamento({ dia })} className="botao-link botao-primario botao-largo">
         Novo agendamento
+      </Link>
+
+      <Link href="/financeiro" className="cartao recebido-hoje">
+        <span>Recebido hoje</span>
+        <strong>{formatarReais(recebidoHoje.totalCentavos)}</strong>
       </Link>
 
       {foraDaGrade.length > 0 && (

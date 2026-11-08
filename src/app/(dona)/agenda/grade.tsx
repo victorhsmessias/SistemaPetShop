@@ -110,7 +110,11 @@ export function GradeDoDia({ dia, fuso, atendimentos }: { dia: Dia; fuso: string
               </span>
               {/* Status antes do horário: em bloco estreito, o que se corta é o horário, não o status. */}
               <span className="bloco-linha">
-                <span className="bloco-status">{NOMES_DOS_STATUS[a.status]}</span> · {horario}
+                <span className="bloco-status">
+                  {a.status === "concluido" ? "✓ " : ""}
+                  {NOMES_DOS_STATUS[a.status]}
+                </span>{" "}
+                · {horario}
               </span>
               {a.pet.observacoes && <span className="bloco-linha bloco-cuidado">⚠ {a.pet.observacoes}</span>}
               <span className="bloco-linha">{a.itens.map((i) => i.descricao).join(", ")}</span>
@@ -169,6 +173,7 @@ export function GradeDaSemana({
                     className={`bloco bloco-compacto status-${a.status}`}
                     style={estiloDoBloco(b, posicoes.get(a.id)!, faixa.inicio, PX_POR_MIN_SEMANA, DURACAO_VISUAL_MINIMA_MIN)}
                   >
+                    {a.status === "concluido" ? "✓ " : ""}
                     {noFuso(a.inicio, fuso).hora} {a.pet.observacoes ? "⚠ " : ""}
                     {a.pet.nome}
                   </span>

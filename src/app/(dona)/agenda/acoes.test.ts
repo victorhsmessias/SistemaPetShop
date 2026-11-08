@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { encerrarConexoes } from "@/db/clientes";
@@ -15,8 +15,10 @@ import {
 } from "@/db/testes/apoio";
 import { auth } from "@/modules/acesso/auth";
 import { listarAgenda, obterAtendimento } from "@/modules/agenda/atendimentos";
+import { MENSAGEM_JA_CONCLUIDO } from "@/modules/agenda/conclusao";
 import { auditoria } from "@/modules/auditoria/schema";
 import { criarServico } from "@/modules/catalogo/servicos";
+import { lancamento } from "@/modules/financeiro/schema";
 
 // As Server Actions da agenda, chamadas diretamente, como um atacante faria sem passar pela tela.
 // Só a leitura dos cabeçalhos da requisição e a revalidação de cache do Next são substituídas;
@@ -27,9 +29,15 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { agendarAcao, editarHorarioAcao, editarObservacoesAcao, editarServicosAcao, mudarStatusAcao } = await import(
-  "@/app/(dona)/agenda/acoes"
-);
+const {
+  agendarAcao,
+  concluirAcao,
+  desfazerConclusaoAcao,
+  editarHorarioAcao,
+  editarObservacoesAcao,
+  editarServicosAcao,
+  mudarStatusAcao,
+} = await import("@/app/(dona)/agenda/acoes");
 const { salvarPetAcao, salvarTutorAcao } = await import("@/app/(dona)/acoes");
 
 const SENHA = "senha-de-teste-123";
@@ -80,6 +88,23 @@ function agendamento(hora: string, extra: Record<string, string> = {}) {
   });
 }
 
+const semMotivo = { erros: {}, motivo: "" };
+
+/** Formulário do botão de uma forma de pagamento: status e total que a tela mostrava (o apoio cobra R$ 50,00). */
+function conclusao(id: string, formaPagamentoId: string, de = "agendado", total = "5000") {
+  return formulario({ id, de, total, formaPagamentoId });
+}
+
+function receitasDoAtendimento(dados: DadosEmpresa, atendimentoId: string) {
+  return daEmpresa(dados, (tx) =>
+    tx
+      .select()
+      .from(lancamento)
+      .where(eq(lancamento.atendimentoId, atendimentoId))
+      .orderBy(asc(lancamento.criadoEm), asc(lancamento.id)),
+  );
+}
+
 async function idsDoDia(dados: DadosEmpresa, dia = DIA) {
   return (await daEmpresa(dados, (tx) => listarAgenda(tx, dia))).atendimentos;
 }
@@ -115,6 +140,8 @@ describe("sem sessão, toda ação da agenda é recusada e manda para o login", 
     ["editarServicosAcao", () => editarServicosAcao(vazio, formulario({ id: "", servico: [] }))],
     ["editarHorarioAcao", () => editarHorarioAcao(vazio, formulario({ id: "", dia: DIA, hora: "09:00", termino: "10:00" }))],
     ["editarObservacoesAcao", () => editarObservacoesAcao(vazio, formulario({ id: "", observacoes: "x" }))],
+    ["concluirAcao", () => concluirAcao({}, conclusao(a.atendimentoId, a.formaPagamentoId))],
+    ["desfazerConclusaoAcao", () => desfazerConclusaoAcao(semMotivo, formulario({ id: a.atendimentoId, motivo: "x" }))],
   ])("%s", async (_nome, chamar) => {
     expect(await destinoDoRedirect(chamar())).toBe("/login");
   });
@@ -124,9 +151,15 @@ describe("sem sessão, toda ação da agenda é recusada e manda para o login", 
     expect(await idsDoDia(a)).toEqual([]);
   });
 
+  it("e nada é concluído", async () => {
+    await destinoDoRedirect(concluirAcao({}, conclusao(a.atendimentoId, a.formaPagamentoId)));
+    expect(await receitasDoAtendimento(a, a.atendimentoId)).toEqual([]);
+  });
+
   it("o administrador é mandado para /admin", async () => {
     requisicao.cookie = cookieAdmin;
     expect(await destinoDoRedirect(agendarAcao(vazio, agendamento("06:00")))).toBe("/admin");
+    expect(await destinoDoRedirect(concluirAcao({}, conclusao(a.atendimentoId, a.formaPagamentoId)))).toBe("/admin");
   });
 });
 
@@ -231,6 +264,74 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
     expect(deB).toMatchObject({ status: "agendado", observacoes: null });
     expect(deB!.itens.map((i) => i.id)).toEqual([b.itemId]);
     expect(deB!.inicio.toISOString()).toBe("2026-11-10T13:00:00.000Z");
+  });
+});
+
+describe("a dona conclui e desfaz a conclusão pelas ações", () => {
+  beforeEach(() => {
+    requisicao.cookie = cookieDonaA;
+  });
+
+  it("conclui com a forma tocada; o segundo toque recebe a mensagem; desfazer pede o motivo e cancela a receita", async () => {
+    const id = a.atendimentoId;
+    expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({});
+    expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({ erro: MENSAGEM_JA_CONCLUIDO });
+    const [receita, ...outras] = await receitasDoAtendimento(a, id);
+    expect(outras).toEqual([]);
+    expect(receita).toMatchObject({ status: "pago", valorCentavos: 5000, formaPagamentoId: a.formaPagamentoId });
+
+    expect(await desfazerConclusaoAcao(semMotivo, formulario({ id, motivo: " " }))).toEqual({
+      erros: { motivo: "Informe o motivo: ele fica no cancelamento da receita." },
+      motivo: " ",
+    });
+    expect(await desfazerConclusaoAcao(semMotivo, formulario({ id, motivo: "Forma errada" }))).toEqual(semMotivo);
+    expect((await receitasDoAtendimento(a, id))[0]).toMatchObject({
+      status: "cancelado",
+      motivoCancelamento: "Forma errada",
+    });
+
+    // Conclusão e desfazer na auditoria, no atendimento e no lançamento, com a dona como autora.
+    const eventos = await daEmpresa(a, (tx) =>
+      tx
+        .select()
+        .from(auditoria)
+        .where(and(inArray(auditoria.tabela, ["atendimento", "lancamento"]), inArray(auditoria.registroId, [id, receita!.id])))
+        .orderBy(auditoria.id),
+    );
+    expect(eventos.filter((e) => e.acao === "alterou" || e.tabela === "lancamento").map((e) => [
+      e.tabela,
+      e.acao,
+      e.usuarioId,
+      (e.depois as { status: string }).status,
+    ])).toEqual([
+      ["atendimento", "alterou", donaAId, "concluido"],
+      ["lancamento", "criou", donaAId, "pago"],
+      ["atendimento", "alterou", donaAId, "agendado"],
+      ["lancamento", "alterou", donaAId, "cancelado"],
+    ]);
+  });
+
+  it("total diferente do que a tela mostrava volta com mensagem, sem concluir", async () => {
+    const r = await concluirAcao({}, conclusao(a.atendimentoId, a.formaPagamentoId, "agendado", "1"));
+    expect(r.erro).toMatch(/O total mudou para R\$\s50,00/);
+    expect(await receitasDoAtendimento(a, a.atendimentoId)).toHaveLength(1); // só a cancelada do teste anterior
+  });
+
+  it("não conclui nem desfaz o atendimento da B, mesmo com os ids certos", async () => {
+    expect(await concluirAcao({}, conclusao(b.atendimentoId, b.formaPagamentoId))).toEqual({
+      erro: "Atendimento não encontrado.",
+    });
+    expect(await desfazerConclusaoAcao(semMotivo, formulario({ id: b.atendimentoId, motivo: "x" }))).toEqual({
+      erros: { geral: "Atendimento não encontrado." },
+      motivo: "x",
+    });
+    // A forma de pagamento da B no atendimento da A também não passa.
+    expect(await concluirAcao({}, conclusao(a.atendimentoId, b.formaPagamentoId))).toEqual({
+      erro: "Escolha uma forma de pagamento.",
+    });
+    const deB = await daEmpresa(b, (tx) => obterAtendimento(tx, b.atendimentoId));
+    expect(deB!.status).toBe("agendado");
+    expect(await receitasDoAtendimento(b, b.atendimentoId)).toEqual([]);
   });
 });
 

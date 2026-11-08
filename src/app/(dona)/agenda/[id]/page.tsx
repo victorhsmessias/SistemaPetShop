@@ -2,32 +2,42 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { BotoesDeStatus } from "@/app/(dona)/agenda/formularios";
+import { BotoesDeStatus, FormularioConcluir, FormularioDesfazerConclusao } from "@/app/(dona)/agenda/formularios";
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { obterAtendimento } from "@/modules/agenda/atendimentos";
+import { somarItens } from "@/modules/agenda/calculos";
 import { noFuso, rotuloDoDia } from "@/modules/agenda/fuso";
 import { atendimentoAtivo, NOMES_DOS_STATUS } from "@/modules/agenda/status";
 import { formatarTelefone } from "@/modules/cadastros/telefone";
 import { formatarReais } from "@/modules/compartilhado/dinheiro";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
+import { listarFormasAtivas, receitaDoAtendimento } from "@/modules/financeiro/lancamentos";
 
 export const metadata: Metadata = { title: "Atendimento · banho-e-tosa" };
 
 type Props = { params: Promise<{ id: string }> };
 
-// Acompanhar o atendimento (H7): status, desfazer um toque errado, cancelar, e o acesso à edição.
+// Acompanhar o atendimento (H7): status, desfazer um toque errado, cancelar, concluir com a forma de pagamento,
+// a receita do atendimento concluído e desfazer a conclusão, e o acesso à edição.
 export default async function PaginaAtendimento({ params }: Props) {
   const { id } = await params;
   const dados = await naEmpresaDaDona(async (tx) => {
     const atendimento = await obterAtendimento(tx, id);
-    return atendimento ? { atendimento, fuso: await fusoDaEmpresa(tx) } : null;
+    if (!atendimento) return null;
+    const concluido = atendimento.status === "concluido";
+    return {
+      atendimento,
+      fuso: await fusoDaEmpresa(tx),
+      formas: atendimentoAtivo(atendimento.status) ? await listarFormasAtivas(tx) : [],
+      receita: concluido ? await receitaDoAtendimento(tx, atendimento.id) : null,
+    };
   });
   if (!dados) notFound();
-  const { atendimento: a, fuso } = dados;
+  const { atendimento: a, fuso, formas, receita } = dados;
   const inicio = noFuso(a.inicio, fuso);
   const fim = noFuso(a.fim, fuso);
-  const total = a.itens.reduce((soma, i) => soma + i.precoCentavos, 0);
+  const total = somarItens(a.itens);
 
   return (
     <main className="pagina">
@@ -84,9 +94,40 @@ export default async function PaginaAtendimento({ params }: Props) {
         </Link>
       </section>
 
-      <section className="cartao" aria-label="Status do atendimento">
-        <BotoesDeStatus id={a.id} status={a.status} confirmado={a.confirmadoEm !== null} />
-      </section>
+      {atendimentoAtivo(a.status) && (
+        <section className="cartao" aria-label="Concluir o atendimento">
+          <FormularioConcluir id={a.id} status={a.status} totalCentavos={total} formas={formas} />
+        </section>
+      )}
+
+      {a.status === "concluido" ? (
+        <section className="cartao" aria-labelledby="titulo-receita">
+          <h2 id="titulo-receita">Receita</h2>
+          {receita ? (
+            <dl className="dados-receita">
+              <div>
+                <dt>Valor</dt>
+                <dd>{formatarReais(receita.valorCentavos)}</dd>
+              </div>
+              <div>
+                <dt>Forma</dt>
+                <dd>{receita.forma ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>Data</dt>
+                <dd>{rotuloDoDia(receita.data)}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="suave">Concluído sem receita: o total era {formatarReais(total)}.</p>
+          )}
+          <FormularioDesfazerConclusao id={a.id} temReceita={receita !== null} />
+        </section>
+      ) : (
+        <section className="cartao" aria-label="Status do atendimento">
+          <BotoesDeStatus id={a.id} status={a.status} confirmado={a.confirmadoEm !== null} />
+        </section>
+      )}
     </main>
   );
 }
