@@ -15,6 +15,8 @@
 #
 # Nada aqui imprime valores de variáveis.
 set -eu
+# O ash do busybox (Alpine), que roda este script, suporta pipefail.
+# shellcheck disable=SC3040
 set -o pipefail
 
 PREFIXO="banho-e-tosa"
