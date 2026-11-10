@@ -17,7 +17,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "criar-admin": "tsx scripts/criar-admin.mts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:meia-noite": "tsx scripts/e2e-meia-noite.mts"
   },
   "dependencies": {
     "better-auth": "1.7.14",
