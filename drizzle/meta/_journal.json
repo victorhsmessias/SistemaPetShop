@@ -99,6 +99,13 @@
       "when": 1794101824340,
       "tag": "0013_dados_padrao_empresa",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794272809799,
+      "tag": "0014_lancamento_cancelado_final",
+      "breakpoints": true
     }
   ]
 }
