@@ -68,7 +68,7 @@ const eslintConfig = defineConfig([
     files: [betterAuth],
     rules: restringir(proibir.bancoPlataforma, proibir.comPlataforma),
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "out/**", "build/**", "dist/**", "next-env.d.ts"]),
 ]);
 
 export default eslintConfig;

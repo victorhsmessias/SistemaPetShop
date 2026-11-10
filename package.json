@@ -15,10 +15,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx scripts/migrar.mts",
     "criar-admin": "tsx scripts/criar-admin.mts",
+    "empacotar": "tsx scripts/empacotar.mts",
     "test:e2e": "playwright test",
-    "test:e2e:meia-noite": "tsx scripts/e2e-meia-noite.mts"
+    "test:e2e:meia-noite": "tsx scripts/e2e-meia-noite.mts",
+    "test:imagem": "tsx scripts/testar-imagem.mts"
   },
   "dependencies": {
     "better-auth": "1.7.14",
@@ -35,6 +37,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "drizzle-kit": "0.31.11",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.3",
     "tsx": "4.23.15",

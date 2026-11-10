@@ -3,6 +3,8 @@
 
 # Next.js
 /.next/
+# comandos empacotados para a imagem (npm run empacotar)
+/dist/
 /out/
 /build
 next-env.d.ts
