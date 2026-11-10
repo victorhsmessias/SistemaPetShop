@@ -14,6 +14,7 @@ x-senhas-descartaveis: &senhas
   SENHA_MIGRADOR: teste-migrador
   SENHA_APP: teste-app
   SENHA_PLATAFORMA: teste-plataforma
+  SENHA_BACKUP: teste-backup
 
 services:
   postgres:

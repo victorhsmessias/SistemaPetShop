@@ -140,6 +140,15 @@ Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejament
 
 ## Problemas comuns
 
+- **Testes falham com "DATABASE_URL_BACKUP não definida" ou o papel `backup` não existe:** o banco local foi criado
+  antes do papel de backup (sessão 06). Acrescente `SENHA_BACKUP` e `DATABASE_URL_BACKUP` ao `.env` (modelo em
+  `.env.example`) e crie o papel uma vez, como superusuário, trocando `<SENHA_BACKUP>` pela senha do `.env`:
+
+  ```bash
+  docker compose exec -T postgres psql -U postgres -d postgres -c "create role backup login password '<SENHA_BACKUP>' nosuperuser nocreatedb nocreaterole bypassrls; grant pg_read_all_data to backup; grant connect on database banho_e_tosa to backup;"
+  ```
+
+  Ou recrie o banco do zero: `docker compose down -v` e repita os passos 3 e 4.
 - **Porta 5435 ocupada:** defina outra em `PORTA_POSTGRES` no `.env` e ajuste a porta nas três URLs.
 - **Mudei as senhas no `.env` e a conexão falha:** o script dos papéis só roda com o volume vazio. Para
   recriar o banco local do zero (apaga os dados): `docker compose down -v` e repita os passos 3 e 4.

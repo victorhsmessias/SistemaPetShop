@@ -13,6 +13,7 @@ env:
   DATABASE_URL: postgres://app:ci-app@localhost:5432/banho_e_tosa
   DATABASE_URL_PLATAFORMA: postgres://plataforma:ci-plataforma@localhost:5432/banho_e_tosa
   DATABASE_URL_MIGRADOR: postgres://migrador:ci-migrador@localhost:5432/banho_e_tosa
+  DATABASE_URL_BACKUP: postgres://backup:ci-backup@localhost:5432/banho_e_tosa
   BETTER_AUTH_URL: http://localhost:3000
 
 jobs:
@@ -52,6 +53,7 @@ jobs:
         run: >-
           psql -v ON_ERROR_STOP=1 -d postgres
           -v senha_migrador=ci-migrador -v senha_app=ci-app -v senha_plataforma=ci-plataforma
+          -v senha_backup=ci-backup
           -f db/preparacao/papeis.sql
 
       - name: Migrations (como migrador)

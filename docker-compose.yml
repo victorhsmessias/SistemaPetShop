@@ -9,6 +9,7 @@ services:
       SENHA_MIGRADOR: ${SENHA_MIGRADOR:?defina SENHA_MIGRADOR no .env}
       SENHA_APP: ${SENHA_APP:?defina SENHA_APP no .env}
       SENHA_PLATAFORMA: ${SENHA_PLATAFORMA:?defina SENHA_PLATAFORMA no .env}
+      SENHA_BACKUP: ${SENHA_BACKUP:?defina SENHA_BACKUP no .env}
     ports:
       - "${PORTA_POSTGRES:-5435}:5432"
     volumes:

@@ -1,6 +1,6 @@
 # Modelo de dados — Marco 1
 
-Versão 1.7 · 07/11/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria), 0010 (login) e 0012 (dados padrão da empresa).
+Versão 1.8 · 09/11/2026 · Detalha a seção 3 do planejamento para as tabelas do M1. Base: ADRs 0002 (multiempresa com RLS), 0008 (auditoria), 0010 (login), 0012 (dados padrão da empresa) e 0013 (backup). Novidades da 1.8: lançamento cancelado é estado final, garantido por trigger, e o papel `backup`, só de leitura.
 
 ## Convenções
 
@@ -166,6 +166,7 @@ Restrições:
 
 - Índice único em `atendimento_id`, só entre lançamentos não cancelados: um atendimento gera no máximo uma receita válida.
 - `check`: cancelado exige motivo (não vazio); origem atendimento exige `atendimento_id`; receita paga exige forma de pagamento.
+- **Cancelado é estado final:** a trigger `lancamento_cancelado_final` (`BEFORE UPDATE`) recusa qualquer mudança numa linha cancelada (erro 23514). Desfazer a conclusão cancela a receita; concluir de novo cria outra.
 - A descrição da receita de atendimento é genérica ("Atendimento"). Nunca leva nome nem telefone do tutor, para a anonimização (H12) não deixar rastro. A tela liga o pet pelo `atendimento_id`.
 
 Índice: (empresa_id, data).
@@ -202,8 +203,9 @@ Restrições:
 | `migrador` | migrations | dono das tabelas; nunca usado com o app rodando |
 | `app` | telas, API e Better Auth | tabelas de negócio só da empresa da transação (RLS); `empresa`, só a própria; tabelas do Better Auth, sem RLS |
 | `plataforma` | painel do administrador e despacho das tarefas | todas as empresas e leitura de `user`; nenhum acesso às tabelas de negócio |
+| `backup` | `pg_dump` do serviço de backup (ADR 0013) | lê todas as tabelas de todas as empresas (`BYPASSRLS` e membro de `pg_read_all_data`); não grava, não apaga, não altera a estrutura e não é dono de nada |
 
-Nenhum desses papéis é superusuário ou tem `BYPASSRLS`, e só o `migrador` é dono de tabelas. O app confere isso ao iniciar e não sobe se estiver errado.
+Nenhum desses papéis é superusuário, e só o `migrador` é dono de tabelas. Só o `backup` tem `BYPASSRLS`, porque o `pg_dump` precisa ler as linhas de todas as empresas, e em troca ele não escreve nada. Criar papel com `BYPASSRLS` exige o superusuário do Postgres (`db/preparacao/papeis.sql`). O `backup` não tem acesso externo: o Postgres fica só na rede interna do EasyPanel. O app confere `app` e `plataforma` ao iniciar e não sobe se estiverem errados; o servidor do app também não sobe com a credencial do `migrador` no ambiente.
 
 ### Regras
 
@@ -259,6 +261,7 @@ Nada é apagado, exceto itens de atendimento:
 - receita paga sempre com forma de pagamento, e receita de atendimento sempre com o atendimento;
 - formas de pagamento e categorias padrão criadas com cada empresa (trigger);
 - nada apagado, exceto itens de atendimento;
+- lançamento cancelado nunca volta a outro estado;
 - valores nunca negativos e fim depois do início;
 - um item por serviço em cada atendimento;
 - `confirmado_em` coerente com o status;
@@ -317,6 +320,9 @@ Só pela função de conclusão do módulo `agenda`. Tudo numa única transaçã
 8. `app` não apaga em nenhuma tabela de negócio, exceto `atendimento_item`, nem altera ou apaga a auditoria.
 9. Entre as tabelas do Better Auth, `plataforma` só tem permissão de leitura em `user`.
 10. O schema do Better Auth mantém as edições feitas à mão: chave estrangeira de `user.empresa_id` para `empresa`, restrição de `role` e datas em `timestamptz`.
+11. O papel `backup` só lê: `BYPASSRLS` e `pg_read_all_data`, sem superusuário, sem criar banco ou papel, sem ser dono de tabela, sem permissão de gravar em nenhuma tabela e sem criar nada nos schemas. Um teste conectado como `backup` confirma que gravar, apagar e alterar a estrutura falham.
+
+**Depois de restaurar um backup** (`npm run test:backup`), os testes de isolamento e de estrutura rodam contra o banco restaurado: o `pg_dump` leva RLS, políticas, triggers e permissões, mas não os papéis, que são criados antes.
 
 ## Próximos marcos
 

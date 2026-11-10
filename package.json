@@ -20,7 +20,8 @@
     "empacotar": "tsx scripts/empacotar.mts",
     "test:e2e": "playwright test",
     "test:e2e:meia-noite": "tsx scripts/e2e-meia-noite.mts",
-    "test:imagem": "tsx scripts/testar-imagem.mts"
+    "test:imagem": "tsx scripts/testar-imagem.mts",
+    "test:backup": "tsx scripts/testar-backup.mts"
   },
   "dependencies": {
     "better-auth": "1.7.14",

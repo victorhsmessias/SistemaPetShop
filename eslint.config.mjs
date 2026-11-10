@@ -40,7 +40,8 @@ const restringir = (...padroes) => ({
   "no-restricted-imports": ["error", { paths: conexaoDireta, patterns: padroes }],
 });
 
-const testes = ["**/*.test.ts", "src/db/**"];
+// Os testes de Docker (npm run test:imagem e test:backup) preparam bancos descartáveis como os testes de integração.
+const testes = ["**/*.test.ts", "src/db/**", "scripts/testar-*.mts"];
 const administracao = ["src/modules/administracao/**/*.{ts,tsx}", "scripts/criar-admin.mts"];
 const acesso = "src/modules/acesso/**/*.{ts,tsx}";
 const betterAuth = "src/modules/acesso/auth.ts";

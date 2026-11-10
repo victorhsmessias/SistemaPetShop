@@ -4,9 +4,11 @@
 : "${SENHA_MIGRADOR:?defina SENHA_MIGRADOR no .env}"
 : "${SENHA_APP:?defina SENHA_APP no .env}"
 : "${SENHA_PLATAFORMA:?defina SENHA_PLATAFORMA no .env}"
+: "${SENHA_BACKUP:?defina SENHA_BACKUP no .env}"
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
   -v senha_migrador="$SENHA_MIGRADOR" \
   -v senha_app="$SENHA_APP" \
   -v senha_plataforma="$SENHA_PLATAFORMA" \
+  -v senha_backup="$SENHA_BACKUP" \
   -f /preparacao/papeis.sql
