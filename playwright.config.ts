@@ -7,14 +7,14 @@ import { defineConfig, devices } from "@playwright/test";
 if (existsSync(".env")) process.loadEnvFile(".env");
 
 // PORTA_E2E: para rodar com outro app ocupando a 3000 (localmente, um servidor já no ar é reaproveitado).
-const porta = Number(process.env.PORTA_E2E ?? 3000);
+const porta = Number(process.env.PORTA_E2E || 3000);
 const baseURL = `http://localhost:${porta}`;
 const ci = Boolean(process.env.CI);
 
 // Relógio do servidor (e2e/relogio.mjs): hora de hoje em São Paulo, 12:00 por padrão, para nenhum teste depender
 // da hora da máquina. `npm run test:e2e:meia-noite` roda com 23:50 e 00:10. O servidor roda em UTC, como no CI.
 // Os testes leem E2E_RELOGIO para calcular a data esperada; só o servidor tem o Date deslocado.
-process.env.E2E_RELOGIO ??= "12:00";
+process.env.E2E_RELOGIO ||= "12:00";
 
 // E2E_SEM_BUILD: reaproveita o build já feito (as rodadas do relógio, depois do test:e2e).
 const iniciar = `npm run start -- -p ${porta}`;

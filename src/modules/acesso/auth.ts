@@ -6,10 +6,10 @@ import { admin } from "better-auth/plugins";
 
 import { eq } from "drizzle-orm";
 
+import { urlUsaHttps } from "@/configuracao/ambiente";
 import { bancoApp } from "@/db/clientes";
 import { comEmpresa, EmpresaIndisponivelError } from "@/db/com-empresa";
 import { argumentosSegurosDoLog } from "@/db/erro-do-banco";
-import { urlUsaHttps } from "@/modules/acesso/configuracao";
 import { account, session, user, verification } from "@/modules/acesso/schema";
 
 /** Único caminho que cria usuárias: o createUser do plugin admin (painel e comando criar-admin). */
