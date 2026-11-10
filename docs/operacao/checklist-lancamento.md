@@ -140,6 +140,12 @@ precisa manter o antigo no ar. Isso depende do `HEALTHCHECK` da imagem. Confirme
 - [ ] R2 → Manage API tokens → token com **Object Read & Write**, só nesse bucket. O R2 não tem token que grave sem
       poder apagar ([docs](https://developers.cloudflare.com/r2/api/tokens/)); a trava do bucket cobre isso.
       Guarde o Access Key ID e o Secret Access Key.
+- [ ] Confirme que a trava vale também para esse token. A documentação diz que a trava bloqueia apagar pela API S3
+      (erro 409 `ObjectLockedByBucketPolicy`), mas não cita o tipo de token. Depois do primeiro backup (passo 11),
+      no Shell do serviço de backup, tente apagar o arquivo recém-enviado:
+      `RCLONE_CONFIG_D_TYPE=s3 RCLONE_CONFIG_D_PROVIDER=Cloudflare RCLONE_CONFIG_D_ENDPOINT="$BACKUP_S3_ENDPOINT" RCLONE_CONFIG_D_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY_ID" RCLONE_CONFIG_D_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_ACCESS_KEY" rclone deletefile "d:$BACKUP_S3_BUCKET/banho-e-tosa/<arquivo>"`.
+      O certo é **falhar** com `ObjectLockedByBucketPolicy` e o arquivo continuar no bucket. Se apagar, a trava não
+      está valendo: revise a regra antes do lançamento.
 - [ ] Crie também um token **Object Read only** do mesmo bucket, para os testes de restauração no seu computador.
 - [ ] Anote o endpoint S3 da conta: `https://<id da conta>.r2.cloudflarestorage.com`.
 
