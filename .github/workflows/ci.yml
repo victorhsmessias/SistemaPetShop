@@ -34,13 +34,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Node 26 (LTS até 30/04/2029), a mesma versão do desenvolvimento (.nvmrc) e da imagem (Dockerfile).
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
-      # Mesmo npm que gera o package-lock.json (packageManager no package.json); o npm 10 do Node 22
-      # resolve as dependências opcionais de outro jeito e recusa o lockfile.
+      # Mesmo npm que gera o package-lock.json (packageManager no package.json), em todo lugar.
       - run: npm install -g npm@11.6.2
 
       - run: npm ci
