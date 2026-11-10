@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { bancoApp } from "@/db/clientes";
 import { comEmpresa, EmpresaIndisponivelError } from "@/db/com-empresa";
+import { argumentosSegurosDoLog } from "@/db/erro-do-banco";
 import { urlUsaHttps } from "@/modules/acesso/configuracao";
 import { account, session, user, verification } from "@/modules/acesso/schema";
 
@@ -33,6 +34,15 @@ async function conferirEmpresaAtiva(usuarioId: string): Promise<void> {
     }
     throw erro;
   }
+}
+
+/**
+ * Log do Better Auth sem dados pessoais nem de senha: erros viram só o resumo (código, restrição, tabela) e os
+ * outros argumentos (linhas do banco, corpo da requisição) ficam de fora. Exportado para o teste.
+ */
+export function registrarLogDoLogin(nivel: "debug" | "info" | "warn" | "error", mensagem: string, ...args: unknown[]) {
+  const saida = nivel === "error" ? console.error : nivel === "warn" ? console.warn : console.log;
+  saida(`[login] ${mensagem}`, ...argumentosSegurosDoLog(args));
 }
 
 function proxiesConfiaveis(): string[] | undefined {
@@ -80,6 +90,7 @@ export const auth = betterAuth({
       },
     },
   },
+  logger: { log: registrarLogDoLogin },
   rateLimit: {
     // Ligado também em desenvolvimento. Só vale para a rota HTTP: chamadas auth.api no servidor não contam.
     enabled: true,

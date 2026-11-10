@@ -1,12 +1,16 @@
 import { eq } from "drizzle-orm";
 
 import { comPlataforma } from "@/db/com-plataforma";
+import { resumoDoErro, textoDoResumo } from "@/db/erro-do-banco";
 import { auth } from "@/modules/acesso/auth";
 import { user } from "@/modules/acesso/schema";
 import { registrarEvento } from "@/modules/auditoria/registrar";
 
 // Criação de usuárias e redefinição de senha pelo Better Auth, com auditoria fora da
 // transação da ação (ADR 0011). Nenhum dado de senha vai para a auditoria nem para os logs.
+
+/** Só o resumo do erro: a mensagem de um erro do banco traz os parâmetros (e-mail, hash da senha). */
+const paraLog = (erro: unknown) => textoDoResumo(resumoDoErro(erro));
 
 export class DadosInvalidosError extends Error {
   constructor(mensagem: string) {
@@ -80,7 +84,7 @@ export async function criarUsuaria({ autorId, cabecalhos, dados, role, empresaId
   } catch (erro) {
     const contexto = await auth.$context;
     await contexto.internalAdapter.deleteUser(criada.id);
-    console.error(`Auditoria falhou ao criar a usuária ${criada.id}; criação desfeita.`, erro);
+    console.error(`Auditoria falhou ao criar a usuária ${criada.id}; criação desfeita. ${paraLog(erro)}`);
     throw new Error("Não foi possível registrar a criação na auditoria. A usuária não foi criada.");
   }
 
@@ -135,7 +139,7 @@ export async function redefinirSenhaDaUsuaria(
   try {
     await auth.api.setUserPassword({ body: { userId: alvo.id, newPassword: novaSenha }, headers: cabecalhos });
   } catch (erro) {
-    await registrar("falhou").catch((e) => console.error(`Auditoria do resultado falhou (usuária ${alvo.id}).`, e));
+    await registrar("falhou").catch((e) => console.error(`Auditoria do resultado falhou (usuária ${alvo.id}). ${paraLog(e)}`));
     throw erro;
   }
 
@@ -144,11 +148,11 @@ export async function redefinirSenhaDaUsuaria(
     await auth.api.revokeUserSessions({ body: { userId: alvo.id }, headers: cabecalhos });
   } catch (erro) {
     sessoesEncerradas = false;
-    console.error(`Senha redefinida, mas as sessões não foram encerradas (usuária ${alvo.id}).`, erro);
+    console.error(`Senha redefinida, mas as sessões não foram encerradas (usuária ${alvo.id}). ${paraLog(erro)}`);
   }
 
   await registrar("concluida", { sessoesEncerradas }).catch((e) =>
-    console.error(`Senha redefinida, mas a auditoria do resultado falhou (usuária ${alvo.id}).`, e),
+    console.error(`Senha redefinida, mas a auditoria do resultado falhou (usuária ${alvo.id}). ${paraLog(e)}`),
   );
   return { sessoesEncerradas };
 }
@@ -166,10 +170,10 @@ export async function encerrarSessoesDaUsuaria(
   try {
     await auth.api.revokeUserSessions({ body: { userId: alvo.id }, headers: cabecalhos });
   } catch (erro) {
-    await registrar("falhou").catch((e) => console.error(`Auditoria do resultado falhou (usuária ${alvo.id}).`, e));
+    await registrar("falhou").catch((e) => console.error(`Auditoria do resultado falhou (usuária ${alvo.id}). ${paraLog(e)}`));
     throw erro;
   }
   await registrar("concluida").catch((e) =>
-    console.error(`Sessões encerradas, mas a auditoria do resultado falhou (usuária ${alvo.id}).`, e),
+    console.error(`Sessões encerradas, mas a auditoria do resultado falhou (usuária ${alvo.id}). ${paraLog(e)}`),
   );
 }

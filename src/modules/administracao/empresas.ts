@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 
 import { comPlataforma } from "@/db/com-plataforma";
+import { resumoDoErro, textoDoResumo } from "@/db/erro-do-banco";
 import { user } from "@/modules/acesso/schema";
 import { exigirAdmin } from "@/modules/administracao/guarda";
 import {
@@ -122,7 +123,9 @@ export async function criarEmpresaComDona(cabecalhos: Headers, dados: NovaEmpres
     const donaId = await criarDonaNaEmpresa(admin.usuarioId, cabecalhos, empresaId, dona);
     return { situacao: "completa", empresaId, donaId };
   } catch (erro) {
-    const motivo = erro instanceof Error ? erro.message : "erro desconhecido";
+    // Erro do banco vira só o resumo: a mensagem do Drizzle traria os parâmetros (e-mail, hash da senha).
+    const resumo = resumoDoErro(erro);
+    const motivo = resumo.mensagem ?? textoDoResumo(resumo);
     return { situacao: "sem_dona", empresaId, erro: `Empresa criada, mas a dona não: ${motivo}` };
   }
 }

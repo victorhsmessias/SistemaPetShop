@@ -1,4 +1,7 @@
+import { inspect } from "node:util";
+
 import { and, eq } from "drizzle-orm";
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { auth } from "@/modules/acesso/auth";
@@ -142,5 +145,42 @@ describe("auditoria falha ao redefinir a senha", () => {
     await entrar(emailDona, "mais-nova-321");
     expect(await obterSessao(sessaoAberta)).not.toBeNull(); // continua aberta: o painel oferece "Encerrar sessões"
     expect((await situacoes()).slice(-2)).toEqual(["iniciada", "concluida"]);
+  });
+});
+
+describe("o log da falha não leva dados da usuária nem de senha", () => {
+  it("um erro do banco com e-mail e hash nos parâmetros vira só o resumo no console.error", async () => {
+    const emailDona = emailTeste("dona-log");
+    const hash = "c0ffee:0123456789abcdef0123456789abcdef";
+    const real = registrar.getMockImplementation()!;
+    registrar.mockImplementation(async (tx, evento) => {
+      if (evento.tabela === "user" && evento.acao === "criou") {
+        registrar.mockImplementation(real);
+        const doPg = Object.assign(new Error("permission denied for table auditoria"), {
+          code: "42501",
+          table: "auditoria",
+          detail: `Failing row contains (${emailDona}, ${hash}).`,
+        });
+        throw new DrizzleQueryError('insert into "auditoria" values ($1, $2)', [emailDona, hash], doPg);
+      }
+      return real(tx, evento);
+    });
+    const espiao = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const resultado = await criarEmpresaComDona(cabecalhosAdmin, {
+        nome: "[teste] Log sem dados",
+        fusoHorario: "America/Sao_Paulo",
+        dona: { nome: "Dona", email: emailDona, senha: SENHA },
+      });
+      empresas.push(resultado.empresaId);
+
+      const saida = espiao.mock.calls.flat().map((v) => (typeof v === "string" ? v : inspect(v))).join(" ");
+      expect(saida).toContain("42501");
+      expect(saida).not.toContain(emailDona);
+      expect(saida).not.toContain(hash);
+      expect(saida).not.toContain(SENHA);
+    } finally {
+      espiao.mockRestore();
+    }
   });
 });
