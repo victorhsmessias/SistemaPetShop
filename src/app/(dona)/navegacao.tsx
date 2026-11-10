@@ -7,6 +7,7 @@ const ITENS = [
   { href: "/agenda", rotulo: "Agenda" },
   { href: "/clientes", rotulo: "Clientes" },
   { href: "/servicos", rotulo: "Serviços" },
+  { href: "/financeiro", rotulo: "Financeiro" },
 ] as const;
 
 export function NavegacaoInferior() {

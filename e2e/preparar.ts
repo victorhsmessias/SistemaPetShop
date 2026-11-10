@@ -20,10 +20,16 @@ export default async function preparar() {
   await criarCadastrosDaAgenda(agenda.empresaId);
   process.env.E2E_AGENDA_EMAIL = agenda.email;
   process.env.E2E_AGENDA_SENHA = agenda.senha;
+
+  const financeiro = await novaDona("Ponta a ponta financeiro");
+  await criarCadastrosDaAgenda(financeiro.empresaId);
+  process.env.E2E_FINANCEIRO_EMAIL = financeiro.email;
+  process.env.E2E_FINANCEIRO_SENHA = financeiro.senha;
   await encerrarConexoes();
 
   return async () => {
     await apagarEmpresa(cadastro.empresaId);
     await apagarEmpresa(agenda.empresaId);
+    await apagarEmpresa(financeiro.empresaId);
   };
 }

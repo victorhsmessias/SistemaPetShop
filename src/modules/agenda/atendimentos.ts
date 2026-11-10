@@ -3,7 +3,18 @@ import { and, asc, eq, gt, inArray, isNull, lt, notInArray, sql } from "drizzle-
 import type { Transacao } from "@/db/clientes";
 import { codigoPgDe } from "@/db/erros";
 import { calcularFim, conflitos } from "@/modules/agenda/calculos";
-import { ehDia, ehHora, inicioDoDia, instanteNoFuso, noFuso, somarDias, type Dia } from "@/modules/agenda/fuso";
+import {
+  ANO_MAXIMO,
+  ANO_MINIMO,
+  ehDia,
+  ehDiaForaDosAnosAceitos,
+  ehHora,
+  inicioDoDia,
+  instanteNoFuso,
+  noFuso,
+  somarDias,
+  type Dia,
+} from "@/modules/agenda/fuso";
 import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { atendimentoAtivo, avaliarMudanca, ehStatus, NOMES_DOS_STATUS, type StatusAtendimento } from "@/modules/agenda/status";
 import { pet, tutor } from "@/modules/cadastros/schema";
@@ -63,8 +74,8 @@ export type ResultadoComAviso<T> = Resultado<T> | AvisoDeHorario;
 
 const MAXIMO_OBSERVACOES = 2000;
 const LIMITE_DA_BUSCA = 50;
-const MENSAGEM_NAO_ENCONTRADO = "Atendimento não encontrado.";
-const MENSAGEM_MUDOU =
+export const MENSAGEM_NAO_ENCONTRADO = "Atendimento não encontrado.";
+export const MENSAGEM_MUDOU =
   "Este atendimento acabou de ser alterado (talvez num toque repetido ou em outra tela). Confira e tente de novo.";
 
 function chaveDoHorario(inicio: Date, fim: Date): string {
@@ -272,7 +283,8 @@ async function validarItens(
 }
 
 function validarDiaEHora(campos: Campos, dia: string | undefined, hora: string | undefined): void {
-  if (!ehDia(dia)) campos.erro("dia", "Informe o dia.");
+  if (ehDiaForaDosAnosAceitos(dia)) campos.erro("dia", `Use um dia entre ${ANO_MINIMO} e ${ANO_MAXIMO}.`);
+  else if (!ehDia(dia)) campos.erro("dia", "Informe o dia.");
   if (!ehHora(hora)) campos.erro("hora", "Informe a hora, por exemplo 09:30.");
 }
 

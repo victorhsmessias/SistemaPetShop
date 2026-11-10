@@ -6,6 +6,8 @@
 
 export type Dia = string;
 export type Hora = string;
+/** AAAA-MM, como no campo month e no ?mes= do Financeiro. */
+export type Mes = string;
 
 const MINUTO = 60_000;
 const DIA = 24 * 60 * MINUTO;
@@ -58,6 +60,17 @@ function doisDigitos(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+// Anos aceitos em ?dia= e ?mes= (ehDia, ehMes). Fora disso o Date.UTC erra (anos 0 a 99 viram 1900 a 1999)
+// ou o ISO sai com seis dígitos (+010000), o que quebraria as contas e a consulta. O limite fica só na
+// entrada: os dias e meses vizinhos dos extremos (2101-01-01, 1999-12) continuam calculados e exibidos, e
+// abri-los pela URL cai em hoje ou no mês atual.
+export const ANO_MINIMO = 2000;
+export const ANO_MAXIMO = 2100;
+
+function anoAceito(ano: number): boolean {
+  return ano >= ANO_MINIMO && ano <= ANO_MAXIMO;
+}
+
 function lerDia(dia: Dia): { ano: number; mes: number; d: number } | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dia);
   if (!m) return null;
@@ -69,7 +82,16 @@ function lerDia(dia: Dia): { ano: number; mes: number; d: number } | null {
 }
 
 export function ehDia(valor: unknown): valor is Dia {
-  return typeof valor === "string" && lerDia(valor) !== null;
+  if (typeof valor !== "string") return false;
+  const d = lerDia(valor);
+  return d !== null && anoAceito(d.ano);
+}
+
+/** Dia que existe no calendário, mas com o ano fora de ANO_MINIMO a ANO_MAXIMO: pede outra mensagem. */
+export function ehDiaForaDosAnosAceitos(valor: unknown): boolean {
+  if (typeof valor !== "string") return false;
+  const d = lerDia(valor);
+  return d !== null && !anoAceito(d.ano);
 }
 
 export function ehHora(valor: unknown): valor is Hora {
@@ -161,4 +183,31 @@ export function rotuloCurtoDoDia(dia: Dia): string {
 /** "2 de nov.". */
 export function rotuloDiaMes(dia: Dia): string {
   return formatoDiaMes.format(dataDoDia(dia));
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Meses (Financeiro). Conta em texto, sem fuso: o mês de um instante vem de noFuso(...).dia.
+
+export function ehMes(valor: unknown): valor is Mes {
+  return typeof valor === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(valor) && anoAceito(Number(valor.slice(0, 4)));
+}
+
+export function mesDoDia(dia: Dia): Mes {
+  return dia.slice(0, 7);
+}
+
+export function primeiroDiaDoMes(mes: Mes): Dia {
+  return `${mes}-01`;
+}
+
+export function somarMeses(mes: Mes, meses: number): Mes {
+  const [ano, m] = [Number(mes.slice(0, 4)), Number(mes.slice(5, 7))];
+  return new Date(Date.UTC(ano, m - 1 + meses, 1)).toISOString().slice(0, 7);
+}
+
+const formatoDoMes = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", month: "long", year: "numeric" });
+
+/** "novembro de 2026". */
+export function rotuloDoMes(mes: Mes): string {
+  return formatoDoMes.format(dataDoDia(primeiroDiaDoMes(mes)));
 }

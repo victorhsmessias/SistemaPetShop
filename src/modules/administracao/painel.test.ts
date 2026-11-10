@@ -104,7 +104,8 @@ describe("comando criar-admin", () => {
       banco
         .select()
         .from(auditoria)
-        .where(and(eq(auditoria.tabela, "user"), eq(auditoria.registroId, adminId))),
+        .where(and(eq(auditoria.tabela, "user"), eq(auditoria.registroId, adminId), eq(auditoria.acao, "criou")))
+        .orderBy(auditoria.id),
     );
     expect(evento).toMatchObject({ acao: "criou", empresaId: null, usuarioId: null });
     expect(evento!.depois).toMatchObject({ role: "admin", origem: "criar-admin" });

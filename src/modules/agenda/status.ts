@@ -1,5 +1,6 @@
 // Status do atendimento (H7 e planejamento, "Estados"). O app garante as transições; o banco garante
-// que confirmado_em é coerente com o status. "concluido" entra com o pagamento, na próxima sessão.
+// que confirmado_em é coerente com o status. "concluido" não passa por aqui: concluir e desfazer a conclusão
+// mexem na receita e só acontecem por agenda/conclusao.ts.
 
 export const STATUS = [
   "agendado",
@@ -52,7 +53,8 @@ export function proximosStatus(status: StatusAtendimento): readonly StatusAtendi
 
 /**
  * Status anterior, deduzido sem coluna nova (modelo de dados, "Desfazer um toque errado"). Reabrir um
- * cancelado ou uma falta é o mesmo que desfazer. Desfazer "concluido" fica para quando o pagamento entrar.
+ * cancelado ou uma falta é o mesmo que desfazer. Desfazer "concluido" é desfazerConclusao (agenda/conclusao.ts),
+ * que lê o status anterior da auditoria e cancela a receita.
  */
 export function statusAnterior(status: StatusAtendimento, confirmadoEm: Date | null): StatusAtendimento | null {
   switch (status) {

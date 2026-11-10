@@ -15,6 +15,7 @@ import {
   type EntradaItem,
   type ResultadoComAviso,
 } from "@/modules/agenda/atendimentos";
+import { concluir, desfazerConclusao } from "@/modules/agenda/conclusao";
 import type { Erros } from "@/modules/compartilhado/validacao";
 
 // Server Actions da agenda. Cada uma começa por naEmpresaDaDona, que confere a sessão e usa o empresaId
@@ -32,6 +33,9 @@ export type EstadoAgenda = {
 };
 
 export type EstadoStatus = { erro?: string };
+
+/** Desfazer a conclusão: o motivo digitado volta com o erro, para não se perder. */
+export type EstadoDesfazer = { erros: Erros; motivo: string };
 
 const texto = (dados: FormData, campo: string) => String(dados.get(campo) ?? "");
 
@@ -64,6 +68,12 @@ function estadoDe(
 
 function revalidarAgenda() {
   revalidatePath("/agenda", "layout");
+}
+
+/** Concluir e desfazer mudam a receita: o Financeiro também é revalidado. */
+function revalidarAgendaEFinanceiro() {
+  revalidarAgenda();
+  revalidatePath("/financeiro");
 }
 
 export async function agendarAcao(_anterior: EstadoAgenda, dados: FormData): Promise<EstadoAgenda> {
@@ -118,4 +128,32 @@ export async function editarObservacoesAcao(_anterior: EstadoAgenda, dados: Form
   if (!resultado.ok) return { erros: resultado.erros, valores: { observacoes }, servicos: [] };
   revalidarAgenda();
   redirect(`/agenda/${resultado.valor.id}`);
+}
+
+/**
+ * Conclui o atendimento com a forma de pagamento do botão tocado (um toque por opção). `de` e `total` são o
+ * status e o total que a tela mostrava: se mudaram, nada é gravado. Toque duplo: "já foi concluído".
+ */
+export async function concluirAcao(_anterior: EstadoStatus, dados: FormData): Promise<EstadoStatus> {
+  const total = texto(dados, "total");
+  const resultado = await naEmpresaDaDona((tx) =>
+    concluir(tx, texto(dados, "id"), {
+      de: texto(dados, "de"),
+      formaPagamentoId: texto(dados, "formaPagamentoId") || undefined,
+      // Sem o total (formulário adulterado), a conferência não roda; a soma vem sempre do banco.
+      totalVisto: /^\d+$/.test(total) ? Number(total) : undefined,
+    }),
+  );
+  if (!resultado.ok) return { erro: resultado.erros.geral ?? resultado.erros.formaPagamento };
+  revalidarAgendaEFinanceiro();
+  return {};
+}
+
+/** Desfaz a conclusão: volta ao status anterior e cancela a receita com o motivo. */
+export async function desfazerConclusaoAcao(_anterior: EstadoDesfazer, dados: FormData): Promise<EstadoDesfazer> {
+  const motivo = texto(dados, "motivo");
+  const resultado = await naEmpresaDaDona((tx) => desfazerConclusao(tx, texto(dados, "id"), motivo));
+  if (!resultado.ok) return { erros: resultado.erros, motivo };
+  revalidarAgendaEFinanceiro();
+  return { erros: {}, motivo: "" };
 }

@@ -9,7 +9,7 @@ Os documentos em `docs/` mandam. Leia a parte relevante antes de mexer no que el
 
 - `docs/planejamento/sistema-banho-e-tosa.md`: escopo, requisitos (H1 a H13), arquitetura e marcos.
 - `docs/planejamento/modelo-de-dados.md`: tabelas, isolamento, papéis, permissões, Better Auth e teste de isolamento.
-- `docs/adr/`: decisões (0001 a 0011).
+- `docs/adr/`: decisões (0001 a 0012).
 
 Se um pedido contradisser os documentos, valem os documentos: avise da contradição. Mudar uma decisão exige
 um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o antigo em silêncio.
@@ -34,16 +34,19 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 - `src/modules/<modulo>/`: código por domínio. Cada módulo é dono das suas tabelas (`schema.ts`).
   - `empresas` (e `fusoDaEmpresa`); `cadastros` (tutor, pet, telefone); `catalogo` (servico);
     `compartilhado` (dinheiro, validação);
-  - `agenda`: atendimento e itens (`atendimentos.ts`), fuso (`fuso.ts`), fim, sobreposição e colunas
-    (`calculos.ts`), transições e desfazer (`status.ts`);
+  - `agenda`: atendimento e itens (`atendimentos.ts`), fuso e meses (`fuso.ts`), fim, total, sobreposição e
+    colunas (`calculos.ts`), transições e desfazer (`status.ts`), concluir e desfazer a conclusão
+    (`conclusao.ts`);
+  - `financeiro`: forma de pagamento, categoria e lançamento (`lancamentos.ts`), resumo do dia e do mês
+    (`resumo.ts`);
   - `acesso`: Better Auth (`auth.ts`), tabelas do login, sessão (`sessao.ts`), cliente do navegador;
   - `auditoria`: tabela e `registrarEvento`;
   - `administracao`: painel do administrador (`exigirAdmin`, empresas, usuárias, criar administrador).
 - `src/db/`: `clientes.ts` (pools), `com-empresa.ts`, `com-plataforma.ts`, `rls.ts`, `verificar-papeis.ts`,
   `testes/apoio.ts`.
 - `src/app/`: telas e Server Actions; regra de negócio fica nos módulos. `scripts/criar-admin.mts`.
-  - `(dona)/`: telas da dona (Agenda, que é a tela inicial; Clientes; Serviços). Toda página e toda ação
-    começam por `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`); o layout do grupo é só visual.
+  - `(dona)/`: telas da dona (Agenda, que é a tela inicial; Clientes; Serviços; Financeiro). Toda página e
+    toda ação começam por `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`); o layout do grupo é só visual.
     `/empresa` só mostra o aviso de empresa suspensa. O atalho `?agendar=` do cadastro de tutor e pet volta
     para o agendamento por uma URL montada em `(dona)/agenda/retorno.ts`, nunca vinda do navegador.
   - Operações dos módulos recebem a transação (`tx`) e nunca o `empresaId`; ids de registros vindos da URL ou do
@@ -95,9 +98,15 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
     desatualizada). Desfazer volta ao anterior, deduzido de `confirmado_em` (sem coluna nova); reabrir
     cancelado ou falta é desfazer. Itens e horário só mudam com o atendimento ativo; o `fim` é recalculado
     quando os serviços mudam. Horário ocupado é aviso, nunca bloqueio, e cancelados e faltas não ocupam.
+    **Concluir e desfazer a conclusão só por `agenda/conclusao.ts`** (`concluir`, `desfazerConclusao`), numa
+    transação com a receita; o `mudarStatus` não conclui. Toque duplo vira "Este atendimento já foi concluído".
 17. **Ações do Better Auth** (criar usuária, redefinir senha, encerrar sessões) auditam fora da transação
     (ADR 0011): criação com evento logo depois e remoção se ele falhar; as outras com evento antes e outro com
     o resultado. Redefinir senha também encerra as sessões (`revokeUserSessions`).
+18. **Lançamento** nunca é apagado (cancelar, com motivo) e nunca leva nome nem telefone do tutor na
+    descrição: a receita de atendimento é "Atendimento", e a tela liga o pet pelo `atendimento_id`. Formas de
+    pagamento e categorias padrão nascem com a empresa pela trigger do ADR 0012; não crie outra função
+    `SECURITY DEFINER` sem ADR.
 
 ## Checklist: nova tabela de negócio
 
@@ -150,6 +159,8 @@ Postgres local na porta 5435 (`PORTA_POSTGRES` no `.env`). Conexões e Better Au
 - Antes de concluir algo que toque o banco ou o login, rode os testes de isolamento. Build vermelho por
   isolamento nunca é "flaky": é vazamento.
 - Testes criam dados com prefixo `[teste]` e e-mails `@teste.banho-e-tosa.local` e apagam o que criaram.
+- Consulta em teste sempre ordena (`orderBy`, na auditoria por `auditoria.id`): sem isso a ordem das linhas
+  não é garantida e o teste falha às vezes.
 - Confira a documentação oficial da versão instalada em vez de confiar na memória.
 - Servidor de desenvolvimento em segundo plano: ao parar, confira se a porta 3000 ficou livre (o processo
   filho do `next dev` pode sobreviver). Antes de encerrar um processo na porta, confira a linha de comando: pode
