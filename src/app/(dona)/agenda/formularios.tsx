@@ -13,7 +13,7 @@ import {
   type EstadoAgenda,
   type EstadoDesfazer,
 } from "@/app/(dona)/agenda/acoes";
-import { Campo, ErroGeral } from "@/app/(dona)/campos";
+import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
 import { ACOES_DOS_STATUS, NOMES_DOS_STATUS, proximosStatus, statusAnterior, type StatusAtendimento } from "@/modules/agenda/status";
 import { centavosParaTexto, formatarReais } from "@/modules/compartilhado/dinheiro";
 
@@ -175,7 +175,12 @@ export function FormularioAgendamento({
         </Campo>
       </div>
       <EscolhaDeServicos key={JSON.stringify(estado.servicos)} servicos={servicos} estado={estado} />
-      <Campo nome="observacoes" rotulo="Observações (opcional)" erro={estado.erros.observacoes}>
+      <Campo
+        nome="observacoes"
+        rotulo="Observações (opcional)"
+        erro={estado.erros.observacoes}
+        dica={DICA_OBSERVACOES}
+      >
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
       <AvisoDeHorario estado={estado} />
@@ -286,7 +291,12 @@ export function FormularioObservacoes({ id, observacoes }: { id: string; observa
     <form action={acao} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
       <ErroGeral erro={estado.erros.geral} />
-      <Campo nome="observacoes" rotulo="Observações do atendimento" erro={estado.erros.observacoes}>
+      <Campo
+        nome="observacoes"
+        rotulo="Observações do atendimento"
+        erro={estado.erros.observacoes}
+        dica={DICA_OBSERVACOES}
+      >
         {(props) => <textarea {...props} defaultValue={estado.valores.observacoes} />}
       </Campo>
       <BotaoEnviar enviando={enviando} rotulo="Salvar observações" />
