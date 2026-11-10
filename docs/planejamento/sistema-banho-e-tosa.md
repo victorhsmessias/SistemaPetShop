@@ -1,6 +1,6 @@
 # Sistema de gestão para banho e tosa — Planejamento
 
-Versão 2.6 · 07/11/2026 · Situação: Marco 1 em andamento. Prontos: a base (sessão 01), o login com o painel do administrador (sessão 02), tutores, pets e serviços (sessão 03) e a agenda (sessão 04). Em andamento: concluir o atendimento com pagamento e a receita no dia e no mês (sessão 05). As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
+Versão 2.7 · 09/11/2026 · Situação: Marco 1 em andamento. Prontos: a base (sessão 01), o login com o painel do administrador (sessão 02), tutores, pets e serviços (sessão 03), a agenda (sessão 04) e concluir o atendimento com pagamento e a receita no dia e no mês (sessão 05). Em andamento: a preparação para produção (sessão 06): imagem, migration na subida, `/api/health`, backup criptografado com restauração testada, CI/CD e documentos de operação (`docs/operacao/`); falta a parte do Victor no EasyPanel, no R2 e no monitor (`docs/operacao/checklist-lancamento.md`). As tabelas estão detalhadas em `docs/planejamento/modelo-de-dados.md`. O Marco 2 depende da pergunta em aberto 1.
 
 ## Resumo executivo
 
@@ -232,7 +232,8 @@ stateDiagram-v2
 
 - **Correção de toque errado:** o atendimento volta ao status anterior, deduzido sem coluna nova (regras no modelo de dados). Reabrir um cancelado ou uma falta é o mesmo que desfazer. Desfazer uma conclusão cancela a receita com motivo e volta ao status de antes de concluir. Toda mudança fica na auditoria.
 - **Pacote vendido:** ativo → encerrado (saldo zero), vencido (passou da validade) ou cancelado.
-- **Lançamento:** a receber → pago. Qualquer um → cancelado, com motivo.
+- **Lançamento:** a receber → pago. Qualquer um → cancelado, com motivo. Cancelado é final: o banco recusa qualquer mudança numa linha cancelada (trigger). Concluir de novo cria outra receita.
+- **Índice da receita do atendimento:** o índice único parcial em `lancamento(atendimento_id)` (não cancelados) fica sem `empresa_id`. Ele é mais restritivo que um índice com a empresa, porque os uuids são globais e a chave estrangeira composta já prende o atendimento à empresa. As consultas filtram por `atendimento_id`, e o RLS acrescenta a empresa. Um erro de duplicidade só revelaria algo de outra empresa a quem já soubesse o uuid de um atendimento dela, e o app sempre lê o atendimento pelo RLS ("não encontrado") antes de criar a receita. Sem motivo concreto para mudar (revisado na sessão 06).
 
 ### Dono dos dados
 
@@ -306,6 +307,8 @@ flowchart LR
 | 0010 | Login com e-mail e senha usando Better Auth | aceito |
 | 0011 | Auditoria das ações de login fora da transação | aceito |
 | 0012 | Dados padrão da empresa criados por trigger com SECURITY DEFINER | aceito |
+| 0013 | Backup diário criptografado com age, enviado ao Cloudflare R2 | aceito |
+| 0014 | Deploy por imagem no GHCR com gatilho do EasyPanel e migration na subida do container | aceito |
 
 ## 5. Segurança e acesso
 
@@ -326,7 +329,12 @@ Funcionário fica para depois.
 
 **Auditoria (ADR 0008).** Gravada na mesma transação da alteração, para lançamentos, vendas de pacote, status de atendimento e ações do administrador. Fica guardada enquanto a empresa existir.
 
-**Backup.** `pg_dump` diário, compactado e criptografado, enviado para um bucket no Cloudflare R2, com 30 dias de retenção. Restauração testada num banco separado antes do lançamento e depois uma vez por mês.
+**Backup (ADR 0013).** `pg_dump` diário, compactado e criptografado com `age`, enviado para um bucket no Cloudflare R2, com 30 dias de retenção.
+
+- Só a chave pública fica na VPS; a privada fica com o Victor, com uma segunda cópia fora do computador e do gerenciador de senhas.
+- O dump é feito por um papel só de leitura (`backup`).
+- O script só apaga o que passou de 31 dias depois de um envio bem-sucedido, e uma trava de 30 dias no bucket impede apagar antes.
+- Restauração testada num banco separado antes do lançamento e depois uma vez por mês, e automaticamente no CI (`npm run test:backup`), com o isolamento conferido depois de restaurar.
 
 **LGPD**
 
@@ -341,7 +349,7 @@ Funcionário fica para depois.
 - **Pontos de exposição:**
   - app na internet: HTTPS e login;
   - backups: criptografados;
-  - logs: sem nome nem telefone;
+  - logs: sem nome nem telefone (erros do banco viram só código, restrição, tabela e empresa);
   - notificação na tela bloqueada: só nome do pet e horário, sem dados do tutor.
 - **Fim da assinatura:** 90 dias para exportar os dados e depois exclusão. Os backups expiram em 30 dias.
 
@@ -356,9 +364,12 @@ Funcionário fica para depois.
 **Deploy e CI**
 
 1. Código no GitHub.
-2. O GitHub Actions roda lint, checagem de tipos e testes, incluindo os de isolamento.
-3. Cada push na main vai para a homologação.
-4. Produção sobe por tag. A migration roda antes de a nova versão entrar.
+2. O GitHub Actions roda lint, checagem de tipos e testes (incluindo os de isolamento), o ponta a ponta (também às 23:50 e às 00:10, com o servidor em UTC), o teste da imagem e o teste do backup.
+3. Cada push na main, com tudo verde, publica a imagem no GitHub Container Registry (tag imutável `sha-<commit>` e etiqueta `homologacao`) e chama o gatilho de deploy do EasyPanel da homologação (ADR 0014).
+4. Produção sobe por tag `v*`, com aprovação manual no GitHub: a mesma imagem já testada ganha a etiqueta `producao`, sem build novo.
+5. A migration roda na subida do container, como `migrador`, antes de o servidor novo entrar. Se falhar, o container novo não sobe e a versão anterior continua no ar.
+6. Toda migration é compatível com a versão anterior do app. Voltar uma versão é trocar a imagem, nunca restaurar o banco.
+7. Passo a passo de operação em `docs/operacao/README.md`.
 
 **Convivência na VPS (ADR 0003)**
 
@@ -368,7 +379,7 @@ Funcionário fica para depois.
 
 **Monitoramento e alertas**
 
-- Rota `/api/health` (app e banco) checada por um monitor externo, fora da VPS, para não cair junto com ela. Vários serviços têm plano gratuito; confira se o uso comercial é permitido.
+- Rota `/api/health` (app e banco, sem autenticação e sem dados) checada por um monitor externo, fora da VPS, para não cair junto com ela. Sugestão: UptimeRobot para a rota e Healthchecks.io para o heartbeat do backup, cujos planos gratuitos permitem uso comercial (termos conferidos em 09/11/2026; links no checklist de lançamento).
 - Alertas por e-mail ou Telegram para: app fora do ar, backup que falhou e tarefa da fila que falhou depois das novas tentativas.
 - Logs do container no EasyPanel, sem dados pessoais. Os erros levam o identificador da empresa.
 
@@ -429,9 +440,11 @@ Cada marco termina em produção e em uso pela piloto.
   - acordo simples com a piloto, cobrindo o tratamento dos dados dos clientes dela, antes de ela cadastrar clientes reais;
   - lista de serviços da piloto, com preço e duração, para o catálogo e os testes;
   - `BETTER_AUTH_URL` com https em homologação e produção, porque o app não sobe sem isso;
-  - `BETTER_AUTH_TRUSTED_PROXIES` apontando para o proxy do EasyPanel. Sem isso, cinco senhas erradas de qualquer pessoa bloqueiam o login de todas por um minuto;
-  - um jeito de rodar o `criar-admin` em produção: compilar o comando no build ou levar o `tsx` e o código-fonte para a imagem;
-  - a mesma versão do Node em desenvolvimento, CI e produção. O CI usa o Node 22, que perde suporte em 30/04/2027. Recomendação: Node 26, LTS com suporte até 30/04/2029, adotado depois que o CI passar inteiro com ele ([endoflife.date](https://endoflife.date/nodejs)).
+  - `BETTER_AUTH_TRUSTED_PROXIES` apontando para o proxy do EasyPanel. Sem isso, cinco senhas erradas de qualquer pessoa bloqueiam o login de todas por um minuto. O app não sobe sem ela em homologação e produção;
+  - os passos do Victor em `docs/operacao/checklist-lancamento.md` (Postgres, usuários do banco, variáveis, R2, chave do backup, monitor, teste de restauração e acordo com a piloto).
+- **Resolvido na sessão 06:**
+  - o `criar-admin` roda dentro da imagem de produção, empacotado no build (`node dist/criar-admin.mjs`, ADR 0014);
+  - a mesma versão do Node em desenvolvimento, CI e produção: Node 26, LTS com suporte até 30/04/2029 ([endoflife.date](https://endoflife.date/nodejs)), adotado depois de o CI passar inteiro com ele (`.nvmrc`). O Node 22 perde suporte em 30/04/2027.
 - **Antes do M2:** regras dos pacotes (pergunta 1).
 - **Antes da 2ª empresa:** CNPJ, termos de uso e política de privacidade (pergunta 3).
 
@@ -458,6 +471,6 @@ Não há sistema anterior: a agenda é de memória, e o cadastro cresce a cada a
 - [x] Autenticação, permissões, auditoria e pontos de LGPD estão decididos. Os documentos legais ficam para antes da 2ª empresa.
 - [x] Existe plano de deploy, backup e monitoramento, com custo estimado.
 - [x] Os marcos de entrega, riscos e estratégia de testes estão listados.
-- [x] Toda decisão relevante tem um ADR (0001 a 0012).
+- [x] Toda decisão relevante tem um ADR (0001 a 0014).
 
 **Conclusão:** pronto para codar o M1. O M2 espera a resposta da pergunta 1.

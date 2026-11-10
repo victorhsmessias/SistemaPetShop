@@ -7,8 +7,8 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 
 ## Requisitos
 
-- Node.js 22.12 ou mais novo, com npm 11.6.2 ou mais novo (`npm install -g npm@11.6.2`; o npm 10 que vem
-  com o Node 22 não aceita o `package-lock.json`)
+- Node.js 26 (a versão do `.nvmrc`, a mesma do CI e da imagem de produção), com npm 11.6.2 ou mais novo
+  (`npm install -g npm@11.6.2`, a mesma versão que gera o `package-lock.json`)
 - Docker com Docker Compose
 
 ## Rodar do zero
@@ -31,12 +31,13 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
    node -e "console.log(require('crypto').randomBytes(18).toString('hex'))"
    ```
 
-   Monte as três URLs com as senhas dos papéis correspondentes:
+   Monte as quatro URLs com as senhas dos papéis correspondentes:
 
    ```
    DATABASE_URL=postgres://app:<SENHA_APP>@localhost:5435/banho_e_tosa
    DATABASE_URL_PLATAFORMA=postgres://plataforma:<SENHA_PLATAFORMA>@localhost:5435/banho_e_tosa
    DATABASE_URL_MIGRADOR=postgres://migrador:<SENHA_MIGRADOR>@localhost:5435/banho_e_tosa
+   DATABASE_URL_BACKUP=postgres://backup:<SENHA_BACKUP>@localhost:5435/banho_e_tosa
    ```
 
    Preencha também o Better Auth:
@@ -56,7 +57,7 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
    ```
 
    Na primeira vez (volume vazio), o container roda `db/preparacao/papeis.sql`, que cria o banco
-   `banho_e_tosa` e os papéis `migrador`, `app` e `plataforma`.
+   `banho_e_tosa` e os papéis `migrador`, `app`, `plataforma` e `backup`.
 
 4. **Rode as migrations** (sempre como `migrador`, o dono das tabelas)
 
@@ -123,10 +124,14 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Checagem de tipos (`tsc --noEmit`) |
 | `npm test` | Testes (Vitest) contra o Postgres |
-| `npm run test:e2e` | Ponta a ponta (Playwright, iPhone/WebKit) contra o build de produção |
+| `npm run test:e2e` | Ponta a ponta (Playwright, iPhone/WebKit) contra o build de produção, com o relógio do servidor às 12:00 de São Paulo |
+| `npm run test:e2e:meia-noite` | O ponta a ponta da agenda e do financeiro às 23:50 e às 00:10 (reaproveita o build) |
+| `npm run test:imagem` | Testa a imagem de produção em Docker: migra, falha segura, `criar-admin`, login e `/api/health` (porta 3006) |
+| `npm run test:backup` | Testa o backup e a restauração em Docker, com o isolamento conferido depois (portas 5437 e 5438) |
 | `npm run db:generate -- --name=<descricao>` | Gera uma migration a partir dos schemas |
-| `npm run db:migrate` | Aplica as migrations como `migrador` |
+| `npm run db:migrate` | Aplica as migrations como `migrador` (com trava, o mesmo código da imagem) |
 | `npm run criar-admin` | Cria o administrador da plataforma (pede e-mail e senha) |
+| `npm run empacotar` | Empacota `migrar` e `criar-admin` em `dist/` para a imagem (o `Dockerfile` roda) |
 
 ## Papéis do banco
 
@@ -135,8 +140,9 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 | `migrador` | `DATABASE_URL_MIGRADOR` | Dono das tabelas; só migrations. O app não usa. |
 | `app` | `DATABASE_URL` | App e Better Auth. Nas tabelas de negócio, só a empresa da transação (RLS). |
 | `plataforma` | `DATABASE_URL_PLATAFORMA` | Painel do administrador: empresas, leitura de `user` e criação na auditoria. |
+| `backup` | `DATABASE_URL_BACKUP` | `pg_dump` do backup: lê tudo (`BYPASSRLS`), não escreve nada. |
 
-Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejamento/modelo-de-dados.md`.
+Nenhum deles é superusuário; só o `backup` tem `BYPASSRLS`, e só lê. Detalhes em `docs/planejamento/modelo-de-dados.md`.
 
 ## Problemas comuns
 
@@ -163,24 +169,27 @@ Nenhum deles é superusuário nem tem `BYPASSRLS`. Detalhes em `docs/planejament
 - **O app de produção não sobe e fala em https:** em produção, `BETTER_AUTH_URL` precisa ser https (só
   localhost fica de fora), para o cookie de sessão sair com `Secure`.
 
-## Pendências do deploy
+## Produção
 
-- **Proxy do EasyPanel e limite de tentativas:** em produção o app fica atrás do proxy. Preencha
-  `BETTER_AUTH_TRUSTED_PROXIES` com o IP (ou faixa CIDR) do proxy. Sem isso, o Better Auth não identifica o IP
-  de cada cliente e todos dividem o mesmo limite: 5 senhas erradas de qualquer pessoa bloqueiam o login de
-  todo mundo por um minuto. Confirme no log que o aviso "could not determine a client IP" não aparece.
-- **`criar-admin` dentro do container de produção:** o comando precisa rodar onde estão as variáveis de
-  produção, com o `tsx` e o código-fonte disponíveis na imagem (por exemplo, pelo console do serviço no
-  EasyPanel: `npm run criar-admin`). Definir isso ao montar a imagem.
-- `BETTER_AUTH_URL` com `https://` e o domínio de produção; `BETTER_AUTH_SECRET` novo (32+ caracteres), só no
-  EasyPanel. O cookie de sessão sai com `Secure` porque a URL é https, e o app se recusa a subir em produção
-  com uma URL sem https.
-- **Extensão `unaccent`:** a migration a cria com o papel `migrador`, dono do banco. O Postgres do EasyPanel
-  precisa ser 13 ou mais novo (extensão "trusted") e ter as extensões do contrib, como a imagem oficial.
+Homologação e produção rodam no EasyPanel, com imagem publicada pelo CI no GitHub Container Registry, migration na
+subida do container, backup diário criptografado para o Cloudflare R2 e monitor externo em `/api/health`. Tudo em
+[`docs/operacao/`](docs/operacao/):
+
+- [`README.md`](docs/operacao/README.md): runbook (deploy, rollback, restauração, administrador, papéis do banco,
+  limites de recursos, alertas e logs);
+- [`checklist-lancamento.md`](docs/operacao/checklist-lancamento.md): passo a passo do lançamento;
+- [`variaveis.md`](docs/operacao/variaveis.md): cada variável de ambiente, onde se configura e se é segredo.
+
+Imagem local para teste: `docker compose -f docker-compose.prod.yml -p banho-e-tosa-imagem up --build -d` e
+<http://localhost:3006/api/health> (senhas descartáveis; não é o deploy).
 
 ## CI
 
 O GitHub Actions (`.github/workflows/ci.yml`) sobe um Postgres descartável, roda o script dos papéis e as
-migrations e depois lint, checagem de tipos, testes e o ponta a ponta com tela de iPhone (WebKit). Se um teste
-de isolamento falhar, o build falha. O segredo do Better Auth é gerado na hora, só para o job. Se o ponta a
-ponta falhar, o relatório do Playwright fica nos artefatos da execução por 7 dias.
+migrations e depois lint, checagem de tipos, testes e o ponta a ponta com tela de iPhone (WebKit), também às 23:50
+e às 00:10. Em jobs paralelos, roda o teste da imagem e o do backup. Se um teste de isolamento falhar, o build
+falha. O segredo do Better Auth é gerado na hora, só para o job. Se o ponta a ponta falhar, o relatório do
+Playwright fica nos artefatos da execução por 7 dias.
+
+Na `main`, com tudo verde, o CI publica as imagens (`sha-<commit>` e `homologacao`) e chama o deploy da homologação.
+Uma tag `v*`, depois de aprovada no Environment `producao`, leva a mesma imagem para a produção (ADR 0014).
