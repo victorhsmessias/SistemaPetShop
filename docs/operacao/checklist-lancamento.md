@@ -11,7 +11,13 @@ no EasyPanel, cada um com o próprio Postgres, as próprias senhas e o próprio 
 ## 0. Antes de começar
 
 - [ ] Contas: GitHub (dono do repositório), EasyPanel na VPS, Cloudflare (R2), UptimeRobot e Healthchecks.io.
-- [ ] O CI da `main` está verde (Actions → CI).
+- [ ] O CI da `main` passou em tudo o que vem antes do deploy (Actions → CI): `verificar`, `teste-imagem`,
+      `teste-backup` e `publicar` verdes. **O job `deploy-homologacao` fica vermelho de propósito** a partir do
+      primeiro push depois do merge, com `Secret EASYPANEL_GATILHO_HOMOLOGACAO não configurado`: o gatilho só existe
+      depois que o serviço do app for criado. Essa falha é esperada e some no passo 6, quando você cadastra o secret
+      e roda o CI da `main` de novo. Até lá, cada push na `main` deixa a execução vermelha só por esse job; qualquer
+      outro job vermelho é problema de verdade. (O `deploy-producao` só roda em tag `v*` e tem a mesma falha
+      esperada até o secret da produção, também no passo 6.)
 - [ ] O domínio ainda não está definido: tudo funciona com a URL provisória do EasyPanel, e nada no código depende
       do domínio final. Quando o domínio chegar, troque `BETTER_AUTH_URL` (e o monitor) e faça o deploy.
 
@@ -45,7 +51,7 @@ O GitHub Packages só aceita **token clássico** (`read:packages`) para baixar i
 Esse token lê **todos** os pacotes que a conta alcança, não pode ser restrito a um só e pode nunca expirar.
 
 - [ ] Crie uma **conta de máquina** no GitHub (por exemplo `banho-e-tosa-deploy`), sem acesso a mais nada.
-- [ ] Depois do primeiro CI verde na `main`, em Packages → `banho-e-tosa` e `banho-e-tosa-backup` → Package
+- [ ] Depois que o job `publicar` passar na `main` (o `deploy-homologacao` vermelho é esperado, passo 0), em Packages → `banho-e-tosa` e `banho-e-tosa-backup` → Package
       settings, dê à conta de máquina acesso de **leitura**.
 - [ ] Com a conta de máquina, crie um token clássico só com `read:packages` e **validade de 1 ano**. Ponha um lembrete
       de rotação no calendário, um mês antes de vencer.
@@ -53,17 +59,24 @@ Esse token lê **todos** os pacotes que a conta alcança, não pode ser restrito
       `app` e `backup`.
 - [ ] Alternativa descartada: tornar as imagens públicas dispensaria o token, mas publicaria o código do app.
 
-## 3. Serviço do app
+## 3. Serviço do app (ainda sem deploy)
 
+O app **não sobe** em homologação e produção sem `BETTER_AUTH_URL` com https e sem `BETTER_AUTH_TRUSTED_PROXIES`.
+Por isso tudo é configurado antes do primeiro deploy, no passo 4.
+
+- [ ] Na VPS (SSH), descubra a faixa da rede do proxy do EasyPanel (Traefik). A rede `easypanel` existe desde a
+      instalação do painel, antes de qualquer serviço:
+      `docker network inspect easypanel --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}'`
+      (por exemplo `10.0.1.0/24`). Se houver mais de uma faixa, separe-as por vírgula. Por que isso importa: passo 5.
 - [ ] Novo serviço App → Source: imagem `ghcr.io/victorhsmessias/banho-e-tosa:homologacao` (na produção,
-      `...:producao`), com a credencial do passo 2.
+      `...:producao`), com a credencial do passo 2. **Não faça o deploy ainda.**
 - [ ] Variáveis (valores reais só aqui; ver [variaveis.md](variaveis.md)):
       - `DATABASE_URL=postgres://app:<SENHA_APP>@<host interno>:5432/banho_e_tosa`
       - `DATABASE_URL_PLATAFORMA=postgres://plataforma:<SENHA_PLATAFORMA>@<host interno>:5432/banho_e_tosa`
       - `BETTER_AUTH_SECRET`: novo, 64 caracteres hex, diferente em cada ambiente
         (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
-      - `BETTER_AUTH_URL`: passo 4.
-      - `BETTER_AUTH_TRUSTED_PROXIES`: passo 5.
+      - `BETTER_AUTH_URL`: passo 4 (antes do deploy).
+      - `BETTER_AUTH_TRUSTED_PROXIES=<faixa>`: a faixa descoberta acima.
 - [ ] **Credencial do migrador em arquivo, não em variável** (ADR 0015): Mounts → **File Mount**, caminho
       `/segredos/database_url_migrador` (exatamente esse), conteúdo
       `postgres://migrador:<SENHA_MIGRADOR>@<host interno>:5432/banho_e_tosa` numa linha. A imagem lê o arquivo como
@@ -72,34 +85,38 @@ Esse token lê **todos** os pacotes que a conta alcança, não pode ser restrito
 - [ ] Não defina outro usuário para o container: ele precisa subir como root para ler o arquivo (o servidor e o
       healthcheck rodam como `node`).
 - [ ] Recursos: limite de 512 MB e 1 CPU em produção (metade na homologação).
-- [ ] Deploy → ligue o **deploy sem queda** (zero-downtime).
+- [ ] Na configuração de deploy do serviço, ligue o **deploy sem queda** (zero-downtime). Só a opção: o primeiro
+      deploy é no passo 4.
 - [ ] Porta do domínio: **3000**.
 
-## 4. URL provisória e HTTPS
+## 4. URL provisória, HTTPS e primeiro deploy
 
 - [ ] No serviço do app, adicione o domínio provisório que o EasyPanel oferece, com **HTTPS** (certificado
       automático).
 - [ ] `BETTER_AUTH_URL` = essa URL exata, com `https://` e sem barra no fim. Ela precisa ser a URL que o navegador
       abre (protocolo, host e porta). O app **não sobe** em homologação e produção sem https.
-- [ ] Deploy. No log: `Migrations: aplicando como migrador...`, depois `Migrations: em dia` e o servidor pronto.
-      Se aparecer `falta o arquivo /segredos/database_url_migrador` ou `o usuário node consegue ler`, confira o
-      caminho da montagem do passo 3.
+- [ ] Confira que as três exigências da subida estão no serviço: `BETTER_AUTH_URL` (https), `BETTER_AUTH_TRUSTED_PROXIES`
+      (passo 3) e a montagem `/segredos/database_url_migrador` (passo 3).
+- [ ] Primeiro deploy. No log: `Migrations: aplicando como migrador...`, depois `Migrations: em dia` e o servidor
+      pronto. Se aparecer "O app não vai iniciar", a mensagem diz qual variável corrigir. Se aparecer
+      `falta o arquivo /segredos/database_url_migrador` ou `o usuário node consegue ler`, confira o caminho da
+      montagem do passo 3.
 - [ ] Confira que a credencial ficou fora do alcance do servidor: no Shell do app,
       `su -s /bin/sh node -c 'cat /segredos/database_url_migrador'` responde `Permission denied`.
-      Se aparecer "O app não vai iniciar", a mensagem diz qual variável corrigir.
 - [ ] `https://<url>/api/health` responde `{"status":"ok"}`.
 
-## 5. Proxy confiável
+## 5. Proxy confiável (conferência)
 
 Sem `BETTER_AUTH_TRUSTED_PROXIES`, atrás do proxy do EasyPanel (Traefik), o Better Auth pode não achar o IP de cada
 cliente. Aí todos dividem o mesmo limite de tentativas: **cinco senhas erradas de qualquer pessoa bloqueiam o login
 de todas por um minuto**. Por isso o app não sobe sem ela em homologação e produção, e recusa faixas abertas
-(`0.0.0.0/0`, `::/0`).
+(`0.0.0.0/0`, `::/0`). A faixa foi configurada no passo 3, antes do primeiro deploy; aqui você confere que ela é a
+certa.
 
-- [ ] Na VPS (SSH), descubra a faixa da rede do proxy:
-      `docker network inspect easypanel --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}'`
-      (por exemplo `10.0.1.0/24`). Se houver mais de uma faixa, separe-as por vírgula.
-- [ ] `BETTER_AUTH_TRUSTED_PROXIES=<faixa>` no serviço do app → deploy.
+- [ ] Como achar a faixa (o mesmo comando do passo 3, na VPS):
+      `docker network inspect easypanel --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}'`. Ela precisa ser a
+      mesma que está em `BETTER_AUTH_TRUSTED_PROXIES`. Se a faixa mudar (o painel recriou a rede `easypanel`, por
+      exemplo), troque a variável e faça o deploy.
 - [ ] Cloudflare na frente (nuvem laranja): comece com o DNS **sem proxy** (nuvem cinza). Com o proxy da Cloudflare,
       o IP que chega ao Traefik é o da Cloudflare, e a configuração muda (faixas da Cloudflare em
       <https://www.cloudflare.com/ips/>, confiadas no Traefik e no app). Deixe isso para quando houver domínio.
@@ -115,8 +132,9 @@ de todas por um minuto**. Por isso o app não sobe sem ela em homologação e pr
       - `homologacao`: secret `EASYPANEL_GATILHO_HOMOLOGACAO` = URL do gatilho da homologação;
       - `producao`: secret `EASYPANEL_GATILHO_PRODUCAO` = URL do gatilho da produção; **Required reviewers**: você
         (aprovação obrigatória); Deployment branches and tags: só tags `v*`.
-- [ ] Rode de novo o CI da `main` (Actions → CI → Re-run). O job `deploy-homologacao` fica verde, e o EasyPanel
-      reimplanta. No resumo do job `publicar` está o digest. Confira no EasyPanel que a imagem em uso tem o mesmo
+- [ ] Rode de novo o CI da `main` (Actions → CI → Re-run failed jobs). O job `deploy-homologacao`, vermelho desde
+      o primeiro push (passo 0), fica verde, e o EasyPanel reimplanta. A partir daqui, a `main` só fica vermelha
+      por problema de verdade. No resumo do job `publicar` está o digest. Confira no EasyPanel que a imagem em uso tem o mesmo
       digest.
 
 ## 7. Confirmar o deploy sem queda

@@ -50,8 +50,11 @@ atendendo sobre o schema novo, e um rollback é só voltar a imagem, sem restaur
 Siga o [checklist de lançamento](checklist-lancamento.md), na ordem. Resumo:
 
 1. Postgres 18 do ambiente, com os quatro papéis e o banco (SQL na seção [Papéis do banco](#papéis-do-banco)).
-2. Serviço `app` com as variáveis, o domínio provisório com HTTPS, os limites e o deploy sem queda ligado.
-3. Gatilho de deploy como secret do Environment no GitHub; merge ou re-execução do CI da `main`.
+2. Serviço `app` com tudo o que a subida exige **antes do primeiro deploy**: a faixa do proxy em
+   `BETTER_AUTH_TRUSTED_PROXIES`, o domínio provisório com HTTPS em `BETTER_AUTH_URL` e a montagem da credencial do
+   migrador; mais os limites e o deploy sem queda ligado. Só então o primeiro deploy.
+3. Gatilho de deploy como secret do Environment no GitHub e re-execução do CI da `main`. Até aqui o job
+   `deploy-homologacao` fica vermelho de propósito (falta o secret); é esperado e some neste passo.
 4. Conferir `https://<url>/api/health` → `{"status":"ok"}` e o log da subida
    (`Migrations: em dia`, sem `could not determine a client IP`).
 5. Criar o administrador ([abaixo](#criar-o-administrador-e-uma-empresa)).
@@ -263,4 +266,4 @@ Ver o [checklist](checklist-lancamento.md#12-monitor-externo-e-teste-de-alerta).
   - o log do Better Auth passa pelo mesmo resumo;
   - o backup não imprime valores de variáveis.
 - Se aparecer `could not determine a client IP`, o `BETTER_AUTH_TRUSTED_PROXIES` está errado
-  ([checklist](checklist-lancamento.md#5-proxy-confiável)).
+  ([checklist](checklist-lancamento.md#5-proxy-confiável-conferência)).
