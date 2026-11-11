@@ -31,17 +31,17 @@ Ver ADR 0013. O serviço de backup não recebe nenhuma variável do app.
 
 | Variável | Para que serve | Onde | Segredo |
 |---|---|---|---|
-| `DATABASE_URL_BACKUP` | Conexão do papel `backup` (só leitura, `BYPASSRLS`) usada pelo `pg_dump`. Em desenvolvimento, usada pelos testes do papel. | serviço backup; `.env` | sim (senha) |
+| `DATABASE_URL_BACKUP` | Conexão do papel `backup` (só leitura, `BYPASSRLS`) usada pelo `pg_dump`. O `backup.sh` passa ao `pg_dump` a URL **sem a senha** e a senha por `PGPASSWORD`, porque os argumentos aparecem no `ps` da VPS (`backup/conexao.sh`). Em desenvolvimento, usada pelos testes do papel. | serviço backup; `.env` | sim (senha) |
 | `BACKUP_AGE_DESTINATARIO` | Chave **pública** do age (`age1...`) que criptografa o backup. A privada nunca vai para a VPS. | serviço backup | não |
 | `BACKUP_S3_ENDPOINT` | Endpoint S3 do R2: `https://<id da conta>.r2.cloudflarestorage.com`. | serviço backup | não |
 | `BACKUP_S3_BUCKET` | Nome do bucket do backup. | serviço backup | não |
 | `BACKUP_S3_ACCESS_KEY_ID` | Access Key ID do token do R2 restrito a esse bucket ("Object Read & Write"). | serviço backup | sim |
 | `BACKUP_S3_SECRET_ACCESS_KEY` | Secret Access Key do mesmo token. | serviço backup | sim |
 | `BACKUP_S3_PROVEDOR` | Opcional. Provedor S3 do rclone; padrão `Cloudflare` (o teste local usa `Rclone`). | serviço backup | não |
-| `BACKUP_HEARTBEAT_URL` | Opcional. URL do monitor chamada a cada backup bem-sucedido; no erro, chama `<url>/fail` (padrão do Healthchecks.io). | serviço backup | sim (quem tem a URL pode fingir backups) |
+| `BACKUP_HEARTBEAT_URL` | Opcional. URL do monitor chamada a cada backup bem-sucedido; no erro, chama `<url>/fail` (padrão do Healthchecks.io). Nunca vai na linha de comando nem no log: o `backup.sh` a passa ao `rclone copyurl` num arquivo temporário legível só pelo usuário do container. | serviço backup | sim (quem tem a URL pode fingir backups) |
 | `BACKUP_HORARIO` | Opcional. Hora do backup diário, `HH:MM`, padrão `03:00`. | serviço backup | não |
 | `TZ` | Opcional. Fuso do agendador, padrão `America/Sao_Paulo` (definido na imagem). | serviço backup | não |
-| `DATABASE_URL_DESTINO` | Só na restauração: conexão do `migrador` com o banco **separado** que recebe o backup. | linha de comando da restauração | sim (senha) |
+| `DATABASE_URL_DESTINO` | Só na restauração: conexão do `migrador` com o banco **separado** que recebe o backup. O `restaurar.sh` passa a senha ao `psql` e ao `pg_restore` por `PGPASSWORD`, nunca nos argumentos. | linha de comando da restauração | sim (senha) |
 | `BACKUP_AGE_CHAVE_ARQUIVO` | Só na restauração: caminho da chave **privada** do age, montada no container só nessa hora. | linha de comando da restauração | o arquivo é |
 
 ## Postgres local (só desenvolvimento)

@@ -61,6 +61,8 @@ services:
       BACKUP_AGE_CHAVE_ARQUIVO: /chaves/chave.txt
     volumes:
       - chaves:/chaves
+      # Espião dos argumentos (o teste confere que nenhum segredo vai na linha de comando).
+      - ./scripts/backup-teste:/espiao:ro
 
 volumes:
   s3:

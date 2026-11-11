@@ -11,10 +11,14 @@
 #   DATABASE_URL_DESTINO       conexão do migrador com o banco de destino (separado do de produção)
 #   BACKUP_AGE_CHAVE_ARQUIVO   caminho da chave PRIVADA do age, montada só na hora (somente leitura)
 #   BACKUP_S3_*                as mesmas do backup.sh, quando o backup vem do bucket
+# A senha do banco não vai nos argumentos (aparecem no ps da VPS): vai por PGPASSWORD (conexao.sh).
 set -eu
 # O ash do busybox (Alpine), que roda este script, suporta pipefail.
 # shellcheck disable=SC3040
 set -o pipefail
+
+# shellcheck source=backup/conexao.sh
+. "$(dirname "$0")/conexao.sh"
 
 PREFIXO="banho-e-tosa"
 registrar() { echo "$(date '+%Y-%m-%d %H:%M:%S %Z') restauração: $*"; }
@@ -25,7 +29,8 @@ falhar() { registrar "ERRO: $*" >&2; exit 1; }
 [ -n "${BACKUP_AGE_CHAVE_ARQUIVO:-}" ] || falhar "BACKUP_AGE_CHAVE_ARQUIVO não definida."
 [ -r "$BACKUP_AGE_CHAVE_ARQUIVO" ] || falhar "não consegui ler a chave privada em BACKUP_AGE_CHAVE_ARQUIVO."
 
-consultar() { psql --no-psqlrc -X -v ON_ERROR_STOP=1 -tA --dbname="$DATABASE_URL_DESTINO" -c "$1"; }
+separar_senha "$DATABASE_URL_DESTINO"
+consultar() { psql --no-psqlrc -X -v ON_ERROR_STOP=1 -tA --no-password --dbname="$URL_SEM_SENHA" -c "$1"; }
 
 papeis=$(consultar "select count(*) from pg_roles where rolname in ('migrador', 'app', 'plataforma', 'backup')")
 [ "$papeis" = "4" ] || falhar "crie antes os papéis migrador, app, plataforma e backup (db/preparacao/papeis.sql)."
@@ -66,7 +71,7 @@ esac
 # sem aviso. --single-transaction: ou restaura tudo, ou nada.
 ler "$1" \
   | age --decrypt --identity "$BACKUP_AGE_CHAVE_ARQUIVO" \
-  | pg_restore --no-owner --exit-on-error --single-transaction --dbname="$DATABASE_URL_DESTINO"
+  | pg_restore --no-owner --exit-on-error --single-transaction --no-password --dbname="$URL_SEM_SENHA"
 
 registrar "conferência (linhas por tabela):"
 consultar "select format('  %s: %s', c.relname,

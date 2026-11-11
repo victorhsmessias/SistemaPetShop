@@ -15,6 +15,7 @@
     4. Retenção.
     5. Heartbeat opcional.
     - Qualquer falha sai com código diferente de zero, não apaga nada e chama `<heartbeat>/fail`. Nada no log mostra valores de variáveis.
+    - Nenhum segredo vai nos argumentos dos programas, que aparecem no `ps` da VPS: a senha do banco vai por `PGPASSWORD` (a URL nos argumentos fica sem senha), a credencial do R2 por variáveis do rclone e a URL do heartbeat por um arquivo temporário (`rclone copyurl --urls`). O `npm run test:backup` confere os argumentos de cada programa chamado.
   - **Chave:**
     - A VPS só guarda a chave pública (`BACKUP_AGE_DESTINATARIO`).
     - A chave privada nunca fica na VPS nem no repositório. Fica no gerenciador de senhas do Victor, com **uma segunda cópia fora deste computador e fora do gerenciador**, porque sem ela os backups não abrem.

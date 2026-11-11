@@ -232,8 +232,10 @@ Passos:
       do serviço de backup e faça o deploy.
 - [ ] **Teste do alerta de app fora do ar** (homologação): pare o Postgres da homologação. O `/api/health` passa a
       responder 503, e o alerta chega em até ~10 min. Ligue o Postgres de novo e confira a mensagem de volta.
-- [ ] **Teste do alerta de backup:** no Shell do serviço de backup, `wget -q -O /dev/null "$BACKUP_HEARTBEAT_URL/fail"`.
-      O Healthchecks.io avisa. Depois rode `backup.sh`, e o check volta ao verde.
+- [ ] **Teste do alerta de backup:** no Shell do serviço de backup, provoque uma falha de verdade com um bucket que
+      não existe: `BACKUP_S3_BUCKET=bucket-que-nao-existe backup.sh`. Ele sai com erro e chama o `/fail`, e o
+      Healthchecks.io avisa. Depois rode `backup.sh`, e o check volta ao verde. (Não chame a URL do heartbeat com
+      `wget` ou `curl` na linha de comando: ela apareceria no `ps` da VPS, e quem tem a URL pode fingir backups.)
 - [ ] Fila de tarefas: ainda não existe (entra no M3, com o pg-boss). Quando entrar, ela ganha um check próprio no
       Healthchecks.io, e cada tarefa que esgotar as novas tentativas chama o `/fail` dele
       ([runbook](README.md#monitor-e-alertas)).

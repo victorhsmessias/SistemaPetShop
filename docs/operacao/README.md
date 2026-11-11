@@ -272,7 +272,7 @@ Ver o [checklist](checklist-lancamento.md#12-monitor-externo-e-teste-de-alerta).
 | Alerta | Como chega |
 |---|---|
 | App fora do ar | O UptimeRobot checa `https://<url>/api/health` a cada 5 min, de fora da VPS. Qualquer resposta diferente de 200 (503 com o banco fora, erro de rede, VPS caída) dispara e-mail. |
-| Backup que não rodou | O `backup.sh` chama `BACKUP_HEARTBEAT_URL` (Healthchecks.io) a cada sucesso e `<url>/fail` no erro. Sem sinal em 1 dia mais 2 h de tolerância, ou com `/fail`, o Healthchecks.io avisa por e-mail ou Telegram. |
+| Backup que não rodou | O `backup.sh` chama `BACKUP_HEARTBEAT_URL` (Healthchecks.io) a cada sucesso e `<url>/fail` no erro, sem pôr a URL na linha de comando. Sem sinal em 1 dia mais 2 h de tolerância, ou com `/fail`, o Healthchecks.io avisa por e-mail ou Telegram. |
 | Tarefa da fila que falhou depois das novas tentativas | A fila (pg-boss) entra no M3. Quando entrar, cada tarefa que esgotar as novas tentativas chama o `/fail` de um check próprio no Healthchecks.io, e o painel do administrador mostra o reprocessamento (ADR 0007). Hoje não há fila. |
 
 ## Logs

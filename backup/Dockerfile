@@ -9,6 +9,7 @@ FROM postgres:18.6-alpine3.24
 RUN apk add --no-cache age rclone tzdata
 
 COPY --chmod=755 backup.sh restaurar.sh agendar.sh /usr/local/bin/
+COPY --chmod=644 conexao.sh /usr/local/bin/
 
 ENV TZ=America/Sao_Paulo \
     BACKUP_HORARIO=03:00

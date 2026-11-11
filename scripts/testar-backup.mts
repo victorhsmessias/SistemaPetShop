@@ -7,7 +7,10 @@
 //   3. a restauração num banco separado e vazio traz as mesmas linhas, tabela por tabela e empresa por empresa, e
 //      recusa um banco que não está vazio;
 //   4. depois de restaurar, RLS, políticas, triggers, funções e permissões são as mesmas, a empresa A só vê os
-//      próprios dados, e os testes de isolamento e de estrutura passam contra o banco restaurado.
+//      próprios dados, e os testes de isolamento e de estrutura passam contra o banco restaurado;
+//   5. nenhuma senha do banco, nem a credencial do S3, nem a URL do heartbeat aparece nos argumentos dos programas
+//      que backup.sh e restaurar.sh chamam (o que o ps da VPS mostra): cada execução passa pelo
+//      scripts/backup-teste/espiar-argumentos.sh, que anota os argumentos de pg_dump, pg_restore, psql, age e rclone.
 // No fim apaga tudo. Projeto do compose: <COMPOSE_PROJECT_NAME ou banho-e-tosa>-backup. Portas: PORTA_BACKUP_ORIGEM
 // (padrão 5437) e PORTA_BACKUP_DESTINO (padrão 5438).
 
@@ -81,6 +84,18 @@ ${texto}`));
       else resolve(saida);
     });
   });
+}
+
+/** Argumentos anotados pelo espiar-argumentos.sh em todas as execuções do backup e da restauração. */
+const argumentosEspiados: string[] = [];
+
+/** Roda backup.sh ou restaurar.sh pelo espião de argumentos e guarda o que ele anotou. */
+async function espiado(args: string[], env: Record<string, string> = {}): Promise<Saida> {
+  const saida = await ferramenta(["sh", "/espiao/espiar-argumentos.sh", ...args], env, true);
+  const trecho = /=== argumentos ===\r?\n([\s\S]*?)=== fim dos argumentos ===/.exec(saida.texto);
+  if (!trecho) throw new Error(`o espião de argumentos não respondeu:\n${saida.texto}`);
+  argumentosEspiados.push(...trecho[1]!.split(/\r?\n/).filter(Boolean));
+  return saida;
 }
 
 function confirmar(condicao: unknown, mensagem: string): asserts condicao {
@@ -330,20 +345,19 @@ async function main() {
     plantar(recente, 10);
 
     console.log("\n3. Backup que falha não apaga nada e não confirma o heartbeat");
-    const s3Recusa = await ferramenta(["backup.sh"], { ...comChave, BACKUP_S3_SECRET_ACCESS_KEY: "segredo-errado" }, true);
+    const s3Recusa = await espiado(["backup.sh"], { ...comChave, BACKUP_S3_SECRET_ACCESS_KEY: "segredo-errado" });
     confirmar(s3Recusa.codigo !== 0, `com o S3 recusando, sai com erro (código ${s3Recusa.codigo})`);
     confirmar(!s3Recusa.texto.includes("segredo-errado") && !s3Recusa.texto.includes("teste-backup"), "o log não mostra segredos");
-    const bancoRecusa = await ferramenta(
-      ["backup.sh"],
-      { ...comChave, DATABASE_URL_BACKUP: "postgres://backup:senha-errada@origem:5432/banho_e_tosa" },
-      true,
-    );
+    const bancoRecusa = await espiado(["backup.sh"], {
+      ...comChave,
+      DATABASE_URL_BACKUP: "postgres://backup:senha-errada@origem:5432/banho_e_tosa",
+    });
     confirmar(bancoRecusa.codigo !== 0, `com o banco recusando, sai com erro (código ${bancoRecusa.codigo})`);
     confirmar(JSON.stringify(objetosDoBucket()) === JSON.stringify([antigo, recente].sort()), "nada foi enviado nem apagado");
     confirmar(heartbeats.length === 2 && heartbeats.every((h) => h === "/hb/fail"), "só o heartbeat de falha foi chamado");
 
     console.log("\n4. Backup bem-sucedido");
-    const ok = await ferramenta(["backup.sh"], comChave, true);
+    const ok = await espiado(["backup.sh"], comChave);
     confirmar(ok.codigo === 0, `o backup termina bem${ok.codigo === 0 ? "" : `:\n${ok.texto}`}`);
     const depois = objetosDoBucket();
     confirmar(depois.length === 2 && depois.includes(recente) && !depois.includes(antigo), "apagou só o de mais de 31 dias");
@@ -353,9 +367,9 @@ async function main() {
     confirmar(String(heartbeats.at(-1)) === "/hb", "o heartbeat de sucesso foi chamado");
 
     console.log("\n5. Restauração num banco separado");
-    const restaurado = await ferramenta(["restaurar.sh", "ultimo"], {}, true);
+    const restaurado = await espiado(["restaurar.sh", "ultimo"]);
     confirmar(restaurado.codigo === 0, `restaurou o último backup${restaurado.codigo === 0 ? "" : `:\n${restaurado.texto}`}`);
-    const deNovo = await ferramenta(["restaurar.sh", "ultimo"], {}, true);
+    const deNovo = await espiado(["restaurar.sh", "ultimo"]);
     confirmar(deNovo.codigo !== 0 && deNovo.texto.includes("não está vazio"), "recusa restaurar num banco que não está vazio");
 
     const linhasDestino = await contagens(destino.migrador);
@@ -377,7 +391,35 @@ async function main() {
     }
     confirmar(JSON.stringify(estruturaDestino.donos) === '["migrador"]', "todas as tabelas pertencem ao migrador");
 
-    console.log("\n6. Isolamento entre empresas depois de restaurar");
+    console.log("\n6. Nenhum segredo nos argumentos dos programas (o que o ps da VPS mostra)");
+    const argumentos = argumentosEspiados.join("\n");
+    const programas = new Set(argumentosEspiados.map((linha) => linha.split(" ")[0]));
+    confirmar(
+      ["pg_dump", "pg_restore", "psql", "age", "rclone"].every((p) => programas.has(p)),
+      `o espião anotou ${argumentosEspiados.length} chamadas (${[...programas].sort().join(", ")})`,
+    );
+    confirmar(
+      argumentos.includes("--dbname=postgres://backup@origem:5432/banho_e_tosa") &&
+        argumentos.includes("--dbname=postgres://migrador@destino:5432/banho_e_tosa"),
+      "pg_dump, psql e pg_restore recebem a URL sem senha",
+    );
+    const segredos = {
+      "senha do backup": "teste-backup",
+      "senha do migrador": "teste-migrador",
+      "senha errada do teste": "senha-errada",
+      "segredo do S3": "teste-segredo",
+      "segredo errado do S3": "segredo-errado",
+      "URL do heartbeat": heartbeat.replace("http://", ""),
+    };
+    for (const [nome, valor] of Object.entries(segredos)) {
+      confirmar(!argumentos.includes(valor), `${nome}: não aparece nos argumentos`);
+    }
+    confirmar(
+      /^rclone copyurl --urls \/tmp\/heartbeat\.\S+ :memory:/m.test(argumentos),
+      "o heartbeat é chamado com a URL num arquivo temporário (rclone copyurl --urls)",
+    );
+
+    console.log("\n7. Isolamento entre empresas depois de restaurar");
     await conferirIsolamentoNoDestino(empresas, porEmpresaOrigem);
     testesDeIsolamentoNoDestino();
   } finally {

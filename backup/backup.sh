@@ -13,11 +13,16 @@
 #   BACKUP_S3_PROVEDOR             opcional (padrão Cloudflare; o teste local usa Rclone)
 #   BACKUP_HEARTBEAT_URL           opcional: chamada no sucesso; no erro, chama <url>/fail (padrão do Healthchecks.io)
 #
-# Nada aqui imprime valores de variáveis.
+# Nada aqui imprime valores de variáveis, e nenhum segredo vai nos argumentos de um programa (eles aparecem no ps da
+# VPS): a senha do banco vai por PGPASSWORD (conexao.sh), a credencial do S3 por variáveis do rclone e a URL do
+# heartbeat por um arquivo temporário legível só por este usuário.
 set -eu
 # O ash do busybox (Alpine), que roda este script, suporta pipefail.
 # shellcheck disable=SC3040
 set -o pipefail
+
+# shellcheck source=backup/conexao.sh
+. "$(dirname "$0")/conexao.sh"
 
 PREFIXO="banho-e-tosa"
 RETENCAO="31d"
@@ -52,17 +57,30 @@ NOME="$PREFIXO-$(date -u '+%Y-%m-%dT%H%M%SZ').dump.age"
 TEMPORARIO="$(mktemp /tmp/backup.XXXXXX)"
 SUCESSO=0
 
+# GET na URL do heartbeat sem pô-la na linha de comando: o rclone copyurl lê a URL de um arquivo (--urls) e grava a
+# resposta em lugar nenhum (:memory:). A saída do rclone é descartada porque, num erro, ela repete a URL.
+avisar_heartbeat() {
+  _lista="$(mktemp /tmp/heartbeat.XXXXXX)"
+  printf '"%s",heartbeat\n' "$1" > "$_lista"
+  _codigo=0
+  rclone copyurl --urls "$_lista" :memory: --retries 2 --low-level-retries 2 --contimeout 10s --timeout 10s \
+    > /dev/null 2>&1 || _codigo=$?
+  rm -f "$_lista"
+  return "$_codigo"
+}
+
 encerrar() {
   rm -f "$TEMPORARIO"
   if [ "$SUCESSO" -ne 1 ] && [ -n "${BACKUP_HEARTBEAT_URL:-}" ]; then
-    wget -q -T 10 -O /dev/null "${BACKUP_HEARTBEAT_URL%/}/fail" 2>/dev/null || true
+    avisar_heartbeat "${BACKUP_HEARTBEAT_URL%/}/fail" || true
   fi
 }
 trap encerrar EXIT
 
 inicio=$(date +%s)
 registrar "gerando o dump criptografado..."
-pg_dump --format=custom --compress=6 --no-password --dbname="$DATABASE_URL_BACKUP" \
+separar_senha "$DATABASE_URL_BACKUP"
+pg_dump --format=custom --compress=6 --no-password --dbname="$URL_SEM_SENHA" \
   | age --encrypt --recipient "$BACKUP_AGE_DESTINATARIO" > "$TEMPORARIO"
 if [ ! -s "$TEMPORARIO" ]; then
   registrar "ERRO: o arquivo do backup ficou vazio." >&2
@@ -80,7 +98,7 @@ SUCESSO=1
 registrar "concluído em $(( $(date +%s) - inicio )) s: $NOME."
 
 if [ -n "${BACKUP_HEARTBEAT_URL:-}" ]; then
-  if ! wget -q -T 10 -O /dev/null "$BACKUP_HEARTBEAT_URL"; then
+  if ! avisar_heartbeat "$BACKUP_HEARTBEAT_URL"; then
     registrar "AVISO: o backup foi feito, mas o heartbeat não respondeu (o monitor pode avisar por engano)." >&2
   fi
 fi
