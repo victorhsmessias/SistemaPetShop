@@ -7,6 +7,7 @@
 #   docker compose -f docker-compose.prod.yml -p banho-e-tosa-imagem down -v
 #
 # PORTA_IMAGEM muda a porta do app no computador (padrão 3006). O Postgres não é exposto.
+# criar-admin: docker compose -f docker-compose.prod.yml -p banho-e-tosa-imagem exec -u node app node dist/criar-admin.mjs
 
 name: banho-e-tosa-imagem
 
@@ -41,12 +42,21 @@ services:
     environment:
       DATABASE_URL: postgres://app:teste-app@postgres:5432/banho_e_tosa
       DATABASE_URL_PLATAFORMA: postgres://plataforma:teste-plataforma@postgres:5432/banho_e_tosa
-      DATABASE_URL_MIGRADOR: postgres://migrador:teste-migrador@postgres:5432/banho_e_tosa
       BETTER_AUTH_SECRET: segredo-descartavel-do-teste-local-0000000000000000
       # localhost: fica fora das regras de homologação e produção (https, proxies), como o test:e2e.
       BETTER_AUTH_URL: http://localhost:${PORTA_IMAGEM:-3006}
+    # A credencial do migrador não vai no ambiente: vai num arquivo dentro de /segredos (pasta só do root), como a
+    # montagem de arquivo do EasyPanel (ADR 0015). URL_MIGRADOR_DO_TESTE troca o conteúdo (o test:imagem usa para
+    # a senha errada).
+    configs:
+      - source: url-migrador
+        target: /segredos/database_url_migrador
     ports:
       - "${PORTA_IMAGEM:-3006}:3000"
+
+configs:
+  url-migrador:
+    content: ${URL_MIGRADOR_DO_TESTE:-postgres://migrador:teste-migrador@postgres:5432/banho_e_tosa}
 
 volumes:
   dados:

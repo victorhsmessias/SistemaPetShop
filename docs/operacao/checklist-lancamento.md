@@ -56,12 +56,17 @@ Esse token lê **todos** os pacotes que a conta alcança, não pode ser restrito
 - [ ] Variáveis (valores reais só aqui; ver [variaveis.md](variaveis.md)):
       - `DATABASE_URL=postgres://app:<SENHA_APP>@<host interno>:5432/banho_e_tosa`
       - `DATABASE_URL_PLATAFORMA=postgres://plataforma:<SENHA_PLATAFORMA>@<host interno>:5432/banho_e_tosa`
-      - `DATABASE_URL_MIGRADOR=postgres://migrador:<SENHA_MIGRADOR>@<host interno>:5432/banho_e_tosa`. A imagem migra
-        com ela e a remove antes de iniciar o servidor; o app nunca a lê.
       - `BETTER_AUTH_SECRET`: novo, 64 caracteres hex, diferente em cada ambiente
         (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
       - `BETTER_AUTH_URL`: passo 4.
       - `BETTER_AUTH_TRUSTED_PROXIES`: passo 5.
+- [ ] **Credencial do migrador em arquivo, não em variável** (ADR 0015): Mounts → **File Mount**, caminho
+      `/segredos/database_url_migrador` (exatamente esse), conteúdo
+      `postgres://migrador:<SENHA_MIGRADOR>@<host interno>:5432/banho_e_tosa` numa linha. A imagem lê o arquivo como
+      root, migra e só então troca para o usuário `node`. **Não crie** a variável `DATABASE_URL_MIGRADOR`: com ela, o
+      container não sobe.
+- [ ] Não defina outro usuário para o container: ele precisa subir como root para ler o arquivo (o servidor e o
+      healthcheck rodam como `node`).
 - [ ] Recursos: limite de 512 MB e 1 CPU em produção (metade na homologação).
 - [ ] Deploy → ligue o **deploy sem queda** (zero-downtime).
 - [ ] Porta do domínio: **3000**.
@@ -73,6 +78,10 @@ Esse token lê **todos** os pacotes que a conta alcança, não pode ser restrito
 - [ ] `BETTER_AUTH_URL` = essa URL exata, com `https://` e sem barra no fim. Ela precisa ser a URL que o navegador
       abre (protocolo, host e porta). O app **não sobe** em homologação e produção sem https.
 - [ ] Deploy. No log: `Migrations: aplicando como migrador...`, depois `Migrations: em dia` e o servidor pronto.
+      Se aparecer `falta o arquivo /segredos/database_url_migrador` ou `o usuário node consegue ler`, confira o
+      caminho da montagem do passo 3.
+- [ ] Confira que a credencial ficou fora do alcance do servidor: no Shell do app,
+      `su -s /bin/sh node -c 'cat /segredos/database_url_migrador'` responde `Permission denied`.
       Se aparecer "O app não vai iniciar", a mensagem diz qual variável corrigir.
 - [ ] `https://<url>/api/health` responde `{"status":"ok"}`.
 
@@ -113,7 +122,8 @@ precisa manter o antigo no ar. Isso depende do `HEALTHCHECK` da imagem. Confirme
 
 - [ ] Deixe um terminal checando a saúde a cada segundo:
       `while true; do curl -s -o /dev/null -w '%{http_code}\n' https://<url>/api/health; sleep 1; done`
-- [ ] No serviço do app, troque a senha em `DATABASE_URL_MIGRADOR` por uma errada e faça o deploy.
+- [ ] No serviço do app, troque a senha no arquivo montado em `/segredos/database_url_migrador` por uma errada e
+      faça o deploy.
 - [ ] O log do container novo mostra `Migrations falharam` e `O app não vai iniciar`, e o terminal **continua em
       200** o tempo todo (a versão antiga segue no ar).
 - [ ] Desfaça a troca da senha e faça o deploy. Continua em 200.
@@ -123,7 +133,8 @@ precisa manter o antigo no ar. Isso depende do `HEALTHCHECK` da imagem. Confirme
 
 ## 8. Administrador
 
-- [ ] Shell do serviço do app → `node dist/criar-admin.mjs` → e-mail e senha (guarde no gerenciador).
+- [ ] Shell do serviço do app → `su -s /bin/sh node -c 'node dist/criar-admin.mjs'` → e-mail e senha (guarde no
+      gerenciador). O Shell entra como root; o comando roda como `node`, sem acesso à credencial do migrador.
 - [ ] Entre em `https://<url>/login`. Você cai em `/admin`.
 - [ ] Na homologação, crie uma empresa de teste com uma dona fictícia e faça o fluxo: agendar, concluir com Pix e ver
       no Financeiro.

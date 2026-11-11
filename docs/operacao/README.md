@@ -2,14 +2,15 @@
 
 Como colocar no ar, atualizar, voltar uma versão, restaurar um backup e manter o banho-e-tosa no EasyPanel. Para a
 primeira configuração, siga antes o [checklist de lançamento](checklist-lancamento.md). As variáveis estão em
-[variaveis.md](variaveis.md). As decisões estão nos ADRs 0003 (hospedagem), 0013 (backup) e 0014 (deploy).
+[variaveis.md](variaveis.md). As decisões estão nos ADRs 0003 (hospedagem), 0013 (backup), 0014 (deploy) e 0015
+(credencial do migrador).
 
 ## Visão geral
 
 | Serviço no EasyPanel | Imagem | O que faz |
 |---|---|---|
 | `postgres` | `postgres:18` | Banco do produto, só na rede interna. Um por ambiente. |
-| `app` | `ghcr.io/victorhsmessias/banho-e-tosa:<homologacao ou producao>` | App Next.js na porta 3000. Na subida, migra como `migrador` e só então inicia o servidor. |
+| `app` | `ghcr.io/victorhsmessias/banho-e-tosa:<homologacao ou producao>` | App Next.js na porta 3000. Na subida, migra como `migrador` (credencial no arquivo `/segredos/database_url_migrador`, legível só pelo root) e só então inicia o servidor como o usuário `node`. |
 | `backup` | `ghcr.io/victorhsmessias/banho-e-tosa-backup:<homologacao ou producao>` | Todo dia às 03:00 de São Paulo: `pg_dump` criptografado com age e enviado ao R2. |
 
 Fluxo de uma mudança:
@@ -21,6 +22,17 @@ Fluxo de uma mudança:
 
 Em cada subida, o `docker-entrypoint.sh` migra antes de o servidor novo entrar. Se a migration falhar, o container
 sai com erro, e o deploy sem queda mantém a versão anterior no ar.
+
+### Credencial do migrador e o Shell do app
+
+A URL do `migrador` (dono das tabelas) não é variável de ambiente: é uma montagem de arquivo do serviço `app` em
+`/segredos/database_url_migrador`, numa pasta que só o root abre (ADR 0015). O container sobe como root, migra e
+troca para o usuário `node`; o servidor e o healthcheck rodam como `node` e não leem o arquivo.
+
+- O Shell do EasyPanel (e o `docker exec`) entra como **root**, que lê o arquivo. Para qualquer comando de rotina,
+  rode como `node`: `su -s /bin/sh node -c '<comando>'` (no terminal da VPS: `docker exec -u node`).
+- Trocar a senha do `migrador` ou o nome do banco: edite o conteúdo da montagem e faça o deploy.
+- Nunca crie a variável `DATABASE_URL_MIGRADOR` no serviço `app`: o container recusa subir com ela.
 
 ## Regra das migrations
 
@@ -76,8 +88,8 @@ Restaurar o banco só em perda de dados ([abaixo](#restaurar-um-backup)).
 
 O administrador é criado dentro do container do app, onde estão as variáveis do ambiente:
 
-1. EasyPanel → serviço `app` → Shell (`sh`).
-2. `node dist/criar-admin.mjs`
+1. EasyPanel → serviço `app` → Shell (`sh`). Ele entra como root.
+2. `su -s /bin/sh node -c 'node dist/criar-admin.mjs'` (roda como `node`, sem acesso à credencial do migrador)
 3. Informe o e-mail e a senha (a senha não aparece ao digitar).
 
 Depois entre com ele em `https://<url>/login`. Em `/admin`, "Nova empresa" cria a empresa e a dona com uma senha
@@ -184,8 +196,9 @@ O `npm run test:backup` faz esse caminho inteiro de forma automática, com dados
    Para um backup específico, troque `ultimo` pelo nome do arquivo (`banho-e-tosa-<data>.dump.age`). O host interno
    do Postgres é o mesmo de `DATABASE_URL_BACKUP`.
 4. **Confira que a chave saiu da VPS** (`ls /tmp`) e reinicie o serviço `backup`, o que também limpa o `/tmp`.
-5. Troque o nome do banco em `DATABASE_URL`, `DATABASE_URL_PLATAFORMA` e `DATABASE_URL_MIGRADOR` do serviço `app`,
-   e em `DATABASE_URL_BACKUP` do serviço `backup`, para `banho_e_tosa_restaurado`. Faça o deploy. Ou, com o app
+5. Troque o nome do banco em `DATABASE_URL` e `DATABASE_URL_PLATAFORMA` do serviço `app`, no arquivo montado em
+   `/segredos/database_url_migrador` do mesmo serviço e em `DATABASE_URL_BACKUP` do serviço `backup`, para
+   `banho_e_tosa_restaurado`. Faça o deploy. Ou, com o app
    parado, renomeie os bancos (`alter database ... rename to ...`).
 6. Confira o `/api/health`, entre como a dona e confira a agenda e o financeiro.
 7. Guarde o banco antigo até ter certeza; depois `drop database`.

@@ -309,6 +309,7 @@ flowchart LR
 | 0012 | Dados padrão da empresa criados por trigger com SECURITY DEFINER | aceito |
 | 0013 | Backup diário criptografado com age, enviado ao Cloudflare R2 | aceito |
 | 0014 | Deploy por imagem no GHCR com gatilho do EasyPanel e migration na subida do container | aceito |
+| 0015 | Credencial do migrador num arquivo legível só pelo root, com o container trocando para node depois de migrar | aceito |
 
 ## 5. Segurança e acesso
 
@@ -367,7 +368,7 @@ Funcionário fica para depois.
 2. O GitHub Actions roda lint, checagem de tipos e testes (incluindo os de isolamento), o ponta a ponta (também às 23:50 e às 00:10, com o servidor em UTC), o teste da imagem e o teste do backup.
 3. Cada push na main, com tudo verde, publica a imagem no GitHub Container Registry (tag imutável `sha-<commit>` e etiqueta `homologacao`) e chama o gatilho de deploy do EasyPanel da homologação (ADR 0014).
 4. Produção sobe por tag `v*`, com aprovação manual no GitHub: a mesma imagem já testada ganha a etiqueta `producao`, sem build novo.
-5. A migration roda na subida do container, como `migrador`, antes de o servidor novo entrar. Se falhar, o container novo não sobe e a versão anterior continua no ar.
+5. A migration roda na subida do container, como `migrador` (credencial num arquivo legível só pelo root, ADR 0015), antes de o servidor novo entrar. Se falhar, o container novo não sobe e a versão anterior continua no ar.
 6. Toda migration é compatível com a versão anterior do app. Voltar uma versão é trocar a imagem, nunca restaurar o banco.
 7. Passo a passo de operação em `docs/operacao/README.md`.
 
@@ -471,6 +472,6 @@ Não há sistema anterior: a agenda é de memória, e o cadastro cresce a cada a
 - [x] Autenticação, permissões, auditoria e pontos de LGPD estão decididos. Os documentos legais ficam para antes da 2ª empresa.
 - [x] Existe plano de deploy, backup e monitoramento, com custo estimado.
 - [x] Os marcos de entrega, riscos e estratégia de testes estão listados.
-- [x] Toda decisão relevante tem um ADR (0001 a 0014).
+- [x] Toda decisão relevante tem um ADR (0001 a 0015).
 
 **Conclusão:** pronto para codar o M1. O M2 espera a resposta da pergunta 1.

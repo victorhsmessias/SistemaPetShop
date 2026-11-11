@@ -4,7 +4,9 @@
 //   1. não sobe o app quando a migration falha (senha do migrador errada): sai com erro e não migra nada;
 //   2. sobe com dois containers ao mesmo tempo num banco vazio: a trava faz um esperar o outro, e cada migration é
 //      aplicada uma vez;
-//   3. sobe, migra e responde 200 no /api/health, sem DATABASE_URL_MIGRADOR no processo do servidor;
+//   3. sobe, migra e responde 200 no /api/health; a credencial do migrador fica só no arquivo legível pelo root
+//      (ADR 0015): o servidor (PID 1, usuário node), o healthcheck e um docker exec não a enxergam, e o usuário node
+//      não lê o arquivo;
 //   4. cria o administrador com dist/criar-admin.mjs dentro do container, e ele faz login e abre o /admin;
 //   5. responde 503 no /api/health com o banco parado.
 // No fim apaga tudo (containers e volume). Projeto do compose: <COMPOSE_PROJECT_NAME ou banho-e-tosa>-imagem.
@@ -22,11 +24,14 @@ const ambienteDoCompose = { ...process.env, PORTA_IMAGEM: String(porta) };
 
 type Saida = { codigo: number; texto: string };
 
-function compose(args: string[], opcoes: { entrada?: string; podeFalhar?: boolean } = {}): Saida {
+function compose(
+  args: string[],
+  opcoes: { entrada?: string; podeFalhar?: boolean; ambiente?: Record<string, string> } = {},
+): Saida {
   const r = spawnSync("docker", ["compose", "-f", "docker-compose.prod.yml", "-p", projeto, ...args], {
     input: opcoes.entrada,
     encoding: "utf8",
-    env: ambienteDoCompose,
+    env: { ...ambienteDoCompose, ...opcoes.ambiente },
     maxBuffer: 64 * 1024 * 1024,
   });
   const saida = { codigo: r.status ?? 1, texto: `${r.stdout ?? ""}${r.stderr ?? ""}` };
@@ -92,22 +97,24 @@ async function main() {
   compose(["up", "-d", "--wait", "postgres"]);
 
   console.log("\n2. Migration falha (senha do migrador errada): o app não sobe");
-  const falha = compose(
-    [
-      "run",
-      "--rm",
-      "--no-deps",
-      "-e",
-      "DATABASE_URL_MIGRADOR=postgres://migrador:senha-errada@postgres:5432/banho_e_tosa",
-      "app",
-    ],
-    { podeFalhar: true },
-  );
+  const falha = compose(["run", "--rm", "--no-deps", "app"], {
+    podeFalhar: true,
+    ambiente: { URL_MIGRADOR_DO_TESTE: "postgres://migrador:senha-errada@postgres:5432/banho_e_tosa" },
+  });
   confirmar(falha.codigo !== 0, `o container saiu com erro (código ${falha.codigo})`);
   confirmar(/Migrations falharam/.test(falha.texto), "o log explica que as migrations falharam");
   confirmar(!/Ready in/.test(falha.texto), "o servidor não chegou a iniciar");
   confirmar(!falha.texto.includes("senha-errada"), "a senha não aparece no log");
   confirmar(psql("select count(*) from pg_tables where schemaname = 'public'") === "0", "nenhuma tabela foi criada");
+
+  console.log("\n2b. DATABASE_URL_MIGRADOR no ambiente do container: recusada, o app não sobe");
+  const comVariavel = compose(
+    ["run", "--rm", "--no-deps", "-e", "DATABASE_URL_MIGRADOR=postgres://migrador:teste-migrador@postgres:5432/banho_e_tosa", "app"],
+    { podeFalhar: true },
+  );
+  confirmar(comVariavel.codigo !== 0, `o container saiu com erro (código ${comVariavel.codigo})`);
+  confirmar(/DATABASE_URL_MIGRADOR não é mais aceita/.test(comVariavel.texto), "o log explica que a variável não é aceita");
+  confirmar(!/Migrations: aplicando/.test(comVariavel.texto), "não chegou a migrar");
 
   console.log("\n3. Dois containers sobem juntos num banco vazio");
   const nomes = [`${projeto}-corrida-1`, `${projeto}-corrida-2`];
@@ -136,16 +143,68 @@ async function main() {
       JSON.stringify(await health.json()) === '{"status":"ok"}',
     "a resposta é mínima e sem cache",
   );
-  const ambiente = compose(["exec", "-T", "app", "sh", "-c", "tr '\\0' '\\n' < /proc/1/environ"]).texto;
-  confirmar(ambiente.includes("DATABASE_URL="), "o processo do servidor é o PID 1 (ambiente lido)");
-  confirmar(!ambiente.includes("DATABASE_URL_MIGRADOR"), "o processo do servidor não tem DATABASE_URL_MIGRADOR");
-  const usuario = compose(["exec", "-T", "app", "id", "-u"]).texto.trim();
-  confirmar(usuario !== "0", `o container não roda como root (uid ${usuario})`);
+
+  console.log("\n4b. A credencial do migrador só está no arquivo, que o usuário node não lê");
+  const arquivo = "/segredos/database_url_migrador";
+  const senhaDoMigrador = "teste-migrador";
+  const container = compose(["ps", "-q", "app"]).texto.trim();
+  const configuracao = JSON.parse(
+    spawnSync("docker", ["inspect", "-f", "{{json .Config}}", container], { encoding: "utf8" }).stdout,
+  ) as { Env: string[]; User: string; Healthcheck: { Test: string[] } };
+  confirmar(
+    !configuracao.Env.some((v) => v.startsWith("DATABASE_URL_MIGRADOR=") || v.includes(senhaDoMigrador)),
+    "o ambiente do container não tem a credencial do migrador",
+  );
+  const uidDoServidor = compose(["exec", "-T", "app", "sh", "-c", "grep '^Uid:' /proc/1/status"]).texto;
+  confirmar(/^Uid:\s+1000\s+1000\s+1000\s+1000\s*$/.test(uidDoServidor.trim()), "o servidor (PID 1) roda como node (uid 1000)");
+  const ambienteDoServidor = compose(["exec", "-T", "-u", "node", "app", "sh", "-c", "tr '\\0' '\\n' < /proc/1/environ"]).texto;
+  confirmar(ambienteDoServidor.includes("DATABASE_URL="), "o processo do servidor é o PID 1 (ambiente lido)");
+  confirmar(
+    !ambienteDoServidor.includes("DATABASE_URL_MIGRADOR") && !ambienteDoServidor.includes(senhaDoMigrador),
+    "o processo do servidor não tem a credencial do migrador",
+  );
+  const lerComoNode = compose(["exec", "-T", "-u", "node", "app", "cat", arquivo], { podeFalhar: true });
+  confirmar(
+    lerComoNode.codigo !== 0 && /Permission denied/.test(lerComoNode.texto) && !lerComoNode.texto.includes(senhaDoMigrador),
+    "o usuário node não lê o arquivo da credencial (Permission denied)",
+  );
+  const execPadrao = compose(["exec", "-T", "app", "env"]).texto;
+  confirmar(
+    !execPadrao.includes("DATABASE_URL_MIGRADOR") && !execPadrao.includes(senhaDoMigrador),
+    "um docker exec não recebe a credencial no ambiente",
+  );
+
+  // O healthcheck: o mesmo prefixo do comando da imagem (su ... node -c), trocando o fetch por id, env e cat.
+  const teste = configuracao.Healthcheck.Test;
+  const prefixo = ["CMD", "su", "-s", "/bin/sh", "node", "-c"];
+  confirmar(
+    JSON.stringify(teste.slice(0, prefixo.length)) === JSON.stringify(prefixo),
+    `o healthcheck roda como o usuário node (${teste.slice(1, prefixo.length).join(" ")} ...)`,
+  );
+  const comoHealthcheck = compose(
+    ["exec", "-T", "app", ...prefixo.slice(1), `id -u; env; cat ${arquivo}`],
+    { podeFalhar: true },
+  ).texto;
+  confirmar(
+    comoHealthcheck.startsWith("1000") &&
+      /Permission denied/.test(comoHealthcheck) &&
+      !comoHealthcheck.includes("DATABASE_URL_MIGRADOR") &&
+      !comoHealthcheck.includes(senhaDoMigrador),
+    "nesse usuário, o healthcheck não tem a credencial no ambiente nem lê o arquivo",
+  );
+  const fimDoHealthcheck = Date.now() + 90_000;
+  let estadoDoHealthcheck = "";
+  while (Date.now() < fimDoHealthcheck) {
+    estadoDoHealthcheck = spawnSync("docker", ["inspect", "-f", "{{.State.Health.Status}}", container], { encoding: "utf8" }).stdout.trim();
+    if (estadoDoHealthcheck === "healthy") break;
+    await esperar(2000);
+  }
+  confirmar(estadoDoHealthcheck === "healthy", "o healthcheck da imagem passa assim (container healthy)");
 
   console.log("\n5. criar-admin dentro do container, login e /admin");
   const email = `admin-imagem-${Date.now()}@teste.banho-e-tosa.local`;
   const senha = `imagem-${Math.random().toString(36).slice(2)}-senha`;
-  const criado = compose(["exec", "-T", "app", "node", "dist/criar-admin.mjs"], { entrada: `${email}\n${senha}\n${senha}\n` });
+  const criado = compose(["exec", "-T", "-u", "node", "app", "node", "dist/criar-admin.mjs"], { entrada: `${email}\n${senha}\n${senha}\n` });
   confirmar(criado.texto.includes(`Administrador criado: ${email}`), "o administrador foi criado");
   confirmar(!criado.texto.includes(senha), "a senha não aparece na saída");
 

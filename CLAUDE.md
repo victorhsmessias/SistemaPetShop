@@ -9,7 +9,7 @@ Os documentos em `docs/` mandam. Leia a parte relevante antes de mexer no que el
 
 - `docs/planejamento/sistema-banho-e-tosa.md`: escopo, requisitos (H1 a H13), arquitetura e marcos.
 - `docs/planejamento/modelo-de-dados.md`: tabelas, isolamento, papéis, permissões, Better Auth e teste de isolamento.
-- `docs/adr/`: decisões (0001 a 0014).
+- `docs/adr/`: decisões (0001 a 0015).
 - `docs/operacao/`: runbook (`README.md`), checklist de lançamento e variáveis de ambiente (`variaveis.md`).
 
 Se um pedido contradisser os documentos, valem os documentos: avise da contradição. Mudar uma decisão exige
@@ -26,7 +26,7 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 - Vitest 5 com Postgres de verdade, sem mocks de banco. `tsx` roda os comandos em `scripts/` (`.mts`).
 - Playwright 1.64 (`e2e/`): perfil iPhone 15 com WebKit, contra o build de produção (`next build && next start`), com o
   relógio do servidor fixado por `e2e/relogio.mjs` (12:00 de São Paulo; 23:50 e 00:10 no `test:e2e:meia-noite`) e `TZ=UTC`.
-- Docker: `Dockerfile` (app; migra na subida pelo `docker-entrypoint.sh`) e `backup/Dockerfile` (pg_dump, age, rclone).
+- Docker: `Dockerfile` (app; migra na subida pelo `docker-entrypoint.sh`, como root, e troca para `node`) e `backup/Dockerfile` (pg_dump, age, rclone).
   O `esbuild` (devDependency, ADR 0014) só empacota `scripts/migrar.mts` e `scripts/criar-admin.mts` em `dist/` para a imagem.
 - Busca sem acento com a extensão `unaccent` (criada pelo `migrador`). Validação de formulário sem biblioteca
   (`compartilhado/validacao.ts`); se começar a se repetir, reavaliar.
@@ -69,8 +69,9 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 1. **Papéis.** `migrador` é dono das tabelas e só roda migrations. `app` (DATABASE_URL) é sujeito ao RLS e é o
    papel do Better Auth. `plataforma` administra empresas, só lê `user`, só cria na `auditoria` e não tem
    acesso às tabelas de negócio. `backup` só lê (BYPASSRLS + `pg_read_all_data`, para o pg_dump) e não escreve nada.
-   Nenhum é superusuário; só o `backup` tem BYPASSRLS. O app não lê `DATABASE_URL_MIGRADOR` (o entrypoint a remove
-   depois de migrar, e o app não sobe em produção se ela chegar até ele).
+   Nenhum é superusuário; só o `backup` tem BYPASSRLS. O app não lê a credencial do `migrador`: na imagem ela fica no
+   arquivo `/segredos/database_url_migrador`, só do root; o entrypoint migra como root e troca para `node` antes do
+   servidor (ADR 0015). A imagem não aceita `DATABASE_URL_MIGRADOR` no ambiente; ela só existe no `.env` e no CI.
 2. **O `empresaId` só vem da sessão.** Páginas e ações da dona usam `naEmpresaDaDona(fn)`, que chama
    `comEmpresaDaSessao` (`src/modules/acesso/sessao.ts`), nunca um `empresaId` do corpo, da URL ou de formulário. `comEmpresa` só é
    importada pelo módulo `acesso` (exceção futura: tarefas agendadas do M3). O ESLint barra; não desligue.

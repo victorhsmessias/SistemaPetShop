@@ -1,19 +1,35 @@
-// Aplica as migrations como o papel migrador (DATABASE_URL_MIGRADOR), com a trava consultiva.
-//   npm run db:migrate              (desenvolvimento e CI; lê o .env)
-//   node dist/migrar.mjs            (imagem de produção; chamado pelo docker-entrypoint.sh)
+// Aplica as migrations como o papel migrador, com a trava consultiva.
+//   npm run db:migrate                       (desenvolvimento e CI; DATABASE_URL_MIGRADOR do .env)
+//   node dist/migrar.mjs <arquivo com a URL> (imagem de produção; chamado pelo docker-entrypoint.sh como root, com
+//                                             o arquivo legível só pelo root: a credencial não vira variável, ADR 0015)
 // Sai com código diferente de zero se falhar: na imagem, o app novo não sobe.
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { resumoDoErro, textoDoResumo } from "@/db/erro-do-banco";
 import { aplicarMigracoes } from "@/db/migracao";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 
-const url = process.env.DATABASE_URL_MIGRADOR;
+const arquivo = process.argv[2];
+const url = arquivo ? lerUrlDoArquivo(arquivo) : process.env.DATABASE_URL_MIGRADOR;
 if (!url) {
-  console.error("Migrations: DATABASE_URL_MIGRADOR não definida (veja docs/operacao/variaveis.md).");
+  console.error(
+    arquivo
+      ? `Migrations: o arquivo ${arquivo} está vazio (veja docs/operacao/variaveis.md).`
+      : "Migrations: DATABASE_URL_MIGRADOR não definida (veja docs/operacao/variaveis.md).",
+  );
   process.exit(1);
+}
+
+function lerUrlDoArquivo(caminho: string): string {
+  try {
+    return readFileSync(caminho, "utf8").trim();
+  } catch (erro) {
+    // Só o código do erro (ENOENT, EACCES): o conteúdo do arquivo nunca vai para o log.
+    console.error(`Migrations: não foi possível ler ${caminho} (${(erro as NodeJS.ErrnoException).code ?? "erro"}).`);
+    process.exit(1);
+  }
 }
 
 const inicio = Date.now();

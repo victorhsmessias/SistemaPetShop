@@ -1,6 +1,6 @@
 # 0014 — Deploy por imagem no GHCR com gatilho do EasyPanel e migration na subida do container
 
-- Status: aceito
+- Status: aceito. A entrega da credencial do `migrador` (variável com `unset`) foi substituída pelo ADR 0015.
 - Contexto:
   - O planejamento pede que cada push na `main` vá para a homologação, que a produção suba por tag e que a migration rode antes de a nova versão entrar.
   - O app roda no EasyPanel de uma VPS que divide a máquina com outros projetos (ADR 0003).
