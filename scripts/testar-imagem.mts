@@ -1,6 +1,8 @@
 // Teste de ponta a ponta da imagem de produção (docker-compose.prod.yml), no Windows (Docker Desktop) e no Linux.
 //   npm run test:imagem
 // Prova que a imagem:
+//   0. não leva .env, arquivos de teste (*.test.*, *.spec.*), código-fonte (src, e2e, scripts) nem ferramentas de
+//      teste ou de build;
 //   1. não sobe o app quando a migration falha (senha do migrador errada): sai com erro e não migra nada;
 //   2. sobe com dois containers ao mesmo tempo num banco vazio: a trava faz um esperar o outro, e cada migration é
 //      aplicada uma vez;
@@ -88,12 +90,50 @@ async function esperarServidor(nome: string, limiteMs: number): Promise<string> 
 
 const quantidadeDeMigracoes = readdirSync("drizzle").filter((f) => f.endsWith(".sql")).length;
 
+/** Mesmo nome de image: do serviço app em docker-compose.prod.yml. */
+const IMAGEM = "banho-e-tosa:teste-local";
+
+/**
+ * O que a imagem final não pode levar: nenhum .env (segredos do desenvolvimento), nenhum arquivo de teste, nem o
+ * código-fonte, os testes de ponta a ponta ou as ferramentas de teste. Roda como root, fora do entrypoint, para
+ * enxergar o sistema de arquivos inteiro.
+ */
+function conferirConteudoDaImagem(): void {
+  const listar = (comando: string) => {
+    const r = spawnSync("docker", ["run", "--rm", "--entrypoint", "sh", IMAGEM, "-c", comando], { encoding: "utf8" });
+    if (r.status !== 0) throw new Error(`docker run ${IMAGEM} falhou (${r.status}):\n${r.stdout}${r.stderr}`);
+    return r.stdout.split(/\r?\n/).filter(Boolean);
+  };
+  const semNodeModules = `-path '*/node_modules' -prune -o`;
+
+  confirmar(listar("test -e /app/.env && echo existe; true").length === 0, "/app/.env não existe na imagem");
+  const envs = listar(`find / -xdev \\( -name '.env' -o -name '.env.*' \\) -print 2>/dev/null; true`);
+  confirmar(envs.length === 0, `nenhum .env em lugar nenhum da imagem${envs.length ? ` (achou ${envs.join(", ")})` : ""}`);
+  const testes = listar(`find /app \\( -name '*.test.*' -o -name '*.spec.*' \\) -print`);
+  confirmar(testes.length === 0, `nenhum arquivo *.test.* ou *.spec.* em /app${testes.length ? ` (achou ${testes.slice(0, 5).join(", ")})` : ""}`);
+  const pastas = listar(`find /app ${semNodeModules} -type d \\( -name src -o -name e2e -o -name scripts -o -name docs \\) -print`);
+  confirmar(pastas.length === 0, `nenhuma pasta src, e2e, scripts ou docs em /app${pastas.length ? ` (achou ${pastas.join(", ")})` : ""}`);
+  const fontes = listar(
+    `find /app ${semNodeModules} \\( -name '*.ts' -o -name '*.tsx' -o -name '*.mts' \\) ! -name '*.d.ts' -print`,
+  );
+  confirmar(fontes.length === 0, `nenhum código-fonte TypeScript em /app${fontes.length ? ` (achou ${fontes.slice(0, 5).join(", ")})` : ""}`);
+  const ferramentas = listar(
+    "for p in vitest @vitest playwright @playwright tsx drizzle-kit eslint typescript esbuild; do " +
+      "test -e /app/node_modules/$p && echo $p; done; true",
+  );
+  confirmar(
+    ferramentas.length === 0,
+    `nenhuma ferramenta de teste ou de build em node_modules${ferramentas.length ? ` (achou ${ferramentas.join(", ")})` : ""}`,
+  );
+}
+
 async function main() {
   console.log(`Projeto ${projeto}, app em ${base}.`);
   compose(["down", "-v", "--remove-orphans"], { podeFalhar: true });
 
   console.log("\n1. Build da imagem e Postgres vazio");
   compose(["build", "app"]);
+  conferirConteudoDaImagem();
   compose(["up", "-d", "--wait", "postgres"]);
 
   console.log("\n2. Migration falha (senha do migrador errada): o app não sobe");
