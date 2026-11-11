@@ -1,6 +1,6 @@
 // Cria o administrador da plataforma. Roda no servidor (em produção, dentro do container):
 //   npm run criar-admin
-// Pede e-mail e senha no terminal. Não existe rota pública para isso.
+// Pede e-mail e senha no terminal. Não existe rota pública para isso. A saída não leva o e-mail nem a senha.
 
 import { existsSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
@@ -8,7 +8,8 @@ import { createInterface } from "node:readline/promises";
 if (existsSync(".env")) process.loadEnvFile(".env");
 
 const { encerrarConexoes } = await import("@/db/clientes");
-const { criarAdministrador } = await import("@/modules/administracao/criar-administrador");
+const { executarCriarAdmin } = await import("@/modules/administracao/criar-administrador");
+const { resumoDoErro, textoDoResumo } = await import("@/db/erro-do-banco");
 
 /** Senha sem eco no terminal. */
 function lerSenhaOculta(rotulo: string): Promise<string> {
@@ -64,13 +65,12 @@ async function perguntar(): Promise<{ email: string; senha: string; confirmacao:
 }
 
 try {
-  const { email, senha, confirmacao } = await perguntar();
-  if (senha !== confirmacao) throw new Error("As senhas não conferem.");
-  const admin = await criarAdministrador({ nome: "Administrador", email, senha });
-  console.log(`Administrador criado: ${admin.email}`);
-  process.exitCode = 0;
+  const resultado = await executarCriarAdmin(await perguntar());
+  (resultado.ok ? console.log : console.error)(resultado.mensagem);
+  process.exitCode = resultado.ok ? 0 : 1;
 } catch (erro) {
-  console.error(`Não foi possível criar o administrador: ${erro instanceof Error ? erro.message : String(erro)}`);
+  // Só a leitura do terminal chega aqui (por exemplo, Ctrl+C na senha); mesmo assim, só o resumo.
+  console.error(`Não foi possível criar o administrador: ${textoDoResumo(resumoDoErro(erro))}`);
   process.exitCode = 1;
 } finally {
   await encerrarConexoes();

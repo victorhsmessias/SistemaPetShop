@@ -205,8 +205,8 @@ async function main() {
   const email = `admin-imagem-${Date.now()}@teste.banho-e-tosa.local`;
   const senha = `imagem-${Math.random().toString(36).slice(2)}-senha`;
   const criado = compose(["exec", "-T", "-u", "node", "app", "node", "dist/criar-admin.mjs"], { entrada: `${email}\n${senha}\n${senha}\n` });
-  confirmar(criado.texto.includes(`Administrador criado: ${email}`), "o administrador foi criado");
-  confirmar(!criado.texto.includes(senha), "a senha não aparece na saída");
+  confirmar(criado.codigo === 0 && criado.texto.includes("Administrador criado."), "o administrador foi criado");
+  confirmar(!criado.texto.includes(senha) && !criado.texto.includes(email), "nem a senha nem o e-mail aparecem na saída");
 
   const login = await fetch(`${base}/api/auth/sign-in/email`, {
     method: "POST",

@@ -19,7 +19,7 @@ import {
 import { user } from "@/modules/acesso/schema";
 import { registrarEvento, type Evento } from "@/modules/auditoria/registrar";
 import { auditoria } from "@/modules/auditoria/schema";
-import { criarAdministrador } from "@/modules/administracao/criar-administrador";
+import { criarAdministrador, executarCriarAdmin } from "@/modules/administracao/criar-administrador";
 import { criarEmpresaComDona, redefinirSenha } from "@/modules/administracao/empresas";
 
 // ADR 0011: o que acontece quando a gravação na auditoria falha. Só o registro de eventos é
@@ -181,6 +181,62 @@ describe("o log da falha não leva dados da usuária nem de senha", () => {
       expect(saida).not.toContain(SENHA);
     } finally {
       espiao.mockRestore();
+    }
+  });
+});
+
+describe("o comando criar-admin não imprime o e-mail nem dados da senha", () => {
+  const saidaDoConsole = (...espioes: { mock: { calls: unknown[][] } }[]) =>
+    espioes
+      .flatMap((e) => e.mock.calls.flat())
+      .map((v) => (typeof v === "string" ? v : inspect(v)))
+      .join(" ");
+
+  it("um DrizzleQueryError do createUser, com e-mail e hash nos parâmetros, vira só o resumo", async () => {
+    const email = emailTeste("admin-log");
+    const hash = "c0ffee:fedcba9876543210fedcba9876543210";
+    const doPg = Object.assign(new Error(`duplicate key value violates unique constraint "user_email_key"`), {
+      code: "23505",
+      constraint: "user_email_key",
+      table: "user",
+      detail: `Key (email)=(${email}) already exists.`,
+    });
+    const espiaoCriar = vi
+      .spyOn(auth.api, "createUser")
+      .mockRejectedValueOnce(new DrizzleQueryError('insert into "user" values ($1, $2)', [email, hash], doPg));
+    const espiaoErro = vi.spyOn(console, "error").mockImplementation(() => {});
+    const espiaoLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const resultado = await executarCriarAdmin({ email, senha: SENHA, confirmacao: SENHA });
+
+      expect(resultado.ok).toBe(false);
+      expect(resultado.mensagem).toContain("23505");
+      expect(resultado.mensagem).toContain("user_email_key");
+      const tudo = `${resultado.mensagem} ${saidaDoConsole(espiaoErro, espiaoLog)}`;
+      expect(tudo).not.toContain(email);
+      expect(tudo).not.toContain(hash);
+      expect(tudo).not.toContain(SENHA);
+      expect(await usuariaPorEmail(email)).toBeUndefined();
+    } finally {
+      espiaoCriar.mockRestore();
+      espiaoErro.mockRestore();
+      espiaoLog.mockRestore();
+    }
+  });
+
+  it("o sucesso não repete o e-mail, e um erro de validação continua explicado", async () => {
+    const email = emailTeste("admin-ok");
+    try {
+      const criado = await executarCriarAdmin({ email, senha: SENHA, confirmacao: SENHA });
+      expect(criado).toEqual({ ok: true, mensagem: expect.stringContaining("Administrador criado.") });
+      expect(criado.mensagem).not.toContain(email);
+      expect(await usuariaPorEmail(email)).toBeDefined();
+
+      const diferente = await executarCriarAdmin({ email: emailTeste("admin-x"), senha: SENHA, confirmacao: "outra-senha-456" });
+      expect(diferente).toEqual({ ok: false, mensagem: expect.stringContaining("As senhas não conferem.") });
+      expect(diferente.mensagem).not.toContain(SENHA);
+    } finally {
+      await apagarUsuarias([email]);
     }
   });
 });
