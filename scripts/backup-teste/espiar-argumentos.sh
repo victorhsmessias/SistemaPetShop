@@ -11,9 +11,12 @@ pasta=$(mktemp -d)
 registro="$pasta/argumentos.log"
 : > "$registro"
 for programa in pg_dump pg_restore psql age rclone wget curl; do
+  # A linha inteira (com a quebra) vai numa escrita só, em modo de acréscimo: num pipe (pg_dump | age | rclone) os
+  # programas começam juntos, e duas escritas por linha (o texto e depois a quebra) deixavam as linhas se misturarem.
   cat > "$pasta/$programa" <<FIM
 #!/bin/sh
-{ printf '%s' "$programa \$*" | tr '\n' ' '; echo; } >> "$registro"
+linha=\$(printf '%s' "$programa \$*" | tr '\n' ' ')
+printf '%s\n' "\$linha" >> "$registro"
 PATH="\${PATH#$pasta:}" exec $programa "\$@"
 FIM
   chmod +x "$pasta/$programa"
