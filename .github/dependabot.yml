@@ -1,0 +1,18 @@
+# Só as actions do GitHub Actions (.github/workflows): elas são fixadas pelo SHA do commit, e o Dependabot atualiza o
+# SHA e o comentário da versão. As dependências npm ficam de fora: versões fixadas no package.json, atualizadas à mão
+# (CLAUDE.md, "Stack").
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"

@@ -196,3 +196,7 @@ Playwright fica nos artefatos da execução por 7 dias.
 
 Na `main`, com tudo verde, o CI publica as imagens (`sha-<commit>` e `homologacao`) e chama o deploy da homologação.
 Uma tag `v*`, depois de aprovada no Environment `producao`, leva a mesma imagem para a produção (ADR 0014).
+
+As actions do workflow são fixadas pelo SHA do commit, com a versão em comentário, e nenhum checkout guarda a
+credencial do GitHub. O Dependabot (`.github/dependabot.yml`, só para as actions) abre um PR por semana quando há
+versão nova; ele passa pelo mesmo CI antes do merge.
