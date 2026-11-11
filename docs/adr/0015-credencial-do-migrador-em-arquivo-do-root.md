@@ -31,10 +31,21 @@
     de usuário, e `su-exec` ou `gosu` exigiriam instalar algo.
   - **O healthcheck também roda como `node`** (`su -s /bin/sh node -c ...`): sem a variável e sem acesso à pasta,
     ele não alcança a credencial.
+  - **O que o root executa na subida é do root.** Os arquivos da imagem são copiados sem `--chown`: `/app`, `dist/`,
+    `drizzle/`, `node_modules` e o entrypoint pertencem ao root e ninguém mais escreve neles. Sem isso, um código
+    rodando como `node` poderia trocar o `dist/migrar.mjs` ou acrescentar uma migration, e no próximo início do mesmo
+    container o entrypoint rodaria isso como root, com acesso ao arquivo da credencial. O `node` só escreve em
+    `/app/.next/cache` (cache de imagens e de fetch do Next), que o root não executa; o app não usa ISR, então o
+    Next não grava em `.next/server`.
   - O `npm run test:imagem` prova: o ambiente do container não tem a credencial; o servidor é o PID 1 com uid 1000 e
     sem a credencial no ambiente; `node` recebe "Permission denied" ao ler o arquivo; um `docker exec` não a recebe
     no ambiente; o healthcheck roda como `node`, não lê o arquivo e deixa o container saudável; a variável no
-    ambiente é recusada; e a senha errada no arquivo impede o servidor de subir sem criar tabela.
+    ambiente é recusada; a senha errada no arquivo impede o servidor de subir sem criar tabela; e o `node` recebe
+    "Permission denied" ao alterar `dist/`, `drizzle/`, `node_modules` ou o entrypoint e ao criar arquivos em
+    `/app`, com tudo fora de `.next/cache` pertencendo ao root.
+  - Consequência para o futuro: um recurso do Next que grave em disco fora de `.next/cache` (por exemplo ISR com
+    `revalidate`) falha com essa imagem. Antes de adotá-lo, decidir onde ele grava sem dar ao `node` escrita no que
+    o root executa.
   - Em desenvolvimento e no CI nada muda: o `npm run db:migrate` continua lendo `DATABASE_URL_MIGRADOR` do `.env`.
 - Alternativas consideradas:
   - **(b) Serviço separado de migration no EasyPanel**, só com a credencial do `migrador`: tira a credencial do

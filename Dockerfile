@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 # Imagem de produção do app (ADR 0014 e 0015). Etapas: dependências -> build -> execução enxuta. O servidor roda
 # como o usuário node; o container sobe como root só para migrar com a credencial do arquivo legível só pelo root.
+# Os arquivos da imagem são do root; o node só escreve em /app/.next/cache.
 # A versão do Node é a mesma do desenvolvimento (.nvmrc) e do CI.
 #   docker build -t banho-e-tosa .
 # Na subida, o docker-entrypoint.sh migra como migrador e só então troca para o usuário node e inicia o servidor.
@@ -36,15 +37,24 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/dist ./dist
-COPY --from=build --chown=node:node /app/drizzle ./drizzle
+# Tudo em /app é do root, sem --chown (ADR 0015): o entrypoint roda como root o dist/migrar.mjs e as SQL de
+# drizzle/, e o usuário node não pode alterá-los nem criar arquivos em /app. Se pudesse, um código rodando como
+# node trocaria o migrar.mjs ou acrescentaria uma migration, e no próximo início do container isso rodaria como
+# root, com acesso à credencial do migrador.
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/drizzle ./drizzle
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # Pasta da credencial do migrador (ADR 0015): só o root entra. O EasyPanel monta o arquivo
 # /segredos/database_url_migrador aqui dentro; com a pasta 0700, o usuário node não o lê, qualquer que seja o modo
 # do arquivo montado.
-RUN install -d -m 0700 -o root -g root /segredos
+# O único lugar de /app onde o node escreve é .next/cache (cache de imagens e de fetch do Next), que o root não
+# executa. O app não tem ISR (o prerender-manifest só tem páginas estáticas sem revalidate), então o Next não grava
+# em .next/server.
+RUN install -d -m 0700 -o root -g root /segredos \
+ && rm -rf /app/.next/cache \
+ && install -d -m 0755 -o node -g node /app/.next/cache
 
 # Sem "USER node": o entrypoint precisa de root para ler a credencial e troca para node antes do servidor e de
 # qualquer outro comando (docker-entrypoint.sh).

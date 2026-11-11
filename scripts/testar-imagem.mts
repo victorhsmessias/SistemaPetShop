@@ -8,7 +8,8 @@
 //      aplicada uma vez;
 //   3. sobe, migra e responde 200 no /api/health; a credencial do migrador fica só no arquivo legível pelo root
 //      (ADR 0015): o servidor (PID 1, usuário node), o healthcheck e um docker exec não a enxergam, e o usuário node
-//      não lê o arquivo;
+//      não lê o arquivo; e o usuário node não altera dist/, drizzle/, node_modules nem o entrypoint, nem cria
+//      arquivos em /app (o root os executa na próxima subida), e só escreve em /app/.next/cache;
 //   4. cria o administrador com dist/criar-admin.mjs dentro do container, e ele faz login e abre o /admin;
 //   5. responde 503 no /api/health com o banco parado.
 // No fim apaga tudo (containers e volume). Projeto do compose: <COMPOSE_PROJECT_NAME ou banho-e-tosa>-imagem.
@@ -240,6 +241,43 @@ async function main() {
     await esperar(2000);
   }
   confirmar(estadoDoHealthcheck === "healthy", "o healthcheck da imagem passa assim (container healthy)");
+
+  console.log("\n4c. O usuário node não altera o que o root executa na subida");
+  // O entrypoint roda como root o dist/migrar.mjs e as SQL de drizzle/. Se o node pudesse mudá-los, o próximo
+  // início do container rodaria o código dele como root, com acesso à credencial (ADR 0015).
+  const tentativas: [string, string][] = [
+    ["alterar dist/migrar.mjs", "echo 'process.exit(0)' >> /app/dist/migrar.mjs"],
+    ["criar arquivo em dist/", "touch /app/dist/invasao.mjs"],
+    ["apagar dist/migrar.mjs", "rm -f /app/dist/migrar.mjs"],
+    ["acrescentar uma migration em drizzle/", "echo 'select 1;' > /app/drizzle/9999_invasao.sql"],
+    ["alterar o journal das migrations", "echo '{}' >> /app/drizzle/meta/_journal.json"],
+    ["alterar uma migration existente", `echo 'select 1;' >> /app/drizzle/$(ls drizzle | grep -m1 '\\.sql$')`],
+    ["criar arquivo em /app", "touch /app/invasao"],
+    ["trocar a pasta dist/ de nome", "mv /app/dist /app/dist-velho"],
+    ["alterar um módulo de node_modules", "echo '' >> /app/node_modules/pg/package.json"],
+    ["alterar o entrypoint", "echo '' >> /usr/local/bin/docker-entrypoint.sh"],
+  ];
+  for (const [descricao, comando] of tentativas) {
+    const r = compose(["exec", "-T", "-u", "node", "app", "sh", "-c", comando], { podeFalhar: true });
+    confirmar(
+      r.codigo !== 0 && /Permission denied/.test(r.texto),
+      `o node não consegue ${descricao} (Permission denied)`,
+    );
+  }
+  const foraDoRoot = compose([
+    "exec", "-T", "app", "sh", "-c",
+    "find /app /usr/local/bin/docker-entrypoint.sh -path /app/.next/cache -prune -o " +
+      "\\( ! -user root -o ! -group root -o -perm -0002 \\) -print",
+  ]).texto.trim();
+  confirmar(
+    foraDoRoot === "",
+    `tudo em /app (fora .next/cache) é do root e ninguém mais escreve${foraDoRoot ? ` (achou ${foraDoRoot.split("\n").slice(0, 5).join(", ")})` : ""}`,
+  );
+  const cache = compose(
+    ["exec", "-T", "-u", "node", "app", "sh", "-c", "touch /app/.next/cache/teste && rm /app/.next/cache/teste && echo gravou"],
+    { podeFalhar: true },
+  ).texto;
+  confirmar(cache.includes("gravou"), "o node grava em /app/.next/cache, o único lugar do Next que precisa");
 
   console.log("\n5. criar-admin dentro do container, login e /admin");
   const email = `admin-imagem-${Date.now()}@teste.banho-e-tosa.local`;

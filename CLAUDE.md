@@ -26,7 +26,7 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 - Vitest 5 com Postgres de verdade, sem mocks de banco. `tsx` roda os comandos em `scripts/` (`.mts`).
 - Playwright 1.64 (`e2e/`): perfil iPhone 15 com WebKit, contra o build de produção (`next build && next start`), com o
   relógio do servidor fixado por `e2e/relogio.mjs` (12:00 de São Paulo; 23:50 e 00:10 no `test:e2e:meia-noite`) e `TZ=UTC`.
-- Docker: `Dockerfile` (app; migra na subida pelo `docker-entrypoint.sh`, como root, e troca para `node`) e `backup/Dockerfile` (pg_dump, age, rclone).
+- Docker: `Dockerfile` (app; migra na subida pelo `docker-entrypoint.sh`, como root, e troca para `node`; os arquivos são do root, e o `node` só escreve em `.next/cache`) e `backup/Dockerfile` (pg_dump, age, rclone).
   O `esbuild` (devDependency, ADR 0014) só empacota `scripts/migrar.mts` e `scripts/criar-admin.mts` em `dist/` para a imagem.
 - Busca sem acento com a extensão `unaccent` (criada pelo `migrador`). Validação de formulário sem biblioteca
   (`compartilhado/validacao.ts`); se começar a se repetir, reavaliar.
