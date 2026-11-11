@@ -264,10 +264,12 @@ async function main() {
       `o node não consegue ${descricao} (Permission denied)`,
     );
   }
+  // Links simbólicos (o Next cria em .next/node_modules) sempre têm modo 777 no Linux, e o modo deles não vale
+  // nada: o que conta é o dono do link e o do alvo, que também é conferido.
   const foraDoRoot = compose([
     "exec", "-T", "app", "sh", "-c",
     "find /app /usr/local/bin/docker-entrypoint.sh -path /app/.next/cache -prune -o " +
-      "\\( ! -user root -o ! -group root -o -perm -0002 \\) -print",
+      "\\( ! -user root -o ! -group root -o \\( -perm -0002 ! -type l \\) \\) -print",
   ]).texto.trim();
   confirmar(
     foraDoRoot === "",
