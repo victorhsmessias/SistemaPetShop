@@ -240,9 +240,12 @@ Passos:
 
 ## 13. Teste de restauração antes do lançamento
 
+- [ ] Prepare o computador conforme os pré-requisitos do teste no runbook: Docker, **Node 26**, o repositório na
+      versão em uso (antes da primeira tag, o commit da homologação) e `npm ci`.
 - [ ] Siga [Teste de restauração](README.md#teste-de-restauração-antes-do-lançamento-e-depois-uma-vez-por-mês) com o
       backup do passo 11, usando a **segunda cópia** da chave, para provar que ela funciona.
-- [ ] As contagens batem, a conferência de RLS passa e os testes de isolamento passam contra o banco restaurado.
+- [ ] As contagens batem, a conferência de RLS passa e o `npm run test:banco-restaurado` passa inteiro contra o
+      banco restaurado.
 - [ ] Anote a data, o tempo total (meta: até 2 h) e o nome do backup. Marque no calendário o próximo teste (mensal).
 
 ## 14. iPhone da piloto

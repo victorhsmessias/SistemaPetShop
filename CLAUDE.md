@@ -174,6 +174,7 @@ npm run test:e2e              # ponta a ponta (iPhone/WebKit); faz o build e sob
 npm run test:e2e:meia-noite   # ponta a ponta às 23:50 e às 00:10 de São Paulo (reaproveita o build)
 npm run test:imagem           # imagem de produção: migra, falha segura, criar-admin, login, health (Docker, porta 3006)
 npm run test:backup           # backup, restauração e isolamento depois de restaurar (Docker, portas 5437 e 5438)
+npm run test:banco-restaurado # isolamento + estrutura + papel backup contra o banco das variáveis (runbook)
 npm run empacotar             # dist/migrar.mjs e dist/criar-admin.mjs (o Dockerfile roda)
 npx playwright install webkit # uma vez por máquina, antes do primeiro test:e2e
 docker compose down -v        # apaga o banco local (o próximo `up` recria do zero)

@@ -160,8 +160,18 @@ só sai do gerenciador de senhas (ou da segunda cópia) na hora de restaurar, e 
 
 ### Teste de restauração (antes do lançamento e depois uma vez por mês)
 
-No computador do Victor, sem tocar na produção. Precisa do Docker, deste repositório, da chave privada num arquivo
-(por exemplo `C:\restauracao\chave.txt`) e de um token do R2 **só de leitura** ("Object Read only") desse bucket.
+No computador do Victor, sem tocar na produção. Pré-requisitos:
+
+- Docker, com as portas 5437 e 5438 livres (o banco de destino fica na 5438);
+- a chave privada do age num arquivo (por exemplo `C:\restauracao\chave.txt`);
+- um token do R2 **só de leitura** ("Object Read only") desse bucket;
+- para o passo 3 (testes contra o banco restaurado):
+  - o **Node 26** (a versão do `.nvmrc`, `node --version` mostra `v26...`) e o npm 11.6.2 ou mais novo;
+  - este repositório na **mesma versão que está em produção**, para os testes conferirem o schema que o backup
+    traz: `git fetch --tags` e `git checkout v<versão em produção>` (a tag do último deploy da produção). Antes da
+    primeira tag, use o commit da imagem em uso na homologação (`git checkout <commit>`, o `sha-<commit>` do
+    resumo do job `publicar`);
+  - as dependências instaladas nessa versão: `npm ci`, na raiz do repositório.
 
 1. Suba um Postgres vazio com os papéis (o compose do teste do backup tem um pronto, com senhas descartáveis):
 
@@ -182,18 +192,25 @@ No computador do Victor, sem tocar na produção. Precisa do Docker, deste repos
    ```
 
    A saída lista as linhas por tabela e confere o RLS.
-3. Rode os testes de isolamento e de estrutura contra o banco restaurado. Eles criam e apagam dados `[teste]`
-   na cópia:
+3. Rode contra o banco restaurado o mesmo conjunto que o `npm run test:backup` roda no CI:
+   `npm run test:banco-restaurado` (todos os `isolamento.test.ts`, o `estrutura.test.ts` e o
+   `papel-backup.test.ts`). Eles criam e apagam dados `[teste]` na cópia. As variáveis abaixo valem só para o
+   terminal aberto e têm prioridade sobre o `.env`, se houver um. As senhas são as descartáveis do compose do teste.
+   `BETTER_AUTH_SECRET` e `BETTER_AUTH_URL` precisam existir porque os testes carregam o módulo de login; qualquer
+   valor descartável serve (nada aqui toca a produção). No PowerShell, na raiz do repositório:
 
    ```powershell
    $env:DATABASE_URL="postgres://app:teste-app@localhost:5438/banho_e_tosa"
    $env:DATABASE_URL_PLATAFORMA="postgres://plataforma:teste-plataforma@localhost:5438/banho_e_tosa"
    $env:DATABASE_URL_MIGRADOR="postgres://migrador:teste-migrador@localhost:5438/banho_e_tosa"
    $env:DATABASE_URL_BACKUP="postgres://backup:teste-backup@localhost:5438/banho_e_tosa"
-   npx vitest run src/modules/cadastros/isolamento.test.ts src/modules/catalogo/isolamento.test.ts `
-     src/modules/agenda/isolamento.test.ts src/modules/financeiro/isolamento.test.ts `
-     src/modules/empresas/isolamento.test.ts src/modules/auditoria/isolamento.test.ts src/db/estrutura.test.ts
+   $env:BETTER_AUTH_SECRET="segredo-descartavel-do-teste-de-restauracao-0000000000"
+   $env:BETTER_AUTH_URL="http://localhost:3000"
+   npm run test:banco-restaurado
    ```
+
+   No Bash, o mesmo com `export NOME=valor` em cada linha. Todos os arquivos precisam passar; uma falha de
+   isolamento no banco restaurado é vazamento, nunca "flaky".
 
 4. Anote a data, o nome do backup, as contagens e o tempo total (a meta é restaurar em até 2 h).
 5. Apague tudo: `docker compose -f docker-compose.backup-teste.yml -p restauracao down -v`. Apague também o arquivo da

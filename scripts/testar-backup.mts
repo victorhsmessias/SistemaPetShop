@@ -13,7 +13,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -266,20 +266,17 @@ async function conferirIsolamentoNoDestino(empresas: string[], porEmpresa: Recor
   confirmar(plataforma === "42501", "a plataforma recebe erro de permissão nas tabelas de negócio");
 }
 
+/**
+ * O mesmo comando do teste de restauração do runbook (npm run test:banco-restaurado): todos os isolamento.test.ts,
+ * o estrutura.test.ts e o papel-backup.test.ts, contra o banco restaurado (as URLs do destino já estão no ambiente).
+ */
 function testesDeIsolamentoNoDestino() {
-  const arquivos = [
-    ...readdirSync("src/modules", { withFileTypes: true })
-      .filter((d) => d.isDirectory() && existsSync(`src/modules/${d.name}/isolamento.test.ts`))
-      .map((d) => `src/modules/${d.name}/isolamento.test.ts`),
-    "src/db/estrutura.test.ts",
-    "src/db/papel-backup.test.ts",
-  ];
-  const r = spawnSync("npx", ["vitest", "run", ...arquivos], {
+  const r = spawnSync("npm", ["run", "test:banco-restaurado"], {
     stdio: "inherit",
     shell: process.platform === "win32",
     env: { ...process.env },
   });
-  confirmar(r.status === 0, `os testes de isolamento e de estrutura passam contra o banco restaurado (${arquivos.length} arquivos)`);
+  confirmar(r.status === 0, "os testes de isolamento, de estrutura e do papel backup passam contra o banco restaurado");
 }
 
 async function main() {

@@ -128,6 +128,7 @@ Planejamento, modelo de dados e decisões: pasta [`docs/`](docs/).
 | `npm run test:e2e:meia-noite` | O ponta a ponta da agenda e do financeiro às 23:50 e às 00:10 (reaproveita o build) |
 | `npm run test:imagem` | Testa a imagem de produção em Docker: migra, falha segura, `criar-admin`, login e `/api/health` (porta 3006) |
 | `npm run test:backup` | Testa o backup e a restauração em Docker, com o isolamento conferido depois (portas 5437 e 5438) |
+| `npm run test:banco-restaurado` | Isolamento, estrutura e papel backup contra o banco das variáveis (o `test:backup` e o teste de restauração do runbook usam) |
 | `npm run db:generate -- --name=<descricao>` | Gera uma migration a partir dos schemas |
 | `npm run db:migrate` | Aplica as migrations como `migrador` (com trava, o mesmo código da imagem) |
 | `npm run criar-admin` | Cria o administrador da plataforma (pede e-mail e senha) |
