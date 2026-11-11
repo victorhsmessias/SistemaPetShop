@@ -201,7 +201,7 @@ Restrições:
 | Papel | Usado por | Acesso |
 |---|---|---|
 | `migrador` | migrations | dono das tabelas; nunca usado com o app rodando |
-| `app` | telas, API e Better Auth | tabelas de negócio só da empresa da transação (RLS); `empresa`, só a própria; tabelas do Better Auth, sem RLS |
+| `app` | telas, API e Better Auth | tabelas de negócio só da empresa da transação (RLS); `empresa`, só a própria; tabelas do Better Auth, sem RLS; no máximo 30 conexões (`CONNECTION LIMIT`, conta no runbook de operação) |
 | `plataforma` | painel do administrador e despacho das tarefas | todas as empresas e leitura de `user`; nenhum acesso às tabelas de negócio |
 | `backup` | `pg_dump` do serviço de backup (ADR 0013) | lê todas as tabelas de todas as empresas (`BYPASSRLS` e membro de `pg_read_all_data`); não grava, não apaga, não altera a estrutura e não é dono de nada |
 

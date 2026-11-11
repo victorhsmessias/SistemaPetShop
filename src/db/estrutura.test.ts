@@ -1,6 +1,7 @@
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { CONEXOES_POR_POOL } from "@/db/clientes";
 import { problemasDoPapel, situacaoDoPapel } from "@/db/verificar-papeis";
 
 // Verificações de estrutura (docs/planejamento/modelo-de-dados.md, itens 5 a 8).
@@ -226,6 +227,17 @@ describe("estrutura do banco", () => {
         order by 1`,
     );
     expect(rows.map((r) => r.permissao)).toEqual(["app:INSERT", "app:SELECT", "plataforma:INSERT"]);
+  });
+
+  // Limite de conexões do papel app (db/preparacao/papeis.sql e docs/operacao/README.md, "Limite de conexões"):
+  // 2 instâncias durante o deploy sem queda × (pool de CONEXOES_POR_POOL + 1 da saúde + 1 da conferência dos papéis)
+  // = 24, mais 6 de folga (criar-admin, um psql de diagnóstico). Uma rajada não esgota o max_connections do servidor.
+  it("o papel app tem CONNECTION LIMIT 30, que cabe duas instâncias do app", async () => {
+    const { rows } = await cliente.query<{ limite: number }>(
+      "select rolconnlimit as limite from pg_roles where rolname = 'app'",
+    );
+    expect(rows).toEqual([{ limite: 30 }]);
+    expect(2 * (CONEXOES_POR_POOL + 2)).toBeLessThanOrEqual(rows[0]!.limite);
   });
 
   // Papel do backup (ADR 0013): lê tudo, sem RLS, e não escreve nem altera a estrutura.

@@ -155,6 +155,8 @@ Nenhum deles é superusuário; só o `backup` tem `BYPASSRLS`, e só lê. Detalh
   ```
 
   Ou recrie o banco do zero: `docker compose down -v` e repita os passos 3 e 4.
+- **O teste "o papel app tem CONNECTION LIMIT 30" falha:** o banco local foi criado antes do limite (sessão 06).
+  Aplique uma vez: `docker compose exec -T postgres psql -U postgres -d postgres -c "alter role app connection limit 30"`.
 - **Porta 5435 ocupada:** defina outra em `PORTA_POSTGRES` no `.env` e ajuste a porta nas três URLs.
 - **Mudei as senhas no `.env` e a conexão falha:** o script dos papéis só roda com o volume vazio. Para
   recriar o banco local do zero (apaga os dados): `docker compose down -v` e repita os passos 3 e 4.

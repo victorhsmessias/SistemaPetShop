@@ -124,7 +124,9 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
     deploy, e o rollback é só voltar a imagem, sem restaurar o banco: acrescentar pode; renomear, apagar, mudar tipo
     ou exigir `not null` em coluna que a versão anterior não preenche é feito em duas versões (`docs/operacao/README.md`).
 20. **`/api/health` sem dados:** sem autenticação, só `{"status":"ok"}` (200) ou `{"status":"indisponivel"}` (503),
-    sem versão, mensagem de erro, dado de empresa ou cache.
+    sem versão, mensagem de erro, dado de empresa ou cache. Checagens simultâneas dividem a mesma em andamento
+    (`src/db/saude.ts`): nunca uma conexão por requisição. O papel `app` tem `CONNECTION LIMIT 30`, calculado com o
+    pool de `CONEXOES_POR_POOL` (`src/db/clientes.ts`); mudar um exige rever o outro.
 21. **Nenhum dado pessoal nem de senha em log.** Nunca nome nem telefone de tutor, e-mail, hash, token ou valor de
     variável secreta. Erro do banco vai para o log só pelo resumo de `src/db/erro-do-banco.ts` (código, restrição,
     tabela e empresa): nunca `erro.message` de um erro do Drizzle (traz os parâmetros) nem o `detail` do pg.

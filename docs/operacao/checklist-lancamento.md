@@ -26,6 +26,10 @@ no EasyPanel, cada um com o próprio Postgres, as próprias senhas e o próprio 
 - [ ] Os quatro usuários do banco: Shell do serviço → `psql -U postgres`, e cole o SQL de
       [Papéis do banco](README.md#papéis-do-banco). Troque cada `<SENHA_...>` por uma senha forte e diferente.
       Criar o `backup` com `BYPASSRLS` exige o superusuário: é por isso que esse passo é feito como `postgres`.
+- [ ] O papel `app` ficou com o limite de conexões:
+      `select rolname, rolconnlimit from pg_roles where rolname = 'app';` devolve `app | 30`. O motivo do valor está
+      em [Limite de conexões do papel app](README.md#limite-de-conexões-do-papel-app). Num servidor em que o papel
+      já existia: `alter role app connection limit 30;`.
 - [ ] Ainda no `psql`, a extensão de busca sem acento está disponível:
       `select name from pg_available_extensions where name = 'unaccent';` devolve uma linha. A primeira migration a
       cria como `migrador`, que é o dono do banco.

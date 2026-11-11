@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { Client } from "pg";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET, HEAD } from "@/app/api/health/route";
 
@@ -43,6 +44,27 @@ describe("/api/health", () => {
     url.password = "senha-errada";
     process.env.DATABASE_URL = url.toString();
     expect((await GET()).status).toBe(503);
+  });
+
+  it("requisições simultâneas dividem uma checagem: uma conexão só, e nada fica guardado depois", async () => {
+    const conectar = vi.spyOn(Client.prototype, "connect");
+    try {
+      const respostas = await Promise.all([
+        ...Array.from({ length: 25 }, () => GET()),
+        ...Array.from({ length: 5 }, () => HEAD()),
+      ]);
+      expect(respostas.map((r) => r.status)).toEqual(Array(30).fill(200));
+      expect(conectar).toHaveBeenCalledTimes(1);
+
+      // Terminada a checagem, a próxima requisição abre outra conexão e vê o banco como ele está agora.
+      bancoForaDoAr();
+      const depois = await Promise.all(Array.from({ length: 10 }, () => GET()));
+      expect(depois.map((r) => r.status)).toEqual(Array(10).fill(503));
+      expect(conectar).toHaveBeenCalledTimes(2);
+      for (const r of depois) expect(r.headers.get("cache-control")).toContain("no-store");
+    } finally {
+      conectar.mockRestore();
+    }
   });
 
   it("HEAD responde o mesmo código, sem corpo", async () => {

@@ -104,7 +104,8 @@ migrations e antes de qualquer restauração. No EasyPanel: serviço `postgres` 
 
 ```sql
 create role migrador login password '<SENHA_MIGRADOR>' nosuperuser nocreatedb nocreaterole nobypassrls;
-create role app login password '<SENHA_APP>' nosuperuser nocreatedb nocreaterole nobypassrls noinherit;
+-- Limite de conexões do app: ver "Limite de conexões do papel app", abaixo.
+create role app login password '<SENHA_APP>' nosuperuser nocreatedb nocreaterole nobypassrls noinherit connection limit 30;
 create role plataforma login password '<SENHA_PLATAFORMA>' nosuperuser nocreatedb nocreaterole nobypassrls noinherit;
 -- Só leitura, para o backup. BYPASSRLS exige superusuário.
 create role backup login password '<SENHA_BACKUP>' nosuperuser nocreatedb nocreaterole bypassrls;
@@ -122,6 +123,32 @@ Postgres traz).
 
 Gere senhas com `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"` (só letras e números,
 sem problema dentro das URLs).
+
+### Limite de conexões do papel app
+
+O `/api/health` não tem autenticação, e uma rajada de requisições (ou um bug que vaze conexões) não pode esgotar
+as conexões do Postgres e derrubar o login. Duas proteções:
+
+- **No app:** as checagens simultâneas do `/api/health` dividem a mesma checagem em andamento, então cada instância
+  abre no máximo uma conexão de saúde por vez (`src/db/saude.ts`); nada fica em cache.
+- **No banco:** `CONNECTION LIMIT 30` no papel `app`. Conta: durante o deploy sem queda rodam **duas instâncias**
+  do app ao mesmo tempo, e cada uma usa até 10 conexões do pool (`CONEXOES_POR_POOL` em `src/db/clientes.ts`), 1 do
+  `/api/health` e 1 da conferência dos papéis na subida: 2 × 12 = 24. Os 6 de folga cobrem o `criar-admin` e um
+  `psql` de diagnóstico como `app`. O `max_connections` padrão do Postgres é 100: sobram 70 para `plataforma`
+  (também até 10 por instância), `migrador`, `backup` e as 3 reservadas ao superusuário, que continua entrando
+  mesmo com o app no limite.
+
+Se o limite for atingido, o app recebe `too many connections for role "app"` (no log, `código 53300`) e as telas
+falham até conexões se liberarem; os outros papéis e o superusuário seguem entrando. Se isso aparecer com uso
+normal, aumente o limite e o pool juntos, sem passar do que o `max_connections` comporta:
+
+```sql
+alter role app connection limit <novo valor>;   -- como postgres; vale para as próximas conexões
+select rolname, rolconnlimit from pg_roles where rolname = 'app';
+```
+
+Mudar o `CONEXOES_POR_POOL` ou rodar mais de duas instâncias do app exige refazer a conta (e o teste em
+`src/db/estrutura.test.ts`).
 
 ## Restaurar um backup
 
