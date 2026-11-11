@@ -63,5 +63,6 @@ Lidas pelo `docker-compose.yml` e pelo `db/preparacao/docker-init.sh` na primeir
 | `E2E_RELOGIO` | Opcional. Hora (`HH:MM`, São Paulo) do relógio do servidor no ponta a ponta; padrão `12:00`. O `npm run test:e2e:meia-noite` usa `23:50` e `00:10`. | linha de comando | não |
 | `E2E_SEM_BUILD` | Opcional. Reaproveita o build já feito no ponta a ponta. | linha de comando | não |
 | `CI` | Definida pelo GitHub Actions; muda o Playwright para o modo de CI. | GitHub Actions | não |
+| `VITEST` | Definida pelo Vitest. Junto com `NODE_ENV=test` (também do Vitest), troca o hash de senha por um scrypt barato só nos testes (`src/modules/acesso/senha-dos-testes.ts`). Não configure: em produção `NODE_ENV=production` desliga a troca. | Vitest | não |
 | `PORTA_IMAGEM` | Opcional. Porta do app no teste da imagem (`npm run test:imagem`), padrão 3006. | linha de comando ou `.env` | não |
 | `PORTA_BACKUP_ORIGEM`, `PORTA_BACKUP_DESTINO` | Opcionais. Portas dos dois Postgres do teste do backup (`npm run test:backup`), padrão 5437 e 5438. | linha de comando ou `.env` | não |

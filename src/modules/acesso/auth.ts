@@ -11,6 +11,7 @@ import { bancoApp } from "@/db/clientes";
 import { comEmpresa, EmpresaIndisponivelError } from "@/db/com-empresa";
 import { argumentosSegurosDoLog } from "@/db/erro-do-banco";
 import { account, session, user, verification } from "@/modules/acesso/schema";
+import { hashBaratoDosTestesAtivo, senhaDosTestes } from "@/modules/acesso/senha-dos-testes";
 
 /** Único caminho que cria usuárias: o createUser do plugin admin (painel e comando criar-admin). */
 const CAMINHO_CRIAR_USUARIA = "/admin/create-user";
@@ -58,6 +59,8 @@ export const auth = betterAuth({
     enabled: true,
     // Cadastro público bloqueado: usuárias só nascem pelo painel do administrador.
     disableSignUp: true,
+    // Só no Vitest um scrypt mais barato (senha-dos-testes.ts); fora dele, o hash padrão do Better Auth.
+    password: hashBaratoDosTestesAtivo() ? senhaDosTestes : undefined,
   },
   user: {
     additionalFields: {
