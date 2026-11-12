@@ -24,6 +24,11 @@ export default defineConfig({
   testDir: "./e2e",
   // Uma dona e uma empresa por execução: os testes rodam em sequência.
   workers: 1,
+  // Cada teste percorre um fluxo inteiro (agendar, concluir, desfazer...) e leva de 20 a 30 s; com o padrão de 30 s,
+  // a máquina carregada derrubava um teste por tempo. A margem da meia-noite continua valendo: no
+  // test:e2e:meia-noite, o relógio do servidor começa às 23:50 quando o servidor sobe e a rodada tem 2 testes, então
+  // no pior caso são 240 s de subida (webServer.timeout) + 2 x 60 s = 6 min, antes das 00:00.
+  timeout: 60_000,
   forbidOnly: ci,
   retries: 0,
   reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
