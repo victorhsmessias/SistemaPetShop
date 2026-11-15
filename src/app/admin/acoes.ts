@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { cabecalhosDaRequisicao } from "@/app/requisicao";
+import { resumoDoErro, textoDoResumo } from "@/db/erro-do-banco";
 import { NaoAutenticadoError } from "@/modules/acesso/sessao";
 import { criarDona, criarEmpresaComDona, encerrarSessoes, redefinirSenha } from "@/modules/administracao/empresas";
 import { AcessoNegadoError } from "@/modules/administracao/guarda";
@@ -20,7 +21,8 @@ function falha(erro: unknown, acao: string): EstadoFormulario {
   if (erro instanceof AcessoNegadoError || erro instanceof NaoAutenticadoError) {
     return { tipo: "erro", mensagem: "Acesso negado." };
   }
-  console.error(`Falha ao ${acao}:`, erro instanceof Error ? erro.message : erro);
+  // Só o resumo: a mensagem de um erro do banco traz os parâmetros da consulta (e-mail, hash da senha).
+  console.error(`Falha ao ${acao}: ${textoDoResumo(resumoDoErro(erro))}`);
   return { tipo: "erro", mensagem: `Não foi possível ${acao}. Tente de novo.` };
 }
 

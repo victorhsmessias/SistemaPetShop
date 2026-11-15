@@ -30,10 +30,14 @@ export function lerUrl(variavel: "DATABASE_URL" | "DATABASE_URL_PLATAFORMA"): st
   return url;
 }
 
+// Teto de conexões de cada pool (o padrão do pg, explícito). O limite do papel app no Postgres (CONNECTION LIMIT,
+// docs/operacao/README.md) foi calculado com este número: mudar um exige rever o outro.
+export const CONEXOES_POR_POOL = 10;
+
 function conectar(variavel: "DATABASE_URL" | "DATABASE_URL_PLATAFORMA"): Banco {
   let conexao = conexoes.get(variavel);
   if (!conexao) {
-    const pool = new Pool({ connectionString: lerUrl(variavel), connectionTimeoutMillis: 5000 });
+    const pool = new Pool({ connectionString: lerUrl(variavel), connectionTimeoutMillis: 5000, max: CONEXOES_POR_POOL });
     conexao = { pool, banco: drizzle({ client: pool, schema }) };
     conexoes.set(variavel, conexao);
   }

@@ -2,10 +2,14 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { hojeNoFuso, rotuloDoDia } from "@/modules/agenda/fuso";
 
+import { agoraDoRelogio } from "./relogio.mjs";
+
 // A dona, num iPhone, conclui o atendimento com pagamento (critério de "pronto" da sessão 05): agenda, conclui
 // com Pix, vê a receita na página do atendimento, no Financeiro e em "Recebido hoje", e desfaz a conclusão
 // com motivo. O agendamento usa um dia fixo, aberto por ?dia=. A receita é do dia em que ela conclui (hoje,
-// no fuso da empresa, que é o padrão America/Sao_Paulo), então a data esperada é calculada como no app.
+// no fuso da empresa, que é o padrão America/Sao_Paulo). O servidor roda com o relógio do teste (e2e/relogio.mjs:
+// 12:00 por padrão; 23:50 e 00:10 no test:e2e:meia-noite, com o servidor em UTC), e a data esperada é calculada
+// pelo mesmo relógio, como no app.
 
 const DIA = "2026-12-03"; // quinta-feira
 const FUSO_DA_EMPRESA = "America/Sao_Paulo";
@@ -50,7 +54,7 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   const receita = page.getByRole("region", { name: "Receita" });
   await expect(receita).toContainText(VALOR);
   await expect(receita).toContainText("Pix");
-  await expect(receita).toContainText(rotuloDoDia(hojeNoFuso(FUSO_DA_EMPRESA)));
+  await expect(receita).toContainText(rotuloDoDia(hojeNoFuso(FUSO_DA_EMPRESA, agoraDoRelogio())));
   await expect(page.getByRole("button", { name: /^Concluir/ })).toHaveCount(0);
 
   // Na agenda, o concluído continua na grade, com a marca de concluído.

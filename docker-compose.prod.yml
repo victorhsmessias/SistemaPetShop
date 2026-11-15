@@ -1,0 +1,62 @@
+# SÓ PARA TESTE LOCAL da imagem de produção (npm run test:imagem). Não é o deploy: homologação e produção rodam no
+# EasyPanel (docs/operacao/README.md). Todas as senhas abaixo são descartáveis, fixas e públicas de propósito; nada
+# aqui é segredo real, e nada daqui vai para o EasyPanel.
+#
+#   docker compose -f docker-compose.prod.yml -p banho-e-tosa-imagem up --build -d
+#   http://localhost:3006/api/health
+#   docker compose -f docker-compose.prod.yml -p banho-e-tosa-imagem down -v
+#
+# PORTA_IMAGEM muda a porta do app no computador (padrão 3006). O Postgres não é exposto.
+# criar-admin: docker compose -f docker-compose.prod.yml -p banho-e-tosa-imagem exec -u node app node dist/criar-admin.mjs
+
+name: banho-e-tosa-imagem
+
+x-senhas-descartaveis: &senhas
+  SENHA_MIGRADOR: teste-migrador
+  SENHA_APP: teste-app
+  SENHA_PLATAFORMA: teste-plataforma
+  SENHA_BACKUP: teste-backup
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_PASSWORD: teste-postgres
+      <<: *senhas
+    volumes:
+      - dados:/var/lib/postgresql
+      - ./db/preparacao/docker-init.sh:/docker-entrypoint-initdb.d/01-papeis.sh:ro
+      - ./db/preparacao/papeis.sql:/preparacao/papeis.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d banho_e_tosa"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build: .
+    image: banho-e-tosa:teste-local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://app:teste-app@postgres:5432/banho_e_tosa
+      DATABASE_URL_PLATAFORMA: postgres://plataforma:teste-plataforma@postgres:5432/banho_e_tosa
+      BETTER_AUTH_SECRET: segredo-descartavel-do-teste-local-0000000000000000
+      # localhost: fica fora das regras de homologação e produção (https, proxies), como o test:e2e.
+      BETTER_AUTH_URL: http://localhost:${PORTA_IMAGEM:-3006}
+    # A credencial do migrador não vai no ambiente: vai num arquivo dentro de /segredos (pasta só do root), como a
+    # montagem de arquivo do EasyPanel (ADR 0015). URL_MIGRADOR_DO_TESTE troca o conteúdo (o test:imagem usa para
+    # a senha errada).
+    configs:
+      - source: url-migrador
+        target: /segredos/database_url_migrador
+    ports:
+      - "${PORTA_IMAGEM:-3006}:3000"
+
+configs:
+  url-migrador:
+    content: ${URL_MIGRADOR_DO_TESTE:-postgres://migrador:teste-migrador@postgres:5432/banho_e_tosa}
+
+volumes:
+  dados:

@@ -2,10 +2,11 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  const { problemasDaConfiguracaoDeLogin } = await import("@/modules/acesso/configuracao");
-  const problemas = problemasDaConfiguracaoDeLogin(process.env);
+  // Variáveis de ambiente (docs/operacao/variaveis.md): sem elas, o app não sobe e explica o que falta.
+  const { problemasDoAmbiente } = await import("@/configuracao/ambiente");
+  const problemas = problemasDoAmbiente(process.env);
   if (problemas.length > 0) {
-    console.error(`\nO app não vai iniciar: configuração do login incorreta.\n${problemas.map((p) => `  - ${p}`).join("\n")}\n`);
+    console.error(`\nO app não vai iniciar: variáveis de ambiente incorretas.\n${problemas.map((p) => `  - ${p}`).join("\n")}\n`);
     process.exit(1);
   }
 

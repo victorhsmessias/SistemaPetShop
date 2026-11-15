@@ -6,10 +6,12 @@ import { admin } from "better-auth/plugins";
 
 import { eq } from "drizzle-orm";
 
+import { urlUsaHttps } from "@/configuracao/ambiente";
 import { bancoApp } from "@/db/clientes";
 import { comEmpresa, EmpresaIndisponivelError } from "@/db/com-empresa";
-import { urlUsaHttps } from "@/modules/acesso/configuracao";
+import { argumentosSegurosDoLog } from "@/db/erro-do-banco";
 import { account, session, user, verification } from "@/modules/acesso/schema";
+import { hashBaratoDosTestesAtivo, senhaDosTestes } from "@/modules/acesso/senha-dos-testes";
 
 /** Único caminho que cria usuárias: o createUser do plugin admin (painel e comando criar-admin). */
 const CAMINHO_CRIAR_USUARIA = "/admin/create-user";
@@ -35,6 +37,15 @@ async function conferirEmpresaAtiva(usuarioId: string): Promise<void> {
   }
 }
 
+/**
+ * Log do Better Auth sem dados pessoais nem de senha: erros viram só o resumo (código, restrição, tabela) e os
+ * outros argumentos (linhas do banco, corpo da requisição) ficam de fora. Exportado para o teste.
+ */
+export function registrarLogDoLogin(nivel: "debug" | "info" | "warn" | "error", mensagem: string, ...args: unknown[]) {
+  const saida = nivel === "error" ? console.error : nivel === "warn" ? console.warn : console.log;
+  saida(`[login] ${mensagem}`, ...argumentosSegurosDoLog(args));
+}
+
 function proxiesConfiaveis(): string[] | undefined {
   const lista = process.env.BETTER_AUTH_TRUSTED_PROXIES?.split(",").map((ip) => ip.trim()).filter(Boolean);
   return lista && lista.length > 0 ? lista : undefined;
@@ -48,6 +59,8 @@ export const auth = betterAuth({
     enabled: true,
     // Cadastro público bloqueado: usuárias só nascem pelo painel do administrador.
     disableSignUp: true,
+    // Só no Vitest um scrypt mais barato (senha-dos-testes.ts); fora dele, o hash padrão do Better Auth.
+    password: hashBaratoDosTestesAtivo() ? senhaDosTestes : undefined,
   },
   user: {
     additionalFields: {
@@ -80,6 +93,7 @@ export const auth = betterAuth({
       },
     },
   },
+  logger: { log: registrarLogDoLogin },
   rateLimit: {
     // Ligado também em desenvolvimento. Só vale para a rota HTTP: chamadas auth.api no servidor não contam.
     enabled: true,

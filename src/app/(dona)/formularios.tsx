@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { salvarPetAcao, salvarServicoAcao, salvarTutorAcao, type EstadoCadastro } from "@/app/(dona)/acoes";
-import { Campo, ErroGeral } from "@/app/(dona)/campos";
+import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
 
 type Valores = Record<string, string>;
 
@@ -40,7 +40,7 @@ export function FormularioTutor({ id, valores, agendar }: { id?: string; valores
           <Link href={`/clientes/${estado.tutorExistenteId}`}>Abrir o tutor já cadastrado</Link>
         </p>
       )}
-      <Campo nome="observacoes" rotulo="Observações" erro={estado.erros.observacoes}>
+      <Campo nome="observacoes" rotulo="Observações" erro={estado.erros.observacoes} dica={DICA_OBSERVACOES}>
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
       <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Cadastrar tutor"} />
@@ -110,7 +110,7 @@ export function FormularioPet({
         nome="observacoes"
         rotulo="Cuidados: comportamento e alergias"
         erro={estado.erros.observacoes}
-        dica="Aparece em destaque na ficha do pet."
+        dica={`Aparece em destaque na ficha do pet. ${DICA_OBSERVACOES}`}
       >
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>

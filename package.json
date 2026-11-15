@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=26.0.0 <27",
     "npm": ">=11.6.2"
   },
   "scripts": {
@@ -15,9 +15,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx scripts/migrar.mts",
     "criar-admin": "tsx scripts/criar-admin.mts",
-    "test:e2e": "playwright test"
+    "empacotar": "tsx scripts/empacotar.mts",
+    "test:e2e": "playwright test",
+    "test:e2e:meia-noite": "tsx scripts/e2e-meia-noite.mts",
+    "test:imagem": "tsx scripts/testar-imagem.mts",
+    "test:backup": "tsx scripts/testar-backup.mts",
+    "test:banco-restaurado": "vitest run isolamento.test estrutura.test papel-backup.test"
   },
   "dependencies": {
     "better-auth": "1.7.14",
@@ -29,11 +34,12 @@
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
-    "@types/node": "22.20.5",
+    "@types/node": "26.6.6",
     "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "drizzle-kit": "0.31.11",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.3",
     "tsx": "4.23.15",

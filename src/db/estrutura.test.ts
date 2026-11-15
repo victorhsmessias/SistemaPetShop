@@ -1,6 +1,7 @@
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { CONEXOES_POR_POOL } from "@/db/clientes";
 import { problemasDoPapel, situacaoDoPapel } from "@/db/verificar-papeis";
 
 // Verificações de estrutura (docs/planejamento/modelo-de-dados.md, itens 5 a 8).
@@ -226,5 +227,67 @@ describe("estrutura do banco", () => {
         order by 1`,
     );
     expect(rows.map((r) => r.permissao)).toEqual(["app:INSERT", "app:SELECT", "plataforma:INSERT"]);
+  });
+
+  // Limite de conexões do papel app (db/preparacao/papeis.sql e docs/operacao/README.md, "Limite de conexões"):
+  // 2 instâncias durante o deploy sem queda × (pool de CONEXOES_POR_POOL + 1 da saúde + 1 da conferência dos papéis)
+  // = 24, mais 6 de folga (criar-admin, um psql de diagnóstico). Uma rajada não esgota o max_connections do servidor.
+  it("o papel app tem CONNECTION LIMIT 30, que cabe duas instâncias do app", async () => {
+    const { rows } = await cliente.query<{ limite: number }>(
+      "select rolconnlimit as limite from pg_roles where rolname = 'app'",
+    );
+    expect(rows).toEqual([{ limite: 30 }]);
+    expect(2 * (CONEXOES_POR_POOL + 2)).toBeLessThanOrEqual(rows[0]!.limite);
+  });
+
+  // Papel do backup (ADR 0013): lê tudo, sem RLS, e não escreve nem altera a estrutura.
+  describe("papel backup", () => {
+    it("só lê: BYPASSRLS e pg_read_all_data, sem superusuário, sem criar banco ou papel, sem pg_write_all_data", async () => {
+      const { rows } = await cliente.query(
+        `select r.rolsuper as superusuario, r.rolcreatedb as "criaBanco", r.rolcreaterole as "criaPapel",
+                r.rolbypassrls as "ignoraRls", r.rolcanlogin as "entra",
+                pg_has_role('backup', 'pg_read_all_data', 'USAGE') as "leTudo",
+                pg_has_role('backup', 'pg_write_all_data', 'MEMBER') as "escreveTudo"
+           from pg_roles r where r.rolname = 'backup'`,
+      );
+      expect(rows).toEqual([
+        {
+          superusuario: false,
+          criaBanco: false,
+          criaPapel: false,
+          ignoraRls: true,
+          entra: true,
+          leTudo: true,
+          escreveTudo: false,
+        },
+      ]);
+    });
+
+    it("não é dono de nenhuma tabela nem membro de outro papel além de pg_read_all_data", async () => {
+      const situacao = await situacaoDoPapel(cliente, "backup");
+      expect(situacao.tabelas).toEqual([]);
+      expect(situacao.superusuario).toEqual([]);
+      const { rows } = await cliente.query<{ papel: string }>(
+        `select g.rolname as papel from pg_auth_members m
+           join pg_roles u on u.oid = m.member join pg_roles g on g.oid = m.roleid
+          where u.rolname = 'backup' order by 1`,
+      );
+      expect(rows.map((r) => r.papel)).toEqual(["pg_read_all_data"]);
+    });
+
+    it("não grava em nenhuma tabela e não cria nada nos schemas", async () => {
+      const { rows } = await cliente.query<{ permissao: string }>(
+        `select n.nspname || '.' || c.relname || ':' || p as permissao
+           from pg_class c join pg_namespace n on n.oid = c.relnamespace
+          cross join unnest(array['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) p
+          where c.relkind in ('r', 'p') and n.nspname in ('public', 'drizzle')
+            and has_table_privilege('backup', c.oid, p)
+          union all
+         select n.nspname || ':CREATE' from pg_namespace n
+          where n.nspname in ('public', 'drizzle') and has_schema_privilege('backup', n.oid, 'CREATE')
+          order by 1`,
+      );
+      expect(rows.map((r) => r.permissao)).toEqual([]);
+    });
   });
 });

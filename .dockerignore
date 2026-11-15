@@ -1,0 +1,23 @@
+# Fora do contexto do build da imagem: segredos, dependências e saídas locais, testes e documentação.
+.env
+.env.*
+!.env.example
+.git
+.github
+node_modules
+.next
+dist
+out
+build
+e2e
+test-results
+playwright-report
+blob-report
+docs
+backup
+*.log
+*.tsbuildinfo
+next-env.d.ts
+docker-compose*.yml
+Dockerfile
+.dockerignore

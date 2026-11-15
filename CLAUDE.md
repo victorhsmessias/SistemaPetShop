@@ -9,20 +9,25 @@ Os documentos em `docs/` mandam. Leia a parte relevante antes de mexer no que el
 
 - `docs/planejamento/sistema-banho-e-tosa.md`: escopo, requisitos (H1 a H13), arquitetura e marcos.
 - `docs/planejamento/modelo-de-dados.md`: tabelas, isolamento, papéis, permissões, Better Auth e teste de isolamento.
-- `docs/adr/`: decisões (0001 a 0012).
+- `docs/adr/`: decisões (0001 a 0015).
+- `docs/operacao/`: runbook (`README.md`), checklist de lançamento e variáveis de ambiente (`variaveis.md`).
 
 Se um pedido contradisser os documentos, valem os documentos: avise da contradição. Mudar uma decisão exige
 um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o antigo em silêncio.
 
 ## Stack (versões fixadas no package.json)
 
-- Next.js 16 (App Router), TypeScript estrito, ESLint 9, npm 11.6.2+. O Next 16 difere do que você conhece:
-  consulte `node_modules/next/dist/docs/` antes de usar uma API do Next. O `AGENTS.md` é gerado pelo `next dev`.
+- Node 26 (`.nvmrc`; o mesmo no CI e na imagem). Next.js 16 (App Router, saída `standalone`), TypeScript estrito,
+  ESLint 9, npm 11.6.2+. O Next 16 difere do que você conhece: consulte `node_modules/next/dist/docs/` antes de
+  usar uma API do Next. O `AGENTS.md` é gerado pelo `next dev`.
 - Drizzle ORM 0.45 + drizzle-kit, driver `pg`. RLS com `.enableRLS()` (o `pgTable.withRLS` do site é da 1.0).
 - Better Auth 1.7 (e-mail e senha + plugin admin). Código-fonte em `node_modules/better-auth/dist` quando a
   documentação não bastar. Schema das tabelas gerado pela CLI oficial (cabeçalho de `acesso/schema.ts`).
 - Vitest 5 com Postgres de verdade, sem mocks de banco. `tsx` roda os comandos em `scripts/` (`.mts`).
-- Playwright 1.64 (`e2e/`): perfil iPhone 15 com WebKit, contra o build de produção (`next build && next start`).
+- Playwright 1.64 (`e2e/`): perfil iPhone 15 com WebKit, contra o build de produção (`next build && next start`), com o
+  relógio do servidor fixado por `e2e/relogio.mjs` (12:00 de São Paulo; 23:50 e 00:10 no `test:e2e:meia-noite`) e `TZ=UTC`.
+- Docker: `Dockerfile` (app; migra na subida pelo `docker-entrypoint.sh`, como root, e troca para `node`; os arquivos são do root, e o `node` só escreve em `.next/cache`) e `backup/Dockerfile` (pg_dump, age, rclone).
+  O `esbuild` (devDependency, ADR 0014) só empacota `scripts/migrar.mts` e `scripts/criar-admin.mts` em `dist/` para a imagem.
 - Busca sem acento com a extensão `unaccent` (criada pelo `migrador`). Validação de formulário sem biblioteca
   (`compartilhado/validacao.ts`); se começar a se repetir, reavaliar.
 - TypeScript fica na 6.0 e ESLint na 9 porque `typescript-eslint` e plugins do `eslint-config-next` ainda
@@ -43,14 +48,19 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
   - `auditoria`: tabela e `registrarEvento`;
   - `administracao`: painel do administrador (`exigirAdmin`, empresas, usuárias, criar administrador).
 - `src/db/`: `clientes.ts` (pools), `com-empresa.ts`, `com-plataforma.ts`, `rls.ts`, `verificar-papeis.ts`,
+  `erro-do-banco.ts` (resumo dos erros para o log), `migracao.ts` (migrations com trava), `saude.ts` (`/api/health`),
   `testes/apoio.ts`.
-- `src/app/`: telas e Server Actions; regra de negócio fica nos módulos. `scripts/criar-admin.mts`.
+- `src/app/`: telas e Server Actions; regra de negócio fica nos módulos. `api/health` (saúde, sem autenticação).
   - `(dona)/`: telas da dona (Agenda, que é a tela inicial; Clientes; Serviços; Financeiro). Toda página e
     toda ação começam por `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`); o layout do grupo é só visual.
     `/empresa` só mostra o aviso de empresa suspensa. O atalho `?agendar=` do cadastro de tutor e pet volta
     para o agendamento por uma URL montada em `(dona)/agenda/retorno.ts`, nunca vinda do navegador.
   - Operações dos módulos recebem a transação (`tx`) e nunca o `empresaId`; ids de registros vindos da URL ou do
     formulário são conferidos com `ehUuid`, e o RLS faz o de outra empresa voltar como "não encontrado".
+- `src/configuracao/ambiente.ts`: variáveis de ambiente conferidas na subida (`instrumentation.ts`).
+- `backup/`: `backup.sh`, `restaurar.sh`, `agendar.sh` (ADR 0013).
+- `scripts/`: `criar-admin.mts`, `migrar.mts`, `empacotar.mts` e os testes de Docker (`testar-imagem.mts`,
+  `testar-backup.mts`, `e2e-meia-noite.mts`).
 - `drizzle/`: migrations (geradas e SQL próprias). `db/preparacao/papeis.sql`: cria papéis e banco.
 - Crie só o que a tarefa usa.
 
@@ -58,7 +68,10 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 
 1. **Papéis.** `migrador` é dono das tabelas e só roda migrations. `app` (DATABASE_URL) é sujeito ao RLS e é o
    papel do Better Auth. `plataforma` administra empresas, só lê `user`, só cria na `auditoria` e não tem
-   acesso às tabelas de negócio. Nenhum é superusuário nem tem BYPASSRLS. O app não lê `DATABASE_URL_MIGRADOR`.
+   acesso às tabelas de negócio. `backup` só lê (BYPASSRLS + `pg_read_all_data`, para o pg_dump) e não escreve nada.
+   Nenhum é superusuário; só o `backup` tem BYPASSRLS. O app não lê a credencial do `migrador`: na imagem ela fica no
+   arquivo `/segredos/database_url_migrador`, só do root; o entrypoint migra como root e troca para `node` antes do
+   servidor (ADR 0015). A imagem não aceita `DATABASE_URL_MIGRADOR` no ambiente; ela só existe no `.env` e no CI.
 2. **O `empresaId` só vem da sessão.** Páginas e ações da dona usam `naEmpresaDaDona(fn)`, que chama
    `comEmpresaDaSessao` (`src/modules/acesso/sessao.ts`), nunca um `empresaId` do corpo, da URL ou de formulário. `comEmpresa` só é
    importada pelo módulo `acesso` (exceção futura: tarefas agendadas do M3). O ESLint barra; não desligue.
@@ -103,10 +116,23 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 17. **Ações do Better Auth** (criar usuária, redefinir senha, encerrar sessões) auditam fora da transação
     (ADR 0011): criação com evento logo depois e remoção se ele falhar; as outras com evento antes e outro com
     o resultado. Redefinir senha também encerra as sessões (`revokeUserSessions`).
-18. **Lançamento** nunca é apagado (cancelar, com motivo) e nunca leva nome nem telefone do tutor na
-    descrição: a receita de atendimento é "Atendimento", e a tela liga o pet pelo `atendimento_id`. Formas de
+18. **Lançamento** nunca é apagado (cancelar, com motivo; cancelado é final, garantido pela trigger
+    `lancamento_cancelado_final`) e nunca leva nome nem telefone do tutor na descrição: a receita de atendimento é "Atendimento", e a tela liga o pet pelo `atendimento_id`. Formas de
     pagamento e categorias padrão nascem com a empresa pela trigger do ADR 0012; não crie outra função
     `SECURITY DEFINER` sem ADR.
+19. **Migration compatível com a versão anterior do app.** A versão antiga roda sobre o schema novo durante o
+    deploy, e o rollback é só voltar a imagem, sem restaurar o banco: acrescentar pode; renomear, apagar, mudar tipo
+    ou exigir `not null` em coluna que a versão anterior não preenche é feito em duas versões (`docs/operacao/README.md`).
+20. **`/api/health` sem dados:** sem autenticação, só `{"status":"ok"}` (200) ou `{"status":"indisponivel"}` (503),
+    sem versão, mensagem de erro, dado de empresa ou cache. Checagens simultâneas dividem a mesma em andamento
+    (`src/db/saude.ts`): nunca uma conexão por requisição. O papel `app` tem `CONNECTION LIMIT 30`, calculado com o
+    pool de `CONEXOES_POR_POOL` (`src/db/clientes.ts`); mudar um exige rever o outro.
+21. **Nenhum dado pessoal nem de senha em log.** Nunca nome nem telefone de tutor, e-mail, hash, token ou valor de
+    variável secreta. Erro do banco vai para o log só pelo resumo de `src/db/erro-do-banco.ts` (código, restrição,
+    tabela e empresa): nunca `erro.message` de um erro do Drizzle (traz os parâmetros) nem o `detail` do pg.
+    `comEmpresa` e `comPlataforma` já trocam o erro do banco por um limpo; novos `console.error` usam `resumoDoErro`.
+22. **Variável de ambiente nova** entra em `src/configuracao/ambiente.ts` (se o app precisar dela para subir),
+    `.env.example` e `docs/operacao/variaveis.md`. Nada de variável que o código não lê.
 
 ## Checklist: nova tabela de negócio
 
@@ -137,7 +163,7 @@ Migration nunca é editada depois de commitada: crie outra.
 
 ```bash
 docker compose up -d --wait   # sobe o Postgres; na 1ª vez cria papéis e banco (db/preparacao)
-npm run db:migrate            # aplica as migrations como migrador
+npm run db:migrate            # aplica as migrations como migrador (scripts/migrar.mts, com trava)
 npm run db:generate -- --name=<descricao>   # gera migration a partir dos schemas
 npm run criar-admin           # cria o administrador da plataforma (pede e-mail e senha no terminal)
 npm run dev                   # app em http://localhost:3000 (recusa subir com papel privilegiado)
@@ -145,6 +171,11 @@ npm run lint
 npm run typecheck
 npm test                      # unitários e integração contra o Postgres local; exige banco no ar e migrado
 npm run test:e2e              # ponta a ponta (iPhone/WebKit); faz o build e sobe na porta 3000 (PORTA_E2E muda)
+npm run test:e2e:meia-noite   # ponta a ponta às 23:50 e às 00:10 de São Paulo (reaproveita o build)
+npm run test:imagem           # imagem de produção: migra, falha segura, criar-admin, login, health (Docker, porta 3006)
+npm run test:backup           # backup, restauração e isolamento depois de restaurar (Docker, portas 5437 e 5438)
+npm run test:banco-restaurado # isolamento + estrutura + papel backup contra o banco das variáveis (runbook)
+npm run empacotar             # dist/migrar.mjs e dist/criar-admin.mjs (o Dockerfile roda)
 npx playwright install webkit # uma vez por máquina, antes do primeiro test:e2e
 docker compose down -v        # apaga o banco local (o próximo `up` recria do zero)
 ```

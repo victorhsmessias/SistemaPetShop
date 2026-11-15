@@ -1,0 +1,69 @@
+# SÓ PARA O TESTE AUTOMATIZADO do backup e da restauração (npm run test:backup). Senhas e chaves descartáveis,
+# fixas e públicas de propósito; nada aqui é segredo real.
+#   origem   Postgres com os papéis e dados de duas empresas (porta PORTA_BACKUP_ORIGEM, padrão 5437)
+#   destino  Postgres vazio, com os papéis, onde o backup é restaurado (porta PORTA_BACKUP_DESTINO, padrão 5438)
+#   s3       S3 local feito com o próprio rclone da imagem de backup ("rclone serve s3"), sem porta no computador
+#   ferramenta  a imagem de backup, para rodar backup.sh, restaurar.sh e age-keygen
+
+name: banho-e-tosa-backup-teste
+
+x-postgres: &postgres
+  image: postgres:18-alpine
+  environment:
+    POSTGRES_PASSWORD: teste-postgres
+    SENHA_MIGRADOR: teste-migrador
+    SENHA_APP: teste-app
+    SENHA_PLATAFORMA: teste-plataforma
+    SENHA_BACKUP: teste-backup
+  volumes:
+    - ./db/preparacao/docker-init.sh:/docker-entrypoint-initdb.d/01-papeis.sh:ro
+    - ./db/preparacao/papeis.sql:/preparacao/papeis.sql:ro
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres -d banho_e_tosa"]
+    interval: 2s
+    timeout: 5s
+    retries: 30
+
+services:
+  origem:
+    <<: *postgres
+    ports:
+      - "${PORTA_BACKUP_ORIGEM:-5437}:5432"
+
+  destino:
+    <<: *postgres
+    ports:
+      - "${PORTA_BACKUP_DESTINO:-5438}:5432"
+
+  s3:
+    build: ./backup
+    image: banho-e-tosa-backup:teste-local
+    # Só no teste: root para gravar no volume. O bucket "backups" é a pasta /dados/backups.
+    user: "0"
+    entrypoint: ["sh", "-c", "mkdir -p /dados/backups && exec rclone serve s3 --addr :8080 --auth-key teste-chave,teste-segredo /dados"]
+    volumes:
+      - s3:/dados
+
+  ferramenta:
+    build: ./backup
+    image: banho-e-tosa-backup:teste-local
+    profiles: ["ferramenta"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL_BACKUP: postgres://backup:teste-backup@origem:5432/banho_e_tosa
+      DATABASE_URL_DESTINO: postgres://migrador:teste-migrador@destino:5432/banho_e_tosa
+      BACKUP_S3_ENDPOINT: http://s3:8080
+      BACKUP_S3_BUCKET: backups
+      BACKUP_S3_ACCESS_KEY_ID: teste-chave
+      BACKUP_S3_SECRET_ACCESS_KEY: teste-segredo
+      BACKUP_S3_PROVEDOR: Rclone
+      BACKUP_AGE_CHAVE_ARQUIVO: /chaves/chave.txt
+    volumes:
+      - chaves:/chaves
+      # Espião dos argumentos (o teste confere que nenhum segredo vai na linha de comando).
+      - ./scripts/backup-teste:/espiao:ro
+
+volumes:
+  s3:
+  chaves:

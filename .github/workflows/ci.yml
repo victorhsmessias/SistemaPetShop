@@ -1,23 +1,44 @@
 name: CI
 
+# Verificação, publicação das imagens e deploy (ADR 0014, docs/operacao/README.md).
+# - Pull request e push na main: lint, tipos, testes (com isolamento), ponta a ponta (com a meia-noite), teste da
+#   imagem e teste do backup.
+# - Push na main, com tudo verde: publica as imagens no GHCR (sha-<commit> imutável + etiqueta homologacao) e
+#   avisa o EasyPanel da homologação.
+# - Tag v*: depois da aprovação no Environment "producao", a imagem sha-<commit> já testada ganha as etiquetas
+#   vX.Y.Z e producao (sem build novo) e o EasyPanel da produção é avisado. A migration roda na subida do container,
+#   antes de o app novo entrar.
+# Toda action é fixada pelo SHA do commit (a versão vai no comentário), e o Dependabot (.github/dependabot.yml) abre
+# PR quando sai versão nova. Nenhum checkout guarda a credencial do GitHub no .git (persist-credentials: false).
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
 
-# Credenciais descartáveis: o Postgres abaixo só existe dentro do runner, durante o job.
+# Permissão mínima; só o job que publica escreve no GHCR.
+permissions:
+  contents: read
+
+# O GHCR exige nomes em minúsculas: o dono do repositório (victorhsmessias) já é.
 env:
-  PGHOST: localhost
-  PGUSER: postgres
-  PGPASSWORD: ci-postgres
-  DATABASE_URL: postgres://app:ci-app@localhost:5432/banho_e_tosa
-  DATABASE_URL_PLATAFORMA: postgres://plataforma:ci-plataforma@localhost:5432/banho_e_tosa
-  DATABASE_URL_MIGRADOR: postgres://migrador:ci-migrador@localhost:5432/banho_e_tosa
-  BETTER_AUTH_URL: http://localhost:3000
+  IMAGEM_APP: ghcr.io/${{ github.repository_owner }}/banho-e-tosa
+  IMAGEM_BACKUP: ghcr.io/${{ github.repository_owner }}/banho-e-tosa-backup
 
 jobs:
   verificar:
+    if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
+    # Credenciais descartáveis: o Postgres abaixo só existe dentro do runner, durante o job.
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: ci-postgres
+      DATABASE_URL: postgres://app:ci-app@localhost:5432/banho_e_tosa
+      DATABASE_URL_PLATAFORMA: postgres://plataforma:ci-plataforma@localhost:5432/banho_e_tosa
+      DATABASE_URL_MIGRADOR: postgres://migrador:ci-migrador@localhost:5432/banho_e_tosa
+      DATABASE_URL_BACKUP: postgres://backup:ci-backup@localhost:5432/banho_e_tosa
+      BETTER_AUTH_URL: http://localhost:3000
     services:
       postgres:
         image: postgres:18-alpine
@@ -32,15 +53,17 @@ jobs:
           --health-retries 10
 
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
+          persist-credentials: false
+
+      # Node 26 (LTS até 30/04/2029), a mesma versão do desenvolvimento (.nvmrc) e da imagem (Dockerfile).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
           cache: npm
 
-      # Mesmo npm que gera o package-lock.json (packageManager no package.json); o npm 10 do Node 22
-      # resolve as dependências opcionais de outro jeito e recusa o lockfile.
+      # Mesmo npm que gera o package-lock.json (packageManager no package.json), em todo lugar.
       - run: npm install -g npm@11.6.2
 
       - run: npm ci
@@ -52,6 +75,7 @@ jobs:
         run: >-
           psql -v ON_ERROR_STOP=1 -d postgres
           -v senha_migrador=ci-migrador -v senha_app=ci-app -v senha_plataforma=ci-plataforma
+          -v senha_backup=ci-backup
           -f db/preparacao/papeis.sql
 
       - name: Migrations (como migrador)
@@ -66,15 +90,184 @@ jobs:
       - name: WebKit do Playwright (motor do Safari)
         run: npx playwright install --with-deps webkit
 
-      - name: Ponta a ponta com tela de iPhone (build de produção)
+      - name: Ponta a ponta com tela de iPhone (build de produção, relógio às 12:00)
         run: npm run test:e2e
+
+      - name: Ponta a ponta às 23:50 e às 00:10 de São Paulo (servidor em UTC)
+        run: npm run test:e2e:meia-noite
 
       - name: Relatório do Playwright, se falhar
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report
           path: |
             playwright-report/
             test-results/
           retention-days: 7
+
+  teste-imagem:
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install -g npm@11.6.2
+      - run: npm ci
+      - name: A imagem sobe, migra (com trava e falha segura), cria o administrador, faz login e responde ao health
+        run: npm run test:imagem
+
+  teste-backup:
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install -g npm@11.6.2
+      - run: npm ci
+      - name: Backup criptografado, restauração num banco separado e isolamento conferido depois
+        run: npm run test:backup
+
+  publicar:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verificar, teste-imagem, teste-backup]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Imagem do app (sha-${{ github.sha }} e homologacao)
+        id: app
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGEM_APP }}:sha-${{ github.sha }}
+            ${{ env.IMAGEM_APP }}:homologacao
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+          # Liga o pacote a este repositório: ele herda o acesso (privado) do repositório.
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Imagem do backup (sha-${{ github.sha }} e homologacao)
+        id: backup
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backup
+          push: true
+          tags: |
+            ${{ env.IMAGEM_BACKUP }}:sha-${{ github.sha }}
+            ${{ env.IMAGEM_BACKUP }}:homologacao
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,mode=max,scope=backup
+          # Liga o pacote a este repositório: ele herda o acesso (privado) do repositório.
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Registro do que foi publicado
+        run: |
+          {
+            echo "### Imagens publicadas"
+            echo "- app: \`${IMAGEM_APP}:sha-${GITHUB_SHA}\` (digest \`${{ steps.app.outputs.digest }}\`)"
+            echo "- backup: \`${IMAGEM_BACKUP}:sha-${GITHUB_SHA}\` (digest \`${{ steps.backup.outputs.digest }}\`)"
+            echo "Rollback: no EasyPanel, troque a imagem do serviço por uma sha-<commit> anterior e faça o deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-homologacao:
+    needs: publicar
+    runs-on: ubuntu-latest
+    environment: homologacao
+    concurrency:
+      group: deploy-homologacao
+      cancel-in-progress: false
+    steps:
+      - name: Avisa o EasyPanel da homologação (gatilho de deploy, guardado como secret)
+        env:
+          GATILHO: ${{ secrets.EASYPANEL_GATILHO_HOMOLOGACAO }}
+        run: |
+          if [ -z "$GATILHO" ]; then
+            echo "::error::Secret EASYPANEL_GATILHO_HOMOLOGACAO não configurado no Environment homologacao (docs/operacao/checklist-lancamento.md)."
+            exit 1
+          fi
+          curl -fsS --retry 3 --max-time 30 -X POST "$GATILHO" -o /dev/null
+          echo "Deploy da homologação pedido para sha-${GITHUB_SHA}." >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-producao:
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    runs-on: ubuntu-latest
+    # O Environment "producao" exige a aprovação de um revisor antes de o job começar.
+    environment: producao
+    concurrency:
+      group: deploy-producao
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # Com fetch-depth 0, o checkout já traz todas as branches (origin/main inclusive); sem credencial guardada
+      # (persist-credentials: false), um git fetch aqui falharia no repositório privado.
+      - name: O commit da tag está na main (foi testado e publicado)
+        run: |
+          git rev-parse --verify --quiet origin/main > /dev/null || { echo "::error::origin/main não veio no checkout."; exit 1; }
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::A tag ${GITHUB_REF_NAME} aponta para um commit fora da main."
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Etiqueta ${{ github.ref_name }} e producao na imagem já testada (sem build novo)
+        run: |
+          for imagem in "$IMAGEM_APP" "$IMAGEM_BACKUP"; do
+            if ! docker buildx imagetools inspect "$imagem:sha-$GITHUB_SHA" > /dev/null; then
+              echo "::error::$imagem:sha-$GITHUB_SHA não existe: o CI da main para este commit terminou verde?"
+              exit 1
+            fi
+            docker buildx imagetools create \
+              -t "$imagem:$GITHUB_REF_NAME" -t "$imagem:producao" "$imagem:sha-$GITHUB_SHA"
+            echo "- \`$imagem:$GITHUB_REF_NAME\` = \`sha-$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Avisa o EasyPanel da produção (gatilho de deploy, guardado como secret)
+        env:
+          GATILHO: ${{ secrets.EASYPANEL_GATILHO_PRODUCAO }}
+        run: |
+          if [ -z "$GATILHO" ]; then
+            echo "::error::Secret EASYPANEL_GATILHO_PRODUCAO não configurado no Environment producao (docs/operacao/checklist-lancamento.md)."
+            exit 1
+          fi
+          curl -fsS --retry 3 --max-time 30 -X POST "$GATILHO" -o /dev/null
+          echo "Deploy da produção pedido para ${GITHUB_REF_NAME} (sha-${GITHUB_SHA})." >> "$GITHUB_STEP_SUMMARY"

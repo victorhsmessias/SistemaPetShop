@@ -7,14 +7,28 @@ import { defineConfig, devices } from "@playwright/test";
 if (existsSync(".env")) process.loadEnvFile(".env");
 
 // PORTA_E2E: para rodar com outro app ocupando a 3000 (localmente, um servidor já no ar é reaproveitado).
-const porta = Number(process.env.PORTA_E2E ?? 3000);
+const porta = Number(process.env.PORTA_E2E || 3000);
 const baseURL = `http://localhost:${porta}`;
 const ci = Boolean(process.env.CI);
+
+// Relógio do servidor (e2e/relogio.mjs): hora de hoje em São Paulo, 12:00 por padrão, para nenhum teste depender
+// da hora da máquina. `npm run test:e2e:meia-noite` roda com 23:50 e 00:10. O servidor roda em UTC, como no CI.
+// Os testes leem E2E_RELOGIO para calcular a data esperada; só o servidor tem o Date deslocado.
+process.env.E2E_RELOGIO ||= "12:00";
+
+// E2E_SEM_BUILD: reaproveita o build já feito (as rodadas do relógio, depois do test:e2e).
+const iniciar = `npm run start -- -p ${porta}`;
+const comando = process.env.E2E_SEM_BUILD ? iniciar : `npm run build && ${iniciar}`;
 
 export default defineConfig({
   testDir: "./e2e",
   // Uma dona e uma empresa por execução: os testes rodam em sequência.
   workers: 1,
+  // Cada teste percorre um fluxo inteiro (agendar, concluir, desfazer...) e leva de 20 a 30 s; com o padrão de 30 s,
+  // a máquina carregada derrubava um teste por tempo. A margem da meia-noite continua valendo: no
+  // test:e2e:meia-noite, o relógio do servidor começa às 23:50 quando o servidor sobe e a rodada tem 2 testes, então
+  // no pior caso são 240 s de subida (webServer.timeout) + 2 x 60 s = 6 min, antes das 00:00.
+  timeout: 60_000,
   forbidOnly: ci,
   retries: 0,
   reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
@@ -28,11 +42,17 @@ export default defineConfig({
   },
   projects: [{ name: "iphone", use: { ...devices["iPhone 15"] } }],
   webServer: {
-    command: `npm run build && npm run start -- -p ${porta}`,
+    command: comando,
     url: `${baseURL}/login`,
-    // Localmente reaproveita um servidor já no ar na porta (por exemplo, o npm run dev).
+    // Localmente reaproveita um servidor já no ar na porta (por exemplo, o npm run dev). Atenção: um servidor
+    // reaproveitado não tem o relógio do teste; feche-o para rodar o test:e2e:meia-noite.
     reuseExistingServer: !ci,
     timeout: 240_000,
-    env: { BETTER_AUTH_URL: baseURL },
+    env: {
+      BETTER_AUTH_URL: baseURL,
+      TZ: "UTC",
+      E2E_RELOGIO_SERVIDOR: process.env.E2E_RELOGIO,
+      NODE_OPTIONS: [process.env.NODE_OPTIONS, "--import ./e2e/relogio.mjs"].filter(Boolean).join(" "),
+    },
   },
 });

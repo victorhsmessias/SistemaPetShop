@@ -3,6 +3,12 @@ import type { ReactNode } from "react";
 // Peças dos formulários da dona. Validação no servidor: os formulários usam noValidate, e as
 // mensagens em português vêm das Server Actions.
 
+/**
+ * Ajuda dos campos de observações (tutor, pet e atendimento): o texto livre é para o serviço. Documentos e dados
+ * sensíveis do tutor não pertencem a ele (LGPD; e as observações do atendimento ficam copiadas na auditoria).
+ */
+export const DICA_OBSERVACOES = "Só o que ajuda no atendimento. Não registre documentos nem dados sensíveis do tutor.";
+
 type PropsCampo = {
   nome: string;
   rotulo: ReactNode;
