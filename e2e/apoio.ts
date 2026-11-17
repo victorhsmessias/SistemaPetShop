@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
@@ -37,6 +37,17 @@ export async function criarEmpresaEDona(nome: string, email: string, senha: stri
     origem: "painel",
   });
   return { empresaId: criada!.id, email, senha };
+}
+
+/** Administrador da plataforma, criado como o comando criar-admin faz. */
+export async function criarAdmin(email: string, senha: string): Promise<void> {
+  await criarUsuaria({
+    autorId: null,
+    dados: { nome: "Admin de teste", email, senha },
+    role: "admin",
+    empresaId: null,
+    origem: "criar-admin",
+  });
 }
 
 /**
@@ -109,6 +120,23 @@ export async function abrirSessao(email: string, senha: string, baseURL: string)
  * criado ao carregar, e criar outra dona depois de fechar daria "Cannot use a pool after calling end".
  */
 export { encerrarConexoes };
+
+/** Apaga, como migrador, o administrador de teste e os registros dele na auditoria. */
+export async function apagarAdmin(email: string): Promise<void> {
+  const url = process.env.DATABASE_URL_MIGRADOR;
+  if (!url) throw new Error("DATABASE_URL_MIGRADOR não definida.");
+  const pool = new Pool({ connectionString: url });
+  const banco = drizzle({ client: pool });
+  try {
+    await banco.transaction(async (tx) => {
+      const apagados = await tx.delete(user).where(eq(user.email, email)).returning({ id: user.id });
+      const ids = apagados.map((u) => u.id);
+      if (ids.length > 0) await tx.delete(auditoria).where(inArray(auditoria.registroId, ids));
+    });
+  } finally {
+    await pool.end();
+  }
+}
 
 export async function apagarEmpresa(empresaId: string): Promise<void> {
   const url = process.env.DATABASE_URL_MIGRADOR;

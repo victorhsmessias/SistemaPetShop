@@ -4,7 +4,15 @@ import path from "node:path";
 
 import type { FullConfig } from "@playwright/test";
 
-import { abrirSessao, apagarEmpresa, criarCadastrosDaAgenda, criarEmpresaEDona, encerrarConexoes } from "./apoio";
+import {
+  abrirSessao,
+  apagarAdmin,
+  apagarEmpresa,
+  criarAdmin,
+  criarCadastrosDaAgenda,
+  criarEmpresaEDona,
+  encerrarConexoes,
+} from "./apoio";
 import { PASTA_DAS_SESSOES, type DonaPreparada } from "./donas";
 
 // Antes dos testes: uma empresa com a dona para cada arquivo de teste e cada perfil (iphone, desktop), como o
@@ -26,14 +34,23 @@ type Pedido = {
 };
 
 const PEDIDOS: Pedido[] = [
-  { arquivo: "cadastro", perfis: PERFIS },
+  { arquivo: "clientes", perfis: PERFIS },
+  { arquivo: "servicos", perfis: PERFIS, cadastrosDaAgenda: true },
   { arquivo: "agenda", perfis: PERFIS, cadastrosDaAgenda: true },
   { arquivo: "financeiro", perfis: PERFIS, cadastrosDaAgenda: true },
+  { arquivo: "atendimento", perfis: PERFIS, cadastrosDaAgenda: true },
+  { arquivo: "login", perfis: PERFIS },
 ];
 
+function novasCredenciais(prefixo: string) {
+  return {
+    email: `${prefixo}-e2e-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`,
+    senha: `e2e-${randomBytes(9).toString("hex")}`,
+  };
+}
+
 async function novaDona(nome: string) {
-  const email = `dona-e2e-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`;
-  const senha = `e2e-${randomBytes(9).toString("hex")}`;
+  const { email, senha } = novasCredenciais("dona");
   return criarEmpresaEDona(nome, email, senha);
 }
 
@@ -44,7 +61,17 @@ export default async function preparar(config: FullConfig) {
 
   const empresas: string[] = [];
   const donas: Record<string, DonaPreparada> = {};
+  const admin: DonaPreparada = { empresaId: "", ...novasCredenciais("admin") };
+  const apagarTudo = async () => {
+    for (const empresaId of empresas) await apagarEmpresa(empresaId);
+    await apagarAdmin(admin.email);
+    rmSync(PASTA_DAS_SESSOES, { recursive: true, force: true });
+  };
   try {
+    await criarAdmin(admin.email, admin.senha);
+    admin.sessao = path.join(PASTA_DAS_SESSOES, "admin.json");
+    writeFileSync(admin.sessao, JSON.stringify(await abrirSessao(admin.email, admin.senha, baseURL)));
+
     for (const pedido of PEDIDOS) {
       for (const perfil of pedido.perfis) {
         const chave = `${pedido.arquivo}-${perfil}`;
@@ -61,15 +88,12 @@ export default async function preparar(config: FullConfig) {
     }
   } catch (erro) {
     await encerrarConexoes();
-    for (const empresaId of empresas) await apagarEmpresa(empresaId);
-    rmSync(PASTA_DAS_SESSOES, { recursive: true, force: true });
+    await apagarTudo();
     throw erro;
   }
   await encerrarConexoes();
   process.env.E2E_DONAS = JSON.stringify(donas);
+  process.env.E2E_ADMIN = JSON.stringify(admin);
 
-  return async () => {
-    for (const empresaId of empresas) await apagarEmpresa(empresaId);
-    rmSync(PASTA_DAS_SESSOES, { recursive: true, force: true });
-  };
+  return apagarTudo;
 }

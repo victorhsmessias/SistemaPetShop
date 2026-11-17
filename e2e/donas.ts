@@ -1,7 +1,7 @@
 import path from "node:path";
 
 // Donas preparadas pelo globalSetup (e2e/preparar.ts), uma por arquivo de teste e perfil, com a chave
-// "<arquivo>-<perfil>". Vão para os testes pelo ambiente (E2E_DONAS, em JSON).
+// "<arquivo>-<perfil>", e o administrador. Vão para os testes pelo ambiente (E2E_DONAS e E2E_ADMIN, em JSON).
 
 export const PASTA_DAS_SESSOES = path.join("e2e", ".sessoes");
 
@@ -15,4 +15,11 @@ export type DonaPreparada = {
 
 export function donasPreparadas(): Record<string, DonaPreparada> {
   return JSON.parse(process.env.E2E_DONAS ?? "{}") as Record<string, DonaPreparada>;
+}
+
+/** Administrador da plataforma preparado pelo globalSetup (E2E_ADMIN, em JSON). */
+export function adminPreparado(): DonaPreparada {
+  const admin = process.env.E2E_ADMIN;
+  if (!admin) throw new Error("Administrador não preparado (e2e/preparar.ts).");
+  return JSON.parse(admin) as DonaPreparada;
 }

@@ -4,7 +4,7 @@ import { diaDaqui, expect, hoje as hojeDaEmpresa, statusAtual, test } from "./te
 
 // A dona, no iPhone e no desktop, conclui o atendimento com pagamento (critério de "pronto" da sessão 05): agenda, conclui
 // com Pix, vê a receita na página do atendimento, no Financeiro e em "Recebido hoje", e desfaz a conclusão
-// com motivo. O agendamento usa um dia no futuro, aberto por ?dia=. A receita é do dia em que ela conclui (hoje,
+// com motivo, e conclui de novo em Dinheiro. O agendamento usa um dia no futuro, aberto por ?dia=. A receita é do dia em que ela conclui (hoje,
 // no fuso da empresa, que é o padrão America/Sao_Paulo). O servidor roda com o relógio do teste (e2e/relogio.mjs:
 // 12:00 por padrão; 23:50 e 00:10 no test:e2e:meia-noite, com o servidor em UTC), e a data esperada é calculada
 // pelo mesmo relógio, como no app.
@@ -12,7 +12,7 @@ import { diaDaqui, expect, hoje as hojeDaEmpresa, statusAtual, test } from "./te
 const DIA = diaDaqui(15);
 const VALOR = /R\$\s80,00/;
 
-test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financeiro e em Recebido hoje; depois desfaz com motivo", {
+test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financeiro e em Recebido hoje; desfaz com motivo e conclui de novo em Dinheiro", {
   tag: "@meia-noite",
 }, async ({ page, tocar }) => {
   await page.goto("/agenda");
@@ -60,6 +60,9 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   const linha = page.getByRole("list", { name: /^Receitas de / }).getByRole("link", { name: /Mel/ });
   await expect(linha).toContainText(VALOR);
   await expect(linha).toContainText("Pix");
+  // Regra 18: a receita não leva nome nem telefone do tutor (a tela liga o pet pelo atendimento).
+  await expect(linha).not.toContainText("Rita");
+  await expect(linha).not.toContainText("98888");
 
   // "Recebido hoje" na agenda do dia.
   await tocar(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Agenda" }));
@@ -70,8 +73,10 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   await tocar(mel);
   await tocar(page.getByRole("button", { name: "Desfazer conclusão" }));
   await tocar(page.getByRole("button", { name: "Desfazer e cancelar a receita" }));
-  await expect(page.getByText("Informe o motivo: ele fica no cancelamento da receita.")).toBeVisible();
-  await page.getByLabel("Motivo (fica no cancelamento da receita)").fill("Era Dinheiro, não Pix");
+  const motivo = page.getByLabel("Motivo (fica no cancelamento da receita)");
+  await expect(motivo).toHaveAccessibleDescription(/Informe o motivo: ele fica no cancelamento da receita\./);
+  await expect(page.getByRole("button", { name: "Desfazer e cancelar a receita" })).toBeEnabled();
+  await motivo.fill("Era Dinheiro, não Pix");
   await tocar(page.getByRole("button", { name: "Desfazer e cancelar a receita" }));
   await expect(statusAtual(page)).toHaveText("Agendado");
   await expect(page.getByRole("button", { name: /^Concluir · R\$\s80,00$/ })).toBeVisible();
@@ -80,4 +85,20 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   await expect(page.getByRole("region", { name: "Hoje" })).toContainText(/R\$\s0,00/);
   await tocar(page.getByText("1 receita cancelada (fora da soma)"));
   await expect(page.getByRole("list", { name: "Receitas canceladas" })).toContainText("Motivo: Era Dinheiro, não Pix");
+
+  // Concluir de novo, agora em Dinheiro: uma receita válida e a cancelada continua fora da soma.
+  await page.goto(`/agenda?dia=${DIA}`);
+  await tocar(mel);
+  await tocar(page.getByRole("button", { name: /^Concluir · R\$\s80,00$/ }));
+  await tocar(page.getByRole("button", { name: "Dinheiro", exact: true }));
+  await expect(statusAtual(page)).toHaveText("Concluído");
+  await expect(page.getByRole("region", { name: "Receita" })).toContainText("Dinheiro");
+
+  await page.goto("/financeiro");
+  await expect(page.getByRole("region", { name: "Hoje" })).toContainText(VALOR);
+  await expect(page.getByRole("region", { name: "Hoje" })).toContainText("1 atendimento concluído");
+  const receitas = page.getByRole("list", { name: /^Receitas de / }).getByRole("link");
+  await expect(receitas).toHaveCount(1);
+  await expect(receitas.first()).toContainText("Dinheiro");
+  await expect(page.getByText("1 receita cancelada (fora da soma)")).toBeVisible();
 });

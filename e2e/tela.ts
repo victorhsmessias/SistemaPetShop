@@ -53,6 +53,30 @@ export function diaDaqui(dias: number): string {
   return somarDias(hoje(), dias);
 }
 
+/**
+ * Agenda um pet pela tela (busca, pet, hora, serviços) e volta para a agenda do dia. Escolha horários livres: com
+ * horário ocupado aparece o aviso, que é assunto do teste da agenda.
+ */
+export async function agendar(
+  page: Page,
+  tocar: (alvo: Locator) => Promise<void>,
+  { dia, hora, servicos, busca = "mel", pet = "Mel" }: { dia: string; hora: string; servicos: string[]; busca?: string; pet?: string },
+): Promise<void> {
+  await page.goto(`/agenda/novo?dia=${dia}`);
+  await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill(busca);
+  await tocar(page.getByRole("button", { name: "Buscar" }));
+  await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: new RegExp(`^${pet}`) }));
+  await page.getByLabel("Hora").fill(hora);
+  for (const servico of servicos) await page.getByRole("checkbox", { name: new RegExp(servico) }).check();
+  await tocar(page.getByRole("button", { name: "Agendar", exact: true }));
+  await expect(page).toHaveURL(new RegExp(`/agenda\\?dia=${dia}$`));
+}
+
+/** O bloco do atendimento na grade do dia (o nome acessível começa por "Pet · Tutor"). */
+export function blocoNaGrade(page: Page, pet: string): Locator {
+  return page.getByRole("link", { name: new RegExp(`^${pet} · `) });
+}
+
 /** Status do atendimento na página dele (a etiqueta tem o nome acessível "Status atual"). */
 export function statusAtual(page: Page): Locator {
   return page.getByRole("status", { name: "Status atual" });
