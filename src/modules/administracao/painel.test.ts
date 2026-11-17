@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -64,8 +65,10 @@ function rodarCriarAdmin(email: string, senha: string, confirmacao = senha) {
 beforeAll(async () => {
   emailAdmin = emailTeste("admin");
   const resultado = rodarCriarAdmin(emailAdmin, SENHA_ADMIN);
-  expect(resultado.stderr).toBe("");
-  expect(resultado.status).toBe(0);
+  // Só o que importa: terminou bem e sem erro. O stderr pode trazer avisos do Node (com a máquina carregada, por
+  // exemplo), e exigir que viesse vazio derrubava o arquivo inteiro.
+  expect(resultado.status, resultado.stderr).toBe(0);
+  expect(resultado.stderr).not.toMatch(/erro|error/i);
 
   cabecalhosAdmin = new Headers({ cookie: await entrar(emailAdmin, SENHA_ADMIN) });
   adminId = (await obterSessao(cabecalhosAdmin))!.usuarioId;
@@ -145,15 +148,16 @@ describe("criar empresa com a dona", () => {
   });
 
   it("e-mail em uso é recusado antes de criar a empresa", async () => {
-    const antes = (await listarEmpresas(cabecalhosAdmin)).length;
+    // Confere pelo nome, só deste teste: a contagem de todas as empresas muda com os outros arquivos rodando juntos.
+    const nome = `[teste] Repetida ${randomUUID().slice(0, 8)}`;
     await expect(
       criarEmpresaComDona(cabecalhosAdmin, {
-        nome: "[teste] Repetida",
+        nome,
         fusoHorario: "America/Sao_Paulo",
         dona: { nome: "Outra", email: emailDona, senha: SENHA_PROVISORIA },
       }),
     ).rejects.toThrow(DadosInvalidosError);
-    expect(await listarEmpresas(cabecalhosAdmin)).toHaveLength(antes);
+    expect((await listarEmpresas(cabecalhosAdmin)).filter((e) => e.nome === nome)).toEqual([]);
   });
 
   it("a lista mostra a empresa com a dona", async () => {
