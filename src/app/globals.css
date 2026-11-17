@@ -262,6 +262,9 @@ summary:focus-visible {
 }
 
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font: inherit;
   font-weight: 600;
   min-height: var(--toque);
@@ -288,15 +291,147 @@ button {
   border-color: var(--borda-controle);
 }
 
+/* Botão de texto: link de toque com 48 px, para ações discretas (Desfazer, Trocar o pet). */
+.botao-texto {
+  background: transparent;
+  color: var(--primaria);
+  padding: 10px 10px;
+}
+
+/*
+ * Perigo (Cancelar, Marcar falta, Desativar): sempre com ícone e só contorno, nunca cheio. A primária (terracota) e o
+ * perigo (bordô) são da mesma família de cor; o contorno e o ícone impedem que o perigo pareça a ação principal.
+ */
+.botao-perigo {
+  background: var(--superficie);
+  color: var(--perigo);
+  border-color: var(--perigo);
+}
+
+/* Ação do polegar, na barra do rodapé. */
+.botao-grande {
+  min-height: var(--acao);
+  font-size: 17px;
+}
+
+button,
+.botao-link {
+  gap: 8px;
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: progress;
 }
 
+/* Ícones SVG (componentes/icone.tsx): traço na cor do texto. */
+.ic {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+
+/* Selo de status (componentes/selo-status.tsx): fundo suave e ícone; as cores vêm de .status-*. */
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 7px;
+  border-radius: var(--raio-selo);
+  background: var(--st-fundo);
+  color: var(--st-texto);
+  font-size: var(--fs-p);
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.selo .ic {
+  width: 16px;
+  height: 16px;
+}
+
+.selo-mini {
+  font-size: 12px;
+  padding: 1px 7px 1px 5px;
+  gap: 3px;
+}
+
+.selo-mini .ic {
+  width: 13px;
+  height: 13px;
+}
+
+/* Grupo recolhível (componentes/grupo-recolhivel.tsx): seta explícita, que gira ao abrir. */
+details.grupo {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-cartao);
+  margin: 0 0 16px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.grupo > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 56px;
+  margin: 0;
+  padding: 0 16px;
+}
+
+.grupo > summary::-webkit-details-marker {
+  display: none;
+}
+
+.grupo .seta {
+  color: var(--suave);
+  transition: transform 0.15s;
+}
+
+.grupo[open] .seta {
+  transform: rotate(180deg);
+}
+
+.grupo > .lista-toque {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--borda);
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .mensagem {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
   border-radius: var(--raio-controle);
   padding: 12px 14px;
   margin: 0;
+}
+
+.mensagem > .ic {
+  margin-top: 2px;
+}
+
+.mensagem-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.mensagem a {
+  color: inherit;
+  font-weight: 700;
 }
 
 .mensagem-erro {
@@ -311,6 +446,10 @@ button:disabled {
 
 .mensagem-aviso {
   background: var(--aviso-fundo);
+  color: var(--aviso);
+}
+
+.mensagem-aviso .mensagem-corpo {
   color: var(--texto);
 }
 
@@ -471,6 +610,7 @@ a {
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-cartao);
   overflow: hidden;
 }
 
@@ -502,9 +642,25 @@ a {
 }
 
 .erro-campo {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
   color: var(--perigo);
-  font-size: 0.9rem;
+  font-size: var(--fs-p);
+  font-weight: 600;
   margin: 0;
+}
+
+.erro-campo .ic {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-width: 2px;
 }
 
 /* Observações de cuidado do pet (comportamento, alergias): precisam saltar aos olhos na hora do banho. */
@@ -645,17 +801,6 @@ a {
   min-height: 44px;
 }
 
-.fora-da-grade summary {
-  display: flex;
-  align-items: center;
-  min-height: var(--toque);
-  margin: 0;
-}
-
-.fora-da-grade .lista-toque {
-  margin: 12px 0 0;
-}
-
 /* Grade do dia: horários vazios tocáveis por baixo, blocos por cima. */
 .grade {
   display: flex;
@@ -725,11 +870,6 @@ a {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.bloco-status {
-  font-weight: 600;
-  color: var(--st-texto);
 }
 
 .bloco-cuidado {
@@ -885,12 +1025,6 @@ a {
 }
 
 /* Página do atendimento. */
-.etiqueta-status {
-  background: var(--st-fundo);
-  color: var(--st-texto);
-  white-space: nowrap;
-}
-
 .lista-itens {
   list-style: none;
   padding: 0;

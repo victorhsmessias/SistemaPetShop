@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AvisoDaPagina, ComAvisoDaPagina } from "@/app/(dona)/agenda/aviso-da-pagina";
 import { FormularioHorario, FormularioObservacoes, FormularioServicosDoAtendimento } from "@/app/(dona)/agenda/formularios";
+import { Aviso } from "@/app/componentes/aviso";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { obterAtendimento } from "@/modules/agenda/atendimentos";
 import { noFuso } from "@/modules/agenda/fuso";
@@ -54,9 +55,9 @@ export default async function PaginaEditarAtendimento({ params }: Props) {
             </section>
           </>
         ) : (
-          <p className="mensagem mensagem-aviso">
+          <Aviso tipo="info">
             Atendimento &quot;{NOMES_DOS_STATUS[a.status]}&quot;: serviços e horário não mudam. Reabra-o se foi engano.
-          </p>
+          </Aviso>
         )}
 
         <section className="cartao">

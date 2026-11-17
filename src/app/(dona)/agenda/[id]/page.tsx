@@ -6,10 +6,11 @@ import { AvisoDaPagina, ComAvisoDaPagina } from "@/app/(dona)/agenda/aviso-da-pa
 import { BotoesDeStatus, FormularioConcluir, FormularioDesfazerConclusao } from "@/app/(dona)/agenda/formularios";
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { SeloDeStatus } from "@/app/componentes/selo-status";
 import { obterAtendimento } from "@/modules/agenda/atendimentos";
 import { somarItens } from "@/modules/agenda/calculos";
 import { noFuso, rotuloDoDia } from "@/modules/agenda/fuso";
-import { atendimentoAtivo, NOMES_DOS_STATUS } from "@/modules/agenda/status";
+import { atendimentoAtivo } from "@/modules/agenda/status";
 import { formatarTelefone } from "@/modules/cadastros/telefone";
 import { formatarReais } from "@/modules/compartilhado/dinheiro";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
@@ -48,14 +49,8 @@ export default async function PaginaAtendimento({ params }: Props) {
         </Link>
         <header className="topo">
           <h1>{a.pet.nome}</h1>
-          {/* role="status": o leitor de tela anuncia a mudança. O nome acessível diz o que a etiqueta é e o status. */}
-          <span
-            className={`etiqueta etiqueta-status status-${a.status}`}
-            role="status"
-            aria-label={`Status: ${NOMES_DOS_STATUS[a.status]}`}
-          >
-            {NOMES_DOS_STATUS[a.status]}
-          </span>
+          {/* role="status": o leitor de tela anuncia a mudança. O nome acessível diz o que o selo é e o status. */}
+          <SeloDeStatus status={a.status} anunciar />
         </header>
         <AvisoDaPagina />
         <p>

@@ -16,6 +16,8 @@ import {
 } from "@/app/(dona)/agenda/acoes";
 import { useAcaoComAviso } from "@/app/(dona)/agenda/aviso-da-pagina";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
+import { Aviso } from "@/app/componentes/aviso";
+import { Icone } from "@/app/componentes/icone";
 import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 import { ACOES_DOS_STATUS, NOMES_DOS_STATUS, proximosStatus, statusAnterior, type StatusAtendimento } from "@/modules/agenda/status";
 import { centavosParaTexto, formatarReais } from "@/modules/compartilhado/dinheiro";
@@ -40,7 +42,7 @@ function BotaoEnviar({ enviando, rotulo }: { enviando: boolean; rotulo: string }
 function AvisoDeHorario({ estado }: { estado: EstadoAgenda }) {
   if (!estado.conflitos?.length) return null;
   return (
-    <div className="mensagem mensagem-aviso" role="alert">
+    <Aviso tipo="aviso" role="alert">
       <strong>Horário ocupado</strong>
       <ul className="lista-aviso">
         {estado.conflitos.map((c) => (
@@ -51,7 +53,7 @@ function AvisoDeHorario({ estado }: { estado: EstadoAgenda }) {
       </ul>
       Você pode agendar mesmo assim.
       <input type="hidden" name="horarioAvisado" value={estado.horarioAvisado} />
-    </div>
+    </Aviso>
   );
 }
 
@@ -144,7 +146,8 @@ function EscolhaDeServicos({
       </ul>
       {estado.erros.servicos && (
         <p id="erro-servicos" className="erro-campo">
-          {estado.erros.servicos}
+          <Icone nome="alerta" />
+          <span>{estado.erros.servicos}</span>
         </p>
       )}
     </fieldset>

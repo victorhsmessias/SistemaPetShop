@@ -48,7 +48,7 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
 
   // Na agenda, o concluído continua na grade, com a marca de concluído.
   await tocar(page.getByRole("link", { name: "‹ Agenda" }));
-  await expect(mel).toContainText("✓ Concluído · 10:00–11:30");
+  await expect(mel).toContainText("Concluído · 10:00–11:30");
 
   // No Financeiro: hoje e o mês com R$ 80,00 e um atendimento concluído; a receita na lista.
   await tocar(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Financeiro" }));

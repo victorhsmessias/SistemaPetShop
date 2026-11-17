@@ -5,6 +5,7 @@ import { GradeDoDia } from "@/app/(dona)/agenda/grade";
 import { urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { BotaoSair } from "@/app/botao-sair";
+import { GrupoRecolhivel } from "@/app/componentes/grupo-recolhivel";
 import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { ocupaHorario } from "@/modules/agenda/calculos";
 import { ehDia, hojeNoFuso, noFuso, rotuloDoDia, somarDias } from "@/modules/agenda/fuso";
@@ -66,10 +67,9 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       </Link>
 
       {foraDaGrade.length > 0 && (
-        <details className="cartao fora-da-grade">
-          <summary>
-            {foraDaGrade.length === 1 ? "1 cancelado ou falta" : `${foraDaGrade.length} cancelados ou faltas`}
-          </summary>
+        <GrupoRecolhivel
+          resumo={foraDaGrade.length === 1 ? "1 cancelado ou falta" : `${foraDaGrade.length} cancelados ou faltas`}
+        >
           <ul className="lista-toque" aria-label="Cancelados e faltas">
             {foraDaGrade.map((a) => (
               <li key={a.id}>
@@ -84,7 +84,7 @@ export default async function PaginaAgenda({ searchParams }: Props) {
               </li>
             ))}
           </ul>
-        </details>
+        </GrupoRecolhivel>
       )}
 
       <section aria-label={`Atendimentos de ${rotuloDoDia(dia)}`}>

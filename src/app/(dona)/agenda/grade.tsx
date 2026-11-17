@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 import { urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
+import { SeloDeStatus } from "@/app/componentes/selo-status";
 import type { AtendimentoDaAgenda } from "@/modules/agenda/atendimentos";
 import { DURACAO_VISUAL_MINIMA_MIN, distribuirEmColunas, ocupaHorario } from "@/modules/agenda/calculos";
 import { inicioDoDia, noFuso, rotuloCurtoDoDia, rotuloDoDia, somarDias, type Dia } from "@/modules/agenda/fuso";
-import { NOMES_DOS_STATUS } from "@/modules/agenda/status";
 
 // Grade da agenda (H6): cada atendimento ocupa um bloco do tamanho da sua duração, e os que se sobrepõem
 // ficam lado a lado. Faixa padrão das 7h às 20h, crescendo quando há atendimento fora dela.
@@ -110,11 +110,7 @@ export function GradeDoDia({ dia, fuso, atendimentos }: { dia: Dia; fuso: string
               </span>
               {/* Status antes do horário: em bloco estreito, o que se corta é o horário, não o status. */}
               <span className="bloco-linha">
-                <span className="bloco-status">
-                  {a.status === "concluido" ? "✓ " : ""}
-                  {NOMES_DOS_STATUS[a.status]}
-                </span>{" "}
-                · {horario}
+                <SeloDeStatus status={a.status} mini /> · {horario}
               </span>
               {a.pet.observacoes && <span className="bloco-linha bloco-cuidado">⚠ {a.pet.observacoes}</span>}
               <span className="bloco-linha">{a.itens.map((i) => i.descricao).join(", ")}</span>

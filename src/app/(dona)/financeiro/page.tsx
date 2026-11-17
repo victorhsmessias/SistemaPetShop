@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { GrupoRecolhivel } from "@/app/componentes/grupo-recolhivel";
 import { contarConcluidos } from "@/modules/agenda/conclusao";
 import {
   ehMes,
@@ -123,18 +124,19 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
       </section>
 
       {receitas.canceladas.length > 0 && (
-        <details className="cartao fora-da-grade">
-          <summary>
-            {receitas.canceladas.length === 1
+        <GrupoRecolhivel
+          resumo={
+            receitas.canceladas.length === 1
               ? "1 receita cancelada (fora da soma)"
-              : `${receitas.canceladas.length} receitas canceladas (fora da soma)`}
-          </summary>
+              : `${receitas.canceladas.length} receitas canceladas (fora da soma)`
+          }
+        >
           <ul className="lista-toque" aria-label="Receitas canceladas">
             {receitas.canceladas.map((r) => (
               <Receita key={r.id} r={r} />
             ))}
           </ul>
-        </details>
+        </GrupoRecolhivel>
       )}
     </main>
   );
