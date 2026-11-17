@@ -15,7 +15,7 @@ import {
 } from "@/db/testes/apoio";
 import { auth } from "@/modules/acesso/auth";
 import { listarAgenda, obterAtendimento } from "@/modules/agenda/atendimentos";
-import { MENSAGEM_JA_CONCLUIDO } from "@/modules/agenda/conclusao";
+import { MENSAGEM_JA_CONCLUIDO, MENSAGEM_NAO_CONCLUIDO } from "@/modules/agenda/conclusao";
 import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { auditoria } from "@/modules/auditoria/schema";
 import { criarServico } from "@/modules/catalogo/servicos";
@@ -262,7 +262,7 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
     expect(await mudarStatusAcao({}, formulario({ id, de: "confirmado", para: "agendado" }))).toEqual({});
     cache.refresh.mockClear();
     const repetido = await mudarStatusAcao({}, formulario({ id, de: "confirmado", para: "agendado" }));
-    expect(repetido.erro).toContain("acabou de ser alterado");
+    expect(repetido.aviso).toContain("acabou de ser alterado");
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
     // A tela desatualizada é re-renderizada na mesma resposta, com o status atual (B1).
     expect(cache.refresh).toHaveBeenCalledTimes(1);
@@ -312,20 +312,20 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
 
   it("não muda status, serviços, horário nem observações do atendimento da B, e não apaga o item dele", async () => {
     const status = await mudarStatusAcao({}, formulario({ id: b.atendimentoId, de: "agendado", para: "cancelado" }));
-    expect(status.erro).toBe("Atendimento não encontrado.");
+    expect(status.aviso).toBe("Atendimento não encontrado.");
 
     // Trocar os serviços apagaria o item atual da B, se a troca passasse.
     const servicos = await editarServicosAcao(
       vazio,
       formulario({ id: b.atendimentoId, servico: [tosaId], [`preco_${tosaId}`]: "1,00", [`duracao_${tosaId}`]: "10" }),
     );
-    expect(servicos.erros.geral).toBe("Atendimento não encontrado.");
+    expect(servicos.aviso).toBe("Atendimento não encontrado.");
 
     const horario = await editarHorarioAcao(
       vazio,
       formulario({ id: b.atendimentoId, dia: DIA, hora: "08:00", termino: "09:00" }),
     );
-    expect(horario.erros.geral).toBe("Atendimento não encontrado.");
+    expect(horario.aviso).toBe("Atendimento não encontrado.");
 
     const observacoes = await editarObservacoesAcao(vazio, formulario({ id: b.atendimentoId, observacoes: "invasão" }));
     expect(observacoes.erros.geral).toBe("Atendimento não encontrado.");
@@ -345,7 +345,7 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
   it("conclui com a forma tocada; o segundo toque recebe a mensagem; desfazer pede o motivo e cancela a receita", async () => {
     const id = await novoAtendimentoDeA();
     expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({});
-    expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({ erro: MENSAGEM_JA_CONCLUIDO });
+    expect(await concluirAcao({}, conclusao(id, a.formaPagamentoId))).toEqual({ aviso: MENSAGEM_JA_CONCLUIDO });
     const [receita, ...outras] = await receitasDoAtendimento(a, id);
     expect(outras).toEqual([]);
     expect(receita).toMatchObject({ status: "pago", valorCentavos: 5000, formaPagamentoId: a.formaPagamentoId });
@@ -385,11 +385,54 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
     const id = await novoAtendimentoDeA();
     cache.refresh.mockClear();
     const r = await concluirAcao({}, conclusao(id, a.formaPagamentoId, "agendado", "1"));
-    expect(r.erro).toMatch(/O total mudou para R\$\s50,00/);
+    expect(r.aviso).toMatch(/O total mudou para R\$\s50,00/);
     // A tela é re-renderizada com o total atual (B1).
     expect(cache.refresh).toHaveBeenCalledTimes(1);
     expect(await receitasDoAtendimento(a, id)).toEqual([]);
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
+  });
+
+  it("recusas por estado atualizam a tela (B1); as de campo mantêm o que foi digitado, sem atualizar", async () => {
+    const cancelado = await novoAtendimentoDeA({ inicio: "2026-12-11T13:00:00Z" });
+    expect(await mudarStatusAcao({}, formulario({ id: cancelado, de: "agendado", para: "cancelado" }))).toEqual({});
+
+    // Serviços e horário de um atendimento cancelado em outra tela: aviso e refresh.
+    cache.refresh.mockClear();
+    const servicos = await editarServicosAcao(
+      vazio,
+      formulario({ id: cancelado, servico: [tosaId], [`preco_${tosaId}`]: "40,00", [`duracao_${tosaId}`]: "30" }),
+    );
+    expect(servicos.aviso).toContain('está "Cancelado" e não pode mudar');
+    expect(servicos.erros).toEqual({});
+    const horario = await editarHorarioAcao(vazio, formulario({ id: cancelado, dia: DIA, hora: "08:00", termino: "09:00" }));
+    expect(horario.aviso).toContain('está "Cancelado" e não pode mudar');
+    expect(cache.refresh).toHaveBeenCalledTimes(2);
+
+    // Desfazer a conclusão de um atendimento que já não está concluído (desfeita em outra tela): aviso e refresh.
+    cache.refresh.mockClear();
+    const ativo = await novoAtendimentoDeA({ inicio: "2026-12-12T13:00:00Z" });
+    expect(await desfazerConclusaoAcao(semMotivo, formulario({ id: ativo, motivo: "x" }))).toEqual({
+      erros: {},
+      aviso: MENSAGEM_NAO_CONCLUIDO,
+      motivo: "x",
+    });
+    expect(cache.refresh).toHaveBeenCalledTimes(1);
+
+    // Erros de campo: voltam no formulário, sem aviso e sem refresh.
+    cache.refresh.mockClear();
+    const semServico = await editarServicosAcao(vazio, formulario({ id: ativo, servico: [] }));
+    expect(semServico).toMatchObject({ erros: { servicos: "Escolha pelo menos um serviço." } });
+    expect(semServico.aviso).toBeUndefined();
+    const terminoAntes = await editarHorarioAcao(vazio, formulario({ id: ativo, dia: DIA, hora: "10:00", termino: "09:00" }));
+    expect(terminoAntes.erros.termino).toContain("depois do início");
+    expect(terminoAntes.aviso).toBeUndefined();
+    expect(await concluirAcao({}, conclusao(ativo, ""))).toEqual({ erro: "Escolha uma forma de pagamento." });
+    await concluirAcao({}, conclusao(ativo, a.formaPagamentoId));
+    expect(await desfazerConclusaoAcao(semMotivo, formulario({ id: ativo, motivo: "" }))).toEqual({
+      erros: { motivo: "Informe o motivo: ele fica no cancelamento da receita." },
+      motivo: "",
+    });
+    expect(cache.refresh).not.toHaveBeenCalled();
   });
 
   it("total zero conclui sem forma de pagamento e sem lançamento, e a página avisa que não houve receita", async () => {
@@ -404,10 +447,11 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
 
   it("não conclui nem desfaz o atendimento da B, mesmo com os ids certos", async () => {
     expect(await concluirAcao({}, conclusao(b.atendimentoId, b.formaPagamentoId))).toEqual({
-      erro: "Atendimento não encontrado.",
+      aviso: "Atendimento não encontrado.",
     });
     expect(await desfazerConclusaoAcao(semMotivo, formulario({ id: b.atendimentoId, motivo: "x" }))).toEqual({
-      erros: { geral: "Atendimento não encontrado." },
+      erros: {},
+      aviso: "Atendimento não encontrado.",
       motivo: "x",
     });
     // A forma de pagamento da B no atendimento da A também não passa.

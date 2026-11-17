@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AvisoDaPagina, ComAvisoDaPagina } from "@/app/(dona)/agenda/aviso-da-pagina";
 import { FormularioHorario, FormularioObservacoes, FormularioServicosDoAtendimento } from "@/app/(dona)/agenda/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { obterAtendimento } from "@/modules/agenda/atendimentos";
@@ -34,32 +35,35 @@ export default async function PaginaEditarAtendimento({ params }: Props) {
 
   return (
     <main className="pagina">
-      <Link href={`/agenda/${a.id}`} className="voltar">
-        ‹ {a.pet.nome}
-      </Link>
-      <h1>Editar atendimento</h1>
+      <ComAvisoDaPagina>
+        <Link href={`/agenda/${a.id}`} className="voltar">
+          ‹ {a.pet.nome}
+        </Link>
+        <h1>Editar atendimento</h1>
+        <AvisoDaPagina />
 
-      {ativo ? (
-        <>
-          <section className="cartao">
-            <h2>Horário</h2>
-            <FormularioHorario id={a.id} dia={inicio.dia} hora={inicio.hora} termino={noFuso(a.fim, fuso).hora} />
-          </section>
-          <section className="cartao">
-            <h2>Serviços</h2>
-            <FormularioServicosDoAtendimento id={a.id} servicos={opcoes} escolhidos={a.itens} />
-          </section>
-        </>
-      ) : (
-        <p className="mensagem mensagem-aviso">
-          Atendimento &quot;{NOMES_DOS_STATUS[a.status]}&quot;: serviços e horário não mudam. Reabra-o se foi engano.
-        </p>
-      )}
+        {ativo ? (
+          <>
+            <section className="cartao">
+              <h2>Horário</h2>
+              <FormularioHorario id={a.id} dia={inicio.dia} hora={inicio.hora} termino={noFuso(a.fim, fuso).hora} />
+            </section>
+            <section className="cartao">
+              <h2>Serviços</h2>
+              <FormularioServicosDoAtendimento id={a.id} servicos={opcoes} escolhidos={a.itens} />
+            </section>
+          </>
+        ) : (
+          <p className="mensagem mensagem-aviso">
+            Atendimento &quot;{NOMES_DOS_STATUS[a.status]}&quot;: serviços e horário não mudam. Reabra-o se foi engano.
+          </p>
+        )}
 
-      <section className="cartao">
-        <h2>Observações</h2>
-        <FormularioObservacoes id={a.id} observacoes={a.observacoes ?? ""} />
-      </section>
+        <section className="cartao">
+          <h2>Observações</h2>
+          <FormularioObservacoes id={a.id} observacoes={a.observacoes ?? ""} />
+        </section>
+      </ComAvisoDaPagina>
     </main>
   );
 }

@@ -7,6 +7,8 @@ import { agendar, blocoNaGrade, diaDaqui, erroGeral, expect, statusAtual, test }
 // tela passa a mostrar o atual, porque o app instalado no iPhone não tem botão de recarregar (B1 do QA).
 
 const MENSAGEM_MUDOU = "Este atendimento acabou de ser alterado (talvez num toque repetido ou em outra tela). Confira e tente de novo.";
+const MENSAGEM_CANCELADO = "Este atendimento está \"Cancelado\" e não pode mudar. Reabra-o antes, se foi engano.";
+const MENSAGEM_NAO_CONCLUIDO = "Este atendimento não está concluído (talvez a conclusão já tenha sido desfeita).";
 
 /** Agenda a Mel e devolve a URL da página do atendimento. */
 async function atendimentoDaMel(page: Page, tocar: (alvo: Locator) => Promise<void>, dia: string, servicos: string[]) {
@@ -96,4 +98,74 @@ test("toque duplo em Confirmar e em Pix grava uma vez só", { tag: "@um-perfil" 
   await page.goto("/financeiro");
   const receitas = page.getByRole("list", { name: /^Receitas de / }).getByRole("link");
   await expect(receitas.filter({ hasText: /R\$\s50,00/ })).toHaveCount(1);
+});
+
+// As outras recusas por estado também atualizam a tela, e o aviso fica no topo da página mesmo quando a seção do
+// formulário que enviou some com o estado atual (Concluir vira Receita, a edição vira o aviso de cancelado).
+
+test("na edição desatualizada, salvar os serviços de um atendimento cancelado em outra aba mostra o aviso", {
+  tag: "@um-perfil",
+}, async ({ page, tocar }) => {
+  const url = await atendimentoDaMel(page, tocar, diaDaqui(53), ["Banho M"]);
+  const outraAba = await page.context().newPage();
+  await outraAba.goto(`${url}/editar`);
+  await expect(outraAba.getByRole("heading", { level: 1, name: "Editar atendimento" })).toBeVisible();
+  await tocar(page.getByRole("button", { name: "Cancelar", exact: true }));
+  await expect(statusAtual(page)).toHaveText("Cancelado");
+
+  await outraAba.getByRole("checkbox", { name: /Hidratação/ }).check();
+  await tocar(outraAba.getByRole("button", { name: "Salvar serviços" }));
+  await expect(erroGeral(outraAba, MENSAGEM_CANCELADO)).toBeVisible();
+  // A tela já mostra o atual: serviços e horário não mudam mais, e os formulários deles saíram.
+  await expect(outraAba.getByText('Atendimento "Cancelado": serviços e horário não mudam.')).toBeVisible();
+  await expect(outraAba.getByRole("button", { name: "Salvar serviços" })).toHaveCount(0);
+  await expect(outraAba.getByRole("button", { name: "Salvar horário" })).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByText(/^Total: R\$\s50,00$/)).toBeVisible();
+});
+
+test("na aba desatualizada, desfazer uma conclusão já desfeita mostra o aviso, e a tela volta a oferecer Concluir", {
+  tag: "@um-perfil",
+}, async ({ page, tocar }) => {
+  const url = await atendimentoDaMel(page, tocar, diaDaqui(54), ["Banho M"]);
+  await tocar(page.getByRole("button", { name: /^Concluir · R\$\s50,00$/ }));
+  await tocar(page.getByRole("button", { name: "Pix", exact: true }));
+  await expect(statusAtual(page)).toHaveText("Concluído");
+  const outraAba = await page.context().newPage();
+  await outraAba.goto(url);
+  await expect(statusAtual(outraAba)).toHaveText("Concluído");
+
+  const desfazer = async (aba: Page, motivo: string) => {
+    await tocar(aba.getByRole("button", { name: "Desfazer conclusão" }));
+    await aba.getByLabel("Motivo (fica no cancelamento da receita)").fill(motivo);
+    await tocar(aba.getByRole("button", { name: "Desfazer e cancelar a receita" }));
+  };
+  await desfazer(page, "Era Dinheiro");
+  await expect(statusAtual(page)).toHaveText("Agendado");
+
+  await desfazer(outraAba, "Era Dinheiro");
+  await expect(erroGeral(outraAba, MENSAGEM_NAO_CONCLUIDO)).toBeVisible();
+  await expect(statusAtual(outraAba)).toHaveText("Agendado");
+  await expect(outraAba.getByRole("region", { name: "Receita" })).toHaveCount(0);
+  await expect(outraAba.getByRole("button", { name: /^Concluir · R\$\s50,00$/ })).toBeVisible();
+});
+
+test("na aba desatualizada, concluir o que outra aba já concluiu mostra o aviso junto com a receita", {
+  tag: "@um-perfil",
+}, async ({ page, tocar }) => {
+  const url = await atendimentoDaMel(page, tocar, diaDaqui(55), ["Banho M"]);
+  const outraAba = await page.context().newPage();
+  await outraAba.goto(url);
+  await tocar(outraAba.getByRole("button", { name: /^Concluir · R\$\s50,00$/ }));
+
+  await tocar(page.getByRole("button", { name: /^Concluir · R\$\s50,00$/ }));
+  await tocar(page.getByRole("button", { name: "Pix", exact: true }));
+  await expect(statusAtual(page)).toHaveText("Concluído");
+
+  await tocar(outraAba.getByRole("button", { name: "Dinheiro", exact: true }));
+  await expect(erroGeral(outraAba, "Este atendimento já foi concluído.")).toBeVisible();
+  await expect(statusAtual(outraAba)).toHaveText("Concluído");
+  await expect(outraAba.getByRole("region", { name: "Concluir o atendimento" })).toHaveCount(0);
+  await expect(outraAba.getByRole("region", { name: "Receita" })).toContainText("Pix");
 });
