@@ -28,9 +28,10 @@ export default defineConfig({
   workers: 1,
   // Cada teste percorre um fluxo inteiro (agendar, concluir, desfazer...) e leva de 20 a 30 s; com o padrão de 30 s,
   // a máquina carregada derrubava um teste por tempo. A margem da meia-noite continua valendo: no
-  // test:e2e:meia-noite, o relógio do servidor começa às 23:50 quando o servidor sobe e a rodada tem só os 2 testes
-  // com a etiqueta @meia-noite, no iPhone, então no pior caso são 240 s de subida (webServer.timeout) + 2 x 60 s =
-  // 6 min, antes das 00:00.
+  // test:e2e:meia-noite, o relógio do servidor começa às 23:50 quando o servidor sobe, o globalSetup roda depois (o
+  // Playwright sobe o webServer antes) e a rodada tem só os 2 testes com a etiqueta @meia-noite, no iPhone. No pior
+  // caso: 240 s de subida (webServer.timeout) + até 60 s de globalSetup (24 donas e o administrador; 5 s medidos aqui,
+  // em 17/11/2026, e ele imprime o tempo) + 2 x 60 s = 7 min, antes das 00:00.
   timeout: 60_000,
   forbidOnly: ci,
   retries: 0,

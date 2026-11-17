@@ -110,6 +110,7 @@ async function salvarSessao(arquivo: string, email: string, senha: string, baseU
 
 export default async function preparar(config: FullConfig) {
   const baseURL = config.projects[0]!.use.baseURL!;
+  const inicio = performance.now();
   rmSync(PASTA_DAS_SESSOES, { recursive: true, force: true });
   mkdirSync(PASTA_DAS_SESSOES, { recursive: true });
 
@@ -154,6 +155,9 @@ export default async function preparar(config: FullConfig) {
     throw erro;
   }
   await encerrarConexoes();
+  // O servidor já está no ar (o webServer sobe antes): este tempo conta na margem da meia-noite (playwright.config.ts).
+  const segundos = Math.round((performance.now() - inicio) / 1000);
+  console.log(`[preparação] ${Object.keys(donas).length} donas e o administrador em ${segundos} s`);
   process.env.E2E_DONAS = JSON.stringify(donas);
   process.env.E2E_ADMIN = JSON.stringify(admin);
 
