@@ -29,6 +29,18 @@ test("a busca ignora acentos e maiúsculas, acha pelo pet e pelo telefone em qua
   }
 });
 
+test("texto com dígitos procura só no texto: o nome de um tutor com o telefone de outro não acha ninguém (B7)", {
+  tag: "@um-perfil",
+}, async ({ page }) => {
+  // "4321" é o fim do telefone do Édson; misturado com o nome da Renata, não é uma busca por telefone.
+  await buscar(page, "renata 4321");
+  await expect(page.getByText('Nada encontrado para "renata 4321".')).toBeVisible();
+  // Só dígitos e sinais de telefone continuam buscando pelo telefone.
+  const porTelefone = await buscar(page, "4321");
+  await expect(porTelefone).toHaveCount(1);
+  await expect(porTelefone.first()).toContainText("Édson Araújo");
+});
+
 test("sem resultado, a busca diz o que procurou; o % é literal, não curinga", { tag: "@um-perfil" }, async ({ page, tocar }) => {
   await buscar(page, "xyz");
   await expect(page.getByText('Nada encontrado para "xyz".')).toBeVisible();
