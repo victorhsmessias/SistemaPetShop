@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
 import type { Browser, Locator, Page } from "@playwright/test";
+import { Pool } from "pg";
 
 import { adminPreparado, PREFIXO_DO_PAINEL } from "./donas";
 import { donaDoArquivo, expect, test } from "./tela";
@@ -77,38 +78,94 @@ test("o e-mail já em uso mostra a mensagem e mantém o que foi digitado (B2)", 
   await expect(cartaoDaEmpresa(page, nome)).toHaveCount(0);
 });
 
+test("senha provisória acima de 128 caracteres: erro no campo, nada é criado e o que foi digitado fica", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  const nome = `${PREFIXO_DO_PAINEL} ${randomUUID().slice(0, 8)}`;
+  const email = `dona-painel-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`;
+  const senha = "s".repeat(129);
+  await page.goto("/admin");
+  await abrir(page, "Nova empresa");
+  const formulario = page.locator("details", { has: page.locator("summary", { hasText: "Nova empresa" }) });
+  await formulario.getByLabel("Nome da empresa").fill(nome);
+  await formulario.getByLabel("Nome da dona").fill("Dona da senha longa");
+  await formulario.getByLabel("E-mail da dona").fill(email);
+  await formulario.getByLabel("Senha provisória").fill(senha);
+  await formulario.getByRole("button", { name: "Criar empresa e dona" }).click();
+
+  const campoSenha = formulario.getByLabel("Senha provisória");
+  await expect(campoSenha).toHaveAccessibleDescription(/A senha pode ter no máximo 128 caracteres\./);
+  await expect(campoSenha).toHaveAttribute("aria-invalid", "true");
+  await expect(campoSenha).toHaveValue(senha);
+  await expect(formulario.getByLabel("Nome da empresa")).toHaveValue(nome);
+  await expect(formulario.getByLabel("E-mail da dona")).toHaveValue(email);
+  await expect(cartaoDaEmpresa(page, nome)).toHaveCount(0);
+});
+
+/**
+ * Outra transação cadastra o mesmo e-mail ao mesmo tempo, sem confirmar até `confirmar()`: a conferência do painel
+ * não a vê, a empresa é criada, e a criação da dona esbarra no e-mail único. É a corrida real (duas criações com o
+ * mesmo e-mail juntas); nada no app é afrouxado para o teste.
+ */
+async function emailCadastradoAoMesmoTempo(email: string) {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL_MIGRADOR, max: 2 });
+  const transacao = await pool.connect();
+  await transacao.query("begin");
+  await transacao.query(`insert into "user" (name, email, role) values ('Cadastro concorrente', $1, 'admin')`, [email]);
+  return {
+    empresaExiste: async (nome: string) =>
+      (await pool.query("select 1 from empresa where nome = $1", [nome])).rowCount === 1,
+    confirmar: () => transacao.query("commit"),
+    apagar: async () => {
+      await transacao.query("rollback").catch(() => undefined);
+      transacao.release();
+      await pool.query(`delete from "user" where email = $1`, [email]);
+      await pool.end();
+    },
+  };
+}
+
 test("empresa criada sem a dona: o formulário é limpo e aponta para Criar dona na empresa já criada", {
   tag: "@desktop",
 }, async ({ page }) => {
   const nome = `${PREFIXO_DO_PAINEL} ${randomUUID().slice(0, 8)}`;
   const email = `dona-painel-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`;
-  await page.goto("/admin");
-  await abrir(page, "Nova empresa");
-  const formulario = page.locator("details", { has: page.locator("summary", { hasText: "Nova empresa" }) });
-  await formulario.getByLabel("Nome da empresa").fill(nome);
-  await formulario.getByLabel("Nome da dona").fill("Dona tardia");
-  await formulario.getByLabel("E-mail da dona").fill(email);
-  // Senha acima do máximo do Better Auth (128): o painel aceita, a empresa é criada e a criação da dona falha.
-  await formulario.getByLabel("Senha provisória").fill("s".repeat(129));
-  await formulario.getByRole("button", { name: "Criar empresa e dona" }).click();
+  const concorrente = await emailCadastradoAoMesmoTempo(email);
+  try {
+    await page.goto("/admin");
+    await abrir(page, "Nova empresa");
+    const formulario = page.locator("details", { has: page.locator("summary", { hasText: "Nova empresa" }) });
+    await formulario.getByLabel("Nome da empresa").fill(nome);
+    await formulario.getByLabel("Nome da dona").fill("Dona tardia");
+    await formulario.getByLabel("E-mail da dona").fill(email);
+    await formulario.getByLabel("Senha provisória").fill(`e2e-${randomBytes(6).toString("hex")}`);
+    await formulario.getByRole("button", { name: "Criar empresa e dona" }).click();
 
-  const mensagem = formulario.getByRole("status");
-  await expect(mensagem).toContainText("Empresa criada, mas a dona não");
-  await expect(mensagem).toContainText(`Crie a dona em "Criar dona", no cartão da empresa.`);
-  // Limpo: reenviar não cria outra empresa.
-  await expect(formulario.getByLabel("Nome da empresa")).toHaveValue("");
-  await expect(formulario.getByLabel("Senha provisória")).toHaveValue("");
+    // A empresa já foi gravada; o outro cadastro do e-mail é confirmado, e a dona não pode mais ser criada.
+    await expect.poll(() => concorrente.empresaExiste(nome)).toBe(true);
+    await concorrente.confirmar();
 
-  await mensagem.getByRole("link", { name: `Ir para ${nome}` }).click();
-  const cartao = cartaoDaEmpresa(page, nome);
-  await expect(cartao).toContainText("Esta empresa ainda não tem usuária.");
-  await abrir(cartao, "Criar dona");
-  await cartao.getByLabel("Nome da dona").fill("Dona tardia");
-  await cartao.getByLabel("E-mail da dona").fill(email);
-  await cartao.getByLabel("Senha provisória").fill(`e2e-${randomBytes(6).toString("hex")}`);
-  await cartao.getByRole("button", { name: "Criar dona" }).click();
-  await expect(cartao).toContainText(email);
-  await expect(page.getByRole("heading", { level: 2, name: nome, exact: true })).toHaveCount(1);
+    const mensagem = formulario.getByRole("status");
+    await expect(mensagem).toContainText("Empresa criada, mas a dona não");
+    await expect(mensagem).toContainText(`Crie a dona em "Criar dona", no cartão da empresa.`);
+    // Limpo: reenviar não cria outra empresa.
+    await expect(formulario.getByLabel("Nome da empresa")).toHaveValue("");
+    await expect(formulario.getByLabel("Senha provisória")).toHaveValue("");
+
+    await mensagem.getByRole("link", { name: `Ir para ${nome}` }).click();
+    const cartao = cartaoDaEmpresa(page, nome);
+    await expect(cartao).toContainText("Esta empresa ainda não tem usuária.");
+    const outroEmail = `dona-painel-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`;
+    await abrir(cartao, "Criar dona");
+    await cartao.getByLabel("Nome da dona").fill("Dona tardia");
+    await cartao.getByLabel("E-mail da dona").fill(outroEmail);
+    await cartao.getByLabel("Senha provisória").fill(`e2e-${randomBytes(6).toString("hex")}`);
+    await cartao.getByRole("button", { name: "Criar dona" }).click();
+    await expect(cartao).toContainText(outroEmail);
+    await expect(page.getByRole("heading", { level: 2, name: nome, exact: true })).toHaveCount(1);
+  } finally {
+    await concorrente.apagar();
+  }
 });
 
 test("encerrar as sessões desconecta a dona do outro aparelho", { tag: "@desktop" }, async ({ page, browser, dona }) => {

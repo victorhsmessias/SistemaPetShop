@@ -28,7 +28,7 @@ import {
   type ResultadoCriacao,
 } from "@/modules/administracao/empresas";
 import { AcessoNegadoError } from "@/modules/administracao/guarda";
-import { DadosInvalidosError } from "@/modules/administracao/usuarias";
+import { DadosInvalidosError, SENHA_MAXIMA } from "@/modules/administracao/usuarias";
 
 const SENHA_ADMIN = "senha-do-admin-123";
 const SENHA_PROVISORIA = "provisoria-123";
@@ -160,6 +160,30 @@ describe("criar empresa com a dona", () => {
     expect((await listarEmpresas(cabecalhosAdmin)).filter((e) => e.nome === nome)).toEqual([]);
   });
 
+  it("senha acima do máximo do Better Auth é recusada no campo antes de criar a empresa; no máximo, passa", async () => {
+    const nome = `[teste] Senha longa ${randomUUID().slice(0, 8)}`;
+    const empresaComSenha = (senha: string) =>
+      criarEmpresaComDona(cabecalhosAdmin, {
+        nome,
+        fusoHorario: "America/Sao_Paulo",
+        dona: { nome: "Longa", email: emailTeste("dona-longa"), senha },
+      });
+
+    const recusa = await empresaComSenha("s".repeat(SENHA_MAXIMA + 1)).then(
+      () => null,
+      (erro: unknown) => erro,
+    );
+    expect(recusa).toBeInstanceOf(DadosInvalidosError);
+    expect(recusa).toMatchObject({ campo: "senha", message: "A senha pode ter no máximo 128 caracteres." });
+    // Nenhuma empresa sem dona por isso.
+    expect((await listarEmpresas(cabecalhosAdmin)).filter((e) => e.nome === nome)).toEqual([]);
+
+    // Exatamente no máximo, o Better Auth aceita: o limite daqui é o dele.
+    const noMaximo = await empresaComSenha("s".repeat(SENHA_MAXIMA));
+    empresasCriadas.push(noMaximo.empresaId);
+    expect(noMaximo.situacao).toBe("completa");
+  });
+
   it("a lista mostra a empresa com a dona", async () => {
     const empresas = await listarEmpresas(cabecalhosAdmin);
     const item = empresas.find((e) => e.id === criada.empresaId);
@@ -238,8 +262,12 @@ describe("redefinir senha", () => {
     ]);
   });
 
-  it("senha curta é recusada antes de qualquer registro", async () => {
-    await expect(redefinirSenha(cabecalhosAdmin, criada.donaId, "curta")).rejects.toThrow(DadosInvalidosError);
+  it("senha curta ou acima do máximo é recusada no campo, antes de qualquer registro", async () => {
+    await expect(redefinirSenha(cabecalhosAdmin, criada.donaId, "curta")).rejects.toMatchObject({ campo: "senha" });
+    await expect(redefinirSenha(cabecalhosAdmin, criada.donaId, "s".repeat(SENHA_MAXIMA + 1))).rejects.toMatchObject({
+      name: "DadosInvalidosError",
+      campo: "senha",
+    });
   });
 });
 

@@ -14,7 +14,8 @@ import { DadosInvalidosError } from "@/modules/administracao/usuarias";
 
 export type EstadoFormulario =
   | { tipo: "inicial" }
-  | { tipo: "erro"; mensagem: string }
+  /** `campo`: o erro é de um campo só (a senha) e aparece nele. */
+  | { tipo: "erro"; mensagem: string; campo?: "senha" }
   | { tipo: "ok"; mensagem: string }
   /** A empresa foi criada e a dona não: o formulário é limpo e aponta para "Criar dona" no cartão dela. */
   | { tipo: "parcial"; mensagem: string; empresaId: string; empresaNome: string };
@@ -22,7 +23,9 @@ export type EstadoFormulario =
 const texto = (dados: FormData, campo: string) => String(dados.get(campo) ?? "");
 
 function falha(erro: unknown, acao: string): EstadoFormulario {
-  if (erro instanceof DadosInvalidosError) return { tipo: "erro", mensagem: erro.message };
+  if (erro instanceof DadosInvalidosError) {
+    return { tipo: "erro", mensagem: erro.message, ...(erro.campo ? { campo: erro.campo } : {}) };
+  }
   if (erro instanceof AcessoNegadoError || erro instanceof NaoAutenticadoError) {
     return { tipo: "erro", mensagem: "Acesso negado." };
   }

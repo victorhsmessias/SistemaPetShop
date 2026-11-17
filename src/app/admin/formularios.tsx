@@ -15,8 +15,28 @@ const inicial: EstadoFormulario = { tipo: "inicial" };
 
 const CLASSES = { erro: "mensagem-erro", ok: "mensagem-sucesso", parcial: "mensagem-aviso" } as const;
 
+/** Erro de um campo só (a senha): aparece no campo, não na mensagem do formulário. */
+function erroDaSenha(estado: EstadoFormulario): string | undefined {
+  return estado.tipo === "erro" && estado.campo === "senha" ? estado.mensagem : undefined;
+}
+
+/** Atributos do campo de senha com o erro dele (o leitor de tela lê o erro junto com o campo). */
+function atributosDaSenha(id: string, erro: string | undefined, dica?: string) {
+  const descricoes = [erro ? `${id}-erro` : null, dica].filter(Boolean).join(" ");
+  return { ...(erro ? { "aria-invalid": true as const } : {}), ...(descricoes ? { "aria-describedby": descricoes } : {}) };
+}
+
+function ErroDoCampo({ id, erro }: { id: string; erro: string | undefined }) {
+  if (!erro) return null;
+  return (
+    <p id={`${id}-erro`} className="erro-campo">
+      {erro}
+    </p>
+  );
+}
+
 function Mensagem({ estado }: { estado: EstadoFormulario }) {
-  if (estado.tipo === "inicial") return null;
+  if (estado.tipo === "inicial" || erroDaSenha(estado)) return null;
   return (
     <p className={`mensagem ${CLASSES[estado.tipo]}`} role="status">
       {estado.mensagem}
@@ -43,7 +63,9 @@ function useLimparAoConcluir(estado: EstadoFormulario) {
   return formulario;
 }
 
-function CamposDona({ prefixo }: { prefixo: string }) {
+function CamposDona({ prefixo, estado }: { prefixo: string; estado: EstadoFormulario }) {
+  const senha = `${prefixo}-dona-senha`;
+  const erro = erroDaSenha(estado);
   return (
     <>
       <div className="campo">
@@ -63,17 +85,21 @@ function CamposDona({ prefixo }: { prefixo: string }) {
         />
       </div>
       <div className="campo">
-        <label htmlFor={`${prefixo}-dona-senha`}>Senha provisória</label>
+        <label htmlFor={senha}>Senha provisória</label>
         <input
-          id={`${prefixo}-dona-senha`}
+          id={senha}
           name="donaSenha"
           type="text"
           autoComplete="new-password"
           autoCapitalize="none"
           minLength={8}
           required
+          {...atributosDaSenha(senha, erro, `${senha}-dica`)}
         />
-        <span className="dica">Mínimo de 8 caracteres. Passe para a dona por um canal seguro.</span>
+        <span id={`${senha}-dica`} className="dica">
+          De 8 a 128 caracteres. Passe para a dona por um canal seguro.
+        </span>
+        <ErroDoCampo id={senha} erro={erro} />
       </div>
     </>
   );
@@ -99,7 +125,7 @@ export function FormularioNovaEmpresa({ fusos }: { fusos: { valor: string; nome:
           ))}
         </select>
       </div>
-      <CamposDona prefixo="nova" />
+      <CamposDona prefixo="nova" estado={estado} />
       <Mensagem estado={estado} />
       <button type="submit" className="botao-primario" disabled={enviando}>
         {enviando ? "Criando…" : "Criar empresa e dona"}
@@ -115,7 +141,7 @@ export function FormularioCriarDona({ empresaId }: { empresaId: string }) {
   return (
     <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario">
       <input type="hidden" name="empresaId" value={empresaId} />
-      <CamposDona prefixo={empresaId} />
+      <CamposDona prefixo={empresaId} estado={estado} />
       <Mensagem estado={estado} />
       <button type="submit" className="botao-primario" disabled={enviando}>
         {enviando ? "Criando…" : "Criar dona"}
@@ -141,7 +167,9 @@ export function FormularioRedefinirSenha({ usuarioId }: { usuarioId: string }) {
           autoCapitalize="none"
           minLength={8}
           required
+          {...atributosDaSenha(`senha-${usuarioId}`, erroDaSenha(estado))}
         />
+        <ErroDoCampo id={`senha-${usuarioId}`} erro={erroDaSenha(estado)} />
       </div>
       <Mensagem estado={estado} />
       <button type="submit" className="botao-primario" disabled={enviando}>

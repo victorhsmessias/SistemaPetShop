@@ -13,15 +13,24 @@ import { registrarEvento } from "@/modules/auditoria/registrar";
 const paraLog = (erro: unknown) => textoDoResumo(resumoDoErro(erro));
 
 export class DadosInvalidosError extends Error {
-  constructor(mensagem: string) {
+  /** O campo do formulário com o problema, quando é de um campo só (o painel mostra o erro nele). */
+  readonly campo?: "senha";
+
+  constructor(mensagem: string, campo?: "senha") {
     super(mensagem);
     this.name = "DadosInvalidosError";
+    this.campo = campo;
   }
 }
 
 export type NovaUsuaria = { nome: string; email: string; senha: string };
 
 const SENHA_MINIMA = 8;
+/**
+ * O máximo do Better Auth (maxPasswordLength, padrão 128; o auth.ts não muda). Conferido aqui, antes de qualquer
+ * gravação: senão a empresa nascia e só a dona era recusada pelo Better Auth.
+ */
+export const SENHA_MAXIMA = 128;
 const formatoEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validarNovaUsuaria(dados: NovaUsuaria): NovaUsuaria {
@@ -35,7 +44,10 @@ export function validarNovaUsuaria(dados: NovaUsuaria): NovaUsuaria {
 
 export function validarSenha(senha: string): void {
   if (senha.length < SENHA_MINIMA) {
-    throw new DadosInvalidosError(`A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`);
+    throw new DadosInvalidosError(`A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`, "senha");
+  }
+  if (senha.length > SENHA_MAXIMA) {
+    throw new DadosInvalidosError(`A senha pode ter no máximo ${SENHA_MAXIMA} caracteres.`, "senha");
   }
 }
 
