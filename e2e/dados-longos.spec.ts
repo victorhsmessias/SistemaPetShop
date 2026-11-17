@@ -54,9 +54,8 @@ test("nome de 120 caracteres, 12 pets, serviço longo e 4 atendimentos no mesmo 
   await semRolagemHorizontal(page, "atendimento");
 });
 
-// B4 do QA (visual, fora desta fase): uma palavra longa sem espaço no nome do tutor faz a tela rolar para o lado.
-// Fica marcado como falha esperada: quando o visual novo corrigir, o Playwright acusa "passou inesperadamente" e o
-// `test.fail` deve ser retirado. O tutor fica na 2ª empresa do arquivo, para não afetar o teste acima.
+// B4 do QA: uma palavra longa sem espaço no nome do tutor fazia a tela rolar para o lado. Corrigido com
+// `overflow-wrap: anywhere` no globals.css. O tutor fica na 2ª empresa do arquivo, para não afetar o teste acima.
 test.describe("palavra longa", () => {
   test.use({
     dona: async ({}, usar, testInfo) => {
@@ -65,9 +64,8 @@ test.describe("palavra longa", () => {
   });
 
   test("palavra longa sem espaço no nome do tutor não cria rolagem horizontal (B4)", async ({ page, tocar }) => {
-    test.fail(true, "B4: palavra longa sem espaço ainda cria rolagem horizontal (correção visual pendente).");
-    // Na lista, o cartão corta o nome (overflow: hidden); a página do tutor rola para o lado.
     await page.goto("/clientes");
+    await semRolagemHorizontal(page, "Clientes");
     await tocar(page.getByRole("list", { name: "Tutores" }).getByRole("link"));
     await expect(page.getByRole("heading", { level: 1, name: /^iPW+$/ })).toBeVisible();
     await semRolagemHorizontal(page, "página do tutor");

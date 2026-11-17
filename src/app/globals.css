@@ -1,38 +1,122 @@
-/* Celular primeiro: a piloto usa iPhone. Cores em variáveis, com tema escuro automático. */
+/*
+ * Visual "Aconchego" (sessão 07): terracota e creme, fonte arredondada do sistema, cantos macios. Celular primeiro:
+ * a piloto usa iPhone. Cores só por estes tokens, com o tema escuro seguindo o aparelho.
+ * O contraste dos pares exigidos (texto >= 4,5:1, interface >= 3:1) é conferido por src/app/contraste.test.ts:
+ * mudou uma cor, rode o teste. A --borda é decorativa (divisores e cartões); campos e botões usam --borda-controle.
+ */
 :root {
-  --fundo: #f6f4ef;
-  --superficie: #ffffff;
-  --texto: #1f2328;
-  --texto-suave: #5b6168;
-  --borda: #d9d6cf;
-  --primaria: #1f6f5c;
+  --fundo: #f8f1e9;
+  --superficie: #fffdf9;
+  --superficie2: #f3e9dd;
+  --texto: #2b211b;
+  --suave: #68584c;
+  --borda: #eadccd;
+  --borda-controle: #8f7b6a;
+  --primaria: #a8481f;
   --primaria-texto: #ffffff;
-  --primaria-hover: #185a4b;
-  --erro: #b42318;
-  --erro-fundo: #fdecea;
-  --sucesso: #146c43;
-  --sucesso-fundo: #e6f4ea;
-  --aviso-fundo: #fff4d6;
-  --raio: 12px;
+  --primaria-hover: #8f3c19;
+  --primaria-suave: #f6e3d8;
+  --perigo: #9e1b32;
+  --perigo-fundo: #f9e1e4;
+  --sucesso: #2d6631;
+  --sucesso-fundo: #e2f0dd;
+  --aviso: #734900;
+  --aviso-fundo: #fcefc9;
+  --info: #264d80;
+  --info-fundo: #e4ecf6;
+  --cuidado-fundo: #fcefc9;
+  --cuidado-texto: #3b2900;
+  --cuidado-faixa: #a56500;
+  --foco: #a8481f;
+  --st-agendado-fundo: #efe7de;
+  --st-agendado-texto: #54473c;
+  --st-agendado-faixa: #8f7b6a;
+  --st-confirmado-fundo: #e2eaf5;
+  --st-confirmado-texto: #284f86;
+  --st-confirmado-faixa: #3d6db0;
+  --st-em-atendimento-fundo: #fbe5c6;
+  --st-em-atendimento-texto: #7f4200;
+  --st-em-atendimento-faixa: #c27a00;
+  --st-pronto-fundo: #e0efda;
+  --st-pronto-texto: #2d6631;
+  --st-pronto-faixa: #4a8a3f;
+  --st-concluido-fundo: #f4e1d6;
+  --st-concluido-texto: #86391a;
+  --st-concluido-faixa: #a8481f;
+  --st-cancelado-fundo: #ebe6e1;
+  --st-cancelado-texto: #59514a;
+  --st-cancelado-faixa: #958b81;
+  --st-faltou-fundo: #f6dde0;
+  --st-faltou-texto: #8a1c2e;
+  --st-faltou-faixa: #9e1b32;
+  --sombra-cartao: 0 2px 10px rgb(92 58 34 / 8%);
+  --sombra-flutuante: 0 10px 28px rgb(92 58 34 / 18%);
+
+  --fonte: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --fs-p: 14px;
+  --fs-mini: 13px;
+  --fs-h2: 19px;
+  --fs-h1: 26px;
+  --fs-valor: 32px;
+  --raio-cartao: 20px;
+  --raio-controle: 14px;
+  --raio-selo: 999px;
   --toque: 48px;
+  --acao: 52px;
+  --borda-larg: 1.5px;
+  --faixa-larg: 5px;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fundo: #14171a;
-    --superficie: #1d2125;
-    --texto: #eceff1;
-    --texto-suave: #a3abb3;
-    --borda: #343a40;
-    --primaria: #3fae92;
-    --primaria-texto: #0d1f1a;
-    --primaria-hover: #56c1a5;
-    --erro: #ff8a80;
-    --erro-fundo: #3a1d1b;
-    --sucesso: #7bd88f;
-    --sucesso-fundo: #17301f;
-    --aviso-fundo: #3a3218;
+    --fundo: #1a1512;
+    --superficie: #251e19;
+    --superficie2: #2f2721;
+    --texto: #f5ede5;
+    --suave: #c5b5a7;
+    --borda: #3b3129;
+    --borda-controle: #978471;
+    --primaria: #f19a70;
+    --primaria-texto: #2b1206;
+    --primaria-hover: #f5b08f;
+    --primaria-suave: #43281b;
+    --perigo: #ff9aa6;
+    --perigo-fundo: #40171e;
+    --sucesso: #a3d99d;
+    --sucesso-fundo: #1d3219;
+    --aviso: #f7c96a;
+    --aviso-fundo: #3d2f12;
+    --info: #9fbfeb;
+    --info-fundo: #1b2a3f;
+    --cuidado-fundo: #3d2f12;
+    --cuidado-texto: #ffe6ad;
+    --cuidado-faixa: #e5a43a;
+    --foco: #f19a70;
+    --st-agendado-fundo: #352c25;
+    --st-agendado-texto: #d8c9bb;
+    --st-agendado-faixa: #9f8b78;
+    --st-confirmado-fundo: #1e2c42;
+    --st-confirmado-texto: #adc8f0;
+    --st-confirmado-faixa: #6f9bdb;
+    --st-em-atendimento-fundo: #433014;
+    --st-em-atendimento-texto: #ffcf8a;
+    --st-em-atendimento-faixa: #e5a43a;
+    --st-pronto-fundo: #1f3a1d;
+    --st-pronto-texto: #ade3a5;
+    --st-pronto-faixa: #79c06d;
+    --st-concluido-fundo: #46291c;
+    --st-concluido-texto: #ffc0a1;
+    --st-concluido-faixa: #f19a70;
+    --st-cancelado-fundo: #302a26;
+    --st-cancelado-texto: #cfc5bc;
+    --st-cancelado-faixa: #8e847b;
+    --st-faltou-fundo: #44191f;
+    --st-faltou-texto: #ffb3bd;
+    --st-faltou-faixa: #f07d8d;
+    --sombra-cartao: 0 1px 0 rgb(255 255 255 / 4%), 0 2px 10px rgb(0 0 0 / 35%);
+    --sombra-flutuante: 0 10px 28px rgb(0 0 0 / 50%);
     color-scheme: dark;
   }
 }
@@ -52,9 +136,11 @@ body {
   min-height: 100dvh;
   background: var(--fundo);
   color: var(--texto);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--fonte);
   font-size: 16px;
   line-height: 1.5;
+  /* Palavra longa sem espaço (um nome digitado errado) quebra em vez de empurrar a tela para o lado (QA B4). */
+  overflow-wrap: anywhere;
 }
 
 h1,
@@ -65,11 +151,12 @@ h3 {
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: var(--fs-h1);
+  font-weight: 700;
 }
 
 h2 {
-  font-size: 1.15rem;
+  font-size: var(--fs-h2);
 }
 
 p {
@@ -106,13 +193,14 @@ p {
 .cartao {
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-cartao);
   padding: 16px;
   margin-bottom: 16px;
 }
 
 .suave {
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 .formulario {
@@ -140,8 +228,8 @@ textarea {
   font-size: 16px;
   min-height: var(--toque);
   padding: 10px 12px;
-  border: 1px solid var(--borda);
-  border-radius: 10px;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
   background: var(--superficie);
   color: var(--texto);
   width: 100%;
@@ -155,7 +243,7 @@ textarea {
 input[aria-invalid="true"],
 select[aria-invalid="true"],
 textarea[aria-invalid="true"] {
-  border-color: var(--erro);
+  border-color: var(--perigo);
 }
 
 input:focus-visible,
@@ -164,13 +252,13 @@ textarea:focus-visible,
 a:focus-visible,
 button:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--primaria);
+  outline: 3px solid var(--foco);
   outline-offset: 2px;
 }
 
 .dica {
   font-size: 0.85rem;
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 button {
@@ -178,8 +266,8 @@ button {
   font-weight: 600;
   min-height: var(--toque);
   padding: 10px 18px;
-  border-radius: 10px;
-  border: 1px solid transparent;
+  border-radius: var(--raio-controle);
+  border: var(--borda-larg) solid transparent;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -195,9 +283,9 @@ button {
 }
 
 .botao-secundario {
-  background: transparent;
+  background: var(--superficie);
   color: var(--texto);
-  border-color: var(--borda);
+  border-color: var(--borda-controle);
 }
 
 button:disabled {
@@ -206,14 +294,14 @@ button:disabled {
 }
 
 .mensagem {
-  border-radius: 10px;
+  border-radius: var(--raio-controle);
   padding: 12px 14px;
   margin: 0;
 }
 
 .mensagem-erro {
-  background: var(--erro-fundo);
-  color: var(--erro);
+  background: var(--perigo-fundo);
+  color: var(--perigo);
 }
 
 .mensagem-sucesso {
@@ -226,6 +314,11 @@ button:disabled {
   color: var(--texto);
 }
 
+.mensagem-info {
+  background: var(--info-fundo);
+  color: var(--info);
+}
+
 .marca {
   font-weight: 700;
   font-size: 1.1rem;
@@ -234,12 +327,12 @@ button:disabled {
 
 .etiqueta {
   display: inline-block;
-  font-size: 0.8rem;
+  font-size: var(--fs-mini);
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--borda);
-  color: var(--texto-suave);
+  border-radius: var(--raio-selo);
+  background: var(--superficie2);
+  color: var(--suave);
 }
 
 .lista-simples {
@@ -301,7 +394,7 @@ details[open] summary {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--texto-suave);
+  color: var(--suave);
   text-decoration: none;
   font-weight: 600;
 }
@@ -321,7 +414,7 @@ a {
   justify-content: center;
   min-height: var(--toque);
   padding: 10px 18px;
-  border-radius: 10px;
+  border-radius: var(--raio-controle);
   font-weight: 600;
   text-decoration: none;
   touch-action: manipulation;
@@ -333,7 +426,7 @@ a {
 }
 
 .botao-link.botao-secundario {
-  border: 1px solid var(--borda);
+  border: var(--borda-larg) solid var(--borda-controle);
   color: var(--texto);
 }
 
@@ -377,7 +470,7 @@ a {
   margin: 0 0 16px;
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
   overflow: hidden;
 }
 
@@ -400,7 +493,7 @@ a {
 
 .lista-toque .detalhe {
   display: block;
-  color: var(--texto-suave);
+  color: var(--suave);
   font-size: 0.9rem;
 }
 
@@ -409,16 +502,17 @@ a {
 }
 
 .erro-campo {
-  color: var(--erro);
+  color: var(--perigo);
   font-size: 0.9rem;
   margin: 0;
 }
 
 /* Observações de cuidado do pet (comportamento, alergias): precisam saltar aos olhos na hora do banho. */
 .cuidado {
-  border-left: 4px solid #d97706;
-  background: var(--aviso-fundo);
-  border-radius: 8px;
+  border-left: var(--faixa-larg) solid var(--cuidado-faixa);
+  background: var(--cuidado-fundo);
+  color: var(--cuidado-texto);
+  border-radius: 10px;
   padding: 10px 12px;
   margin: 8px 0 0;
 }
@@ -451,57 +545,53 @@ a {
 
 /* Agenda (H5 a H7). A grade usa 2 px por minuto no dia e 1 px na semana (agenda/grade.tsx). */
 
-:root {
-  --status-agendado: #64748b;
-  --status-confirmado: #2563eb;
-  --status-em-atendimento: #d97706;
-  --status-pronto: #16a34a;
-  --status-concluido: #1f6f5c;
-  --status-encerrado: #9ca3af;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --status-agendado: #94a3b8;
-    --status-confirmado: #60a5fa;
-    --status-em-atendimento: #fbbf24;
-    --status-pronto: #4ade80;
-    --status-concluido: #3fae92;
-    --status-encerrado: #6b7280;
-  }
-}
-
+/* Status: o selo usa fundo suave e texto escuro da mesma família (>= 4,5:1); a cor cheia fica só na faixa do bloco. */
 .status-agendado {
-  --cor-status: var(--status-agendado);
+  --st-fundo: var(--st-agendado-fundo);
+  --st-texto: var(--st-agendado-texto);
+  --cor-status: var(--st-agendado-faixa);
 }
 
 .status-confirmado {
-  --cor-status: var(--status-confirmado);
+  --st-fundo: var(--st-confirmado-fundo);
+  --st-texto: var(--st-confirmado-texto);
+  --cor-status: var(--st-confirmado-faixa);
 }
 
 .status-em_atendimento {
-  --cor-status: var(--status-em-atendimento);
+  --st-fundo: var(--st-em-atendimento-fundo);
+  --st-texto: var(--st-em-atendimento-texto);
+  --cor-status: var(--st-em-atendimento-faixa);
 }
 
 .status-pronto {
-  --cor-status: var(--status-pronto);
+  --st-fundo: var(--st-pronto-fundo);
+  --st-texto: var(--st-pronto-texto);
+  --cor-status: var(--st-pronto-faixa);
 }
 
 /* Concluído continua na grade, esmaecido: já foi pago e não pede mais nada. */
 .status-concluido {
-  --cor-status: var(--status-concluido);
+  --st-fundo: var(--st-concluido-fundo);
+  --st-texto: var(--st-concluido-texto);
+  --cor-status: var(--st-concluido-faixa);
 }
 
 .bloco.status-concluido {
-  background: var(--fundo);
-  border-style: dashed;
-  border-left-style: solid;
+  background: var(--superficie2);
   box-shadow: none;
 }
 
-.status-cancelado,
+.status-cancelado {
+  --st-fundo: var(--st-cancelado-fundo);
+  --st-texto: var(--st-cancelado-texto);
+  --cor-status: var(--st-cancelado-faixa);
+}
+
 .status-faltou {
-  --cor-status: var(--status-encerrado);
+  --st-fundo: var(--st-faltou-fundo);
+  --st-texto: var(--st-faltou-texto);
+  --cor-status: var(--st-faltou-faixa);
 }
 
 .botao-largo,
@@ -527,8 +617,8 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--borda);
-  border-radius: 10px;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
   font-size: 1.6rem;
   line-height: 1;
   text-decoration: none;
@@ -571,7 +661,7 @@ a {
   display: flex;
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
   padding: 12px 8px 12px 0;
 }
 
@@ -585,7 +675,7 @@ a {
   right: 6px;
   transform: translateY(-50%);
   font-size: 0.75rem;
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 .grade-corpo {
@@ -620,7 +710,7 @@ a {
   padding: 4px 6px;
   border-radius: 8px;
   border: 1px solid var(--borda);
-  border-left: 4px solid var(--cor-status, var(--borda));
+  border-left: var(--faixa-larg) solid var(--cor-status, var(--borda-controle));
   background: var(--superficie);
   box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
   color: var(--texto);
@@ -639,11 +729,12 @@ a {
 
 .bloco-status {
   font-weight: 600;
-  color: var(--cor-status);
+  color: var(--st-texto);
 }
 
 .bloco-cuidado {
-  background: var(--aviso-fundo);
+  background: var(--cuidado-fundo);
+  color: var(--cuidado-texto);
   border-radius: 4px;
   padding: 0 4px;
   font-weight: 600;
@@ -740,8 +831,8 @@ a {
 }
 
 .lista-servicos li {
-  border: 1px solid var(--borda);
-  border-radius: 10px;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
 }
 
 .lista-servicos li.marcado {
@@ -773,7 +864,7 @@ a {
 
 .opcao-servico .detalhe {
   display: block;
-  color: var(--texto-suave);
+  color: var(--suave);
   font-size: 0.9rem;
 }
 
@@ -795,8 +886,8 @@ a {
 
 /* Página do atendimento. */
 .etiqueta-status {
-  border-color: var(--cor-status);
-  color: var(--cor-status);
+  background: var(--st-fundo);
+  color: var(--st-texto);
   white-space: nowrap;
 }
 
@@ -865,7 +956,7 @@ a {
 }
 
 .dados-receita dt {
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 .dados-receita dd {
@@ -878,7 +969,7 @@ a {
 .resumo h2 {
   margin: 0;
   font-size: 1rem;
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 .resumo p {
