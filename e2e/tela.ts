@@ -82,9 +82,9 @@ export function blocoNaGrade(page: Page, pet: string): Locator {
   return page.getByRole("link", { name: new RegExp(`^${pet} · `) });
 }
 
-/** Status do atendimento na página dele (a etiqueta tem o nome acessível "Status atual"). */
+/** Status do atendimento na página dele (a etiqueta tem o nome acessível "Status: <status>", como "Status: Confirmado"). */
 export function statusAtual(page: Page): Locator {
-  return page.getByRole("status", { name: "Status atual" });
+  return page.getByRole("status", { name: /^Status: / });
 }
 
 /** Mensagem de erro geral do formulário (role="alert"), sem pegar o anunciador de rota do Next. */

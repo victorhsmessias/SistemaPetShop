@@ -28,6 +28,7 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   const tocarStatus = async (botao: string, statusEsperado: string) => {
     await tocar(page.getByRole("button", { name: botao }));
     await expect(statusAtual(page)).toHaveText(statusEsperado);
+    await expect(statusAtual(page)).toHaveAccessibleName(`Status: ${statusEsperado}`);
   };
 
   await page.goto(`/agenda?dia=${DIA}`);
