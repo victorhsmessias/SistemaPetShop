@@ -14,6 +14,7 @@ import {
   type EstadoDesfazer,
 } from "@/app/(dona)/agenda/acoes";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
+import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 import { ACOES_DOS_STATUS, NOMES_DOS_STATUS, proximosStatus, statusAnterior, type StatusAtendimento } from "@/modules/agenda/status";
 import { centavosParaTexto, formatarReais } from "@/modules/compartilhado/dinheiro";
 
@@ -53,8 +54,8 @@ function AvisoDeHorario({ estado }: { estado: EstadoAgenda }) {
 }
 
 /**
- * Serviços do atendimento: ao marcar, preço e duração vêm do catálogo e podem ser editados.
- * `key` no componente pai remonta a lista quando o formulário volta do servidor, com o que foi marcado.
+ * Serviços do atendimento: ao marcar, preço e duração vêm do catálogo e podem ser editados. Os marcados ficam no
+ * estado do componente, e o formulário não é limpo quando volta do servidor (enviarSemLimpar).
  */
 function EscolhaDeServicos({
   servicos,
@@ -163,7 +164,7 @@ export function FormularioAgendamento({
   const v = estado.valores;
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="petId" value={petId} />
       <ErroGeral erro={estado.erros.geral ?? estado.erros.pet} />
       <div className="campos-lado-a-lado">
@@ -174,7 +175,7 @@ export function FormularioAgendamento({
           {(props) => <input {...props} type="time" step={300} defaultValue={v.hora} />}
         </Campo>
       </div>
-      <EscolhaDeServicos key={JSON.stringify(estado.servicos)} servicos={servicos} estado={estado} />
+      <EscolhaDeServicos servicos={servicos} estado={estado} />
       <Campo
         nome="observacoes"
         rotulo="Observações (opcional)"
@@ -214,11 +215,10 @@ export function FormularioServicosDoAtendimento({
   );
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
       <ErroGeral erro={estado.erros.geral} />
       <EscolhaDeServicos
-        key={JSON.stringify(estado.servicos)}
         servicos={servicos}
         estado={estado}
         legendaVisivel={false}
@@ -263,7 +263,7 @@ export function FormularioHorario({
   };
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
       <ErroGeral erro={estado.erros.geral} />
       <Campo nome="dia" rotulo="Dia" erro={estado.erros.dia}>
@@ -288,7 +288,7 @@ export function FormularioHorario({
 export function FormularioObservacoes({ id, observacoes }: { id: string; observacoes: string }) {
   const [estado, acao, enviando] = useActionState(editarObservacoesAcao, inicial({ observacoes }));
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
       <ErroGeral erro={estado.erros.geral} />
       <Campo
@@ -437,7 +437,7 @@ export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; te
     );
   }
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
       <ErroGeral erro={estado.erros.geral} />
       {temReceita && (

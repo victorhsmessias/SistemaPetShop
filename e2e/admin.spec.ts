@@ -52,6 +52,31 @@ test("o administrador cria uma empresa com a dona, e o formulário é limpo depo
   await expect(cartao).toContainText(email);
 });
 
+test("o e-mail já em uso mostra a mensagem e mantém o que foi digitado (B2)", { tag: "@desktop" }, async ({
+  page,
+  dona,
+}) => {
+  const nome = `${PREFIXO_DO_PAINEL} ${randomUUID().slice(0, 8)}`;
+  const senha = `e2e-${randomBytes(6).toString("hex")}`;
+  await page.goto("/admin");
+  await abrir(page, "Nova empresa");
+  const formulario = page.locator("details", { has: page.locator("summary", { hasText: "Nova empresa" }) });
+  await formulario.getByLabel("Nome da empresa").fill(nome);
+  await formulario.getByLabel("Fuso horário").selectOption("America/Manaus");
+  await formulario.getByLabel("Nome da dona").fill("Dona repetida");
+  await formulario.getByLabel("E-mail da dona").fill(dona.email);
+  await formulario.getByLabel("Senha provisória").fill(senha);
+  await formulario.getByRole("button", { name: "Criar empresa e dona" }).click();
+
+  await expect(formulario.getByRole("status")).toHaveText("Este e-mail já está em uso.");
+  await expect(formulario.getByLabel("Nome da empresa")).toHaveValue(nome);
+  await expect(formulario.getByLabel("Fuso horário")).toHaveValue("America/Manaus");
+  await expect(formulario.getByLabel("Nome da dona")).toHaveValue("Dona repetida");
+  await expect(formulario.getByLabel("E-mail da dona")).toHaveValue(dona.email);
+  await expect(formulario.getByLabel("Senha provisória")).toHaveValue(senha);
+  await expect(cartaoDaEmpresa(page, nome)).toHaveCount(0);
+});
+
 test("encerrar as sessões desconecta a dona do outro aparelho", { tag: "@desktop" }, async ({ page, browser, dona }) => {
   const aparelho = await aparelhoDaDona(browser, dona.sessao!);
 

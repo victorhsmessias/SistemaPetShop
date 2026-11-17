@@ -150,3 +150,24 @@ test("o erro de um campo mantém o que foi digitado, e o telefone repetido leva 
   await tocar(page.getByRole("link", { name: "Abrir o tutor já cadastrado" }));
   await expect(page.getByRole("heading", { level: 1, name: "Carla Duarte" })).toBeVisible();
 });
+
+test("o que a dona digita enquanto o formulário envia não é apagado quando volta o erro (B8)", {
+  tag: "@um-perfil",
+}, async ({ page, tocar }) => {
+  // Atrasa o envio (a rede lenta do celular), para dar tempo de digitar com o botão em "Salvando…".
+  await page.route("**/clientes/novo", async (rota) => {
+    if (rota.request().method() === "POST") await new Promise((pronto) => setTimeout(pronto, 1500));
+    await rota.continue();
+  });
+  await page.goto("/clientes/novo");
+  await page.getByLabel("Nome do tutor").fill("Beatriz Envio");
+  await page.getByLabel("Telefone (WhatsApp)").fill("9912");
+  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
+  await expect(page.getByRole("button", { name: "Salvando…" })).toBeDisabled();
+
+  await page.getByLabel("Observações").fill("Digitado enquanto enviava.");
+  await expect(page.getByLabel("Telefone (WhatsApp)")).toHaveAccessibleDescription(/Informe DDD e número/);
+  await expect(page.getByRole("button", { name: "Cadastrar tutor" })).toBeEnabled();
+  await expect(page.getByLabel("Observações")).toHaveValue("Digitado enquanto enviava.");
+  await expect(page.getByLabel("Nome do tutor")).toHaveValue("Beatriz Envio");
+});

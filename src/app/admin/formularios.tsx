@@ -9,6 +9,7 @@ import {
   redefinirSenhaAcao,
   type EstadoFormulario,
 } from "@/app/admin/acoes";
+import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 
 const inicial: EstadoFormulario = { tipo: "inicial" };
 
@@ -21,7 +22,10 @@ function Mensagem({ estado }: { estado: EstadoFormulario }) {
   );
 }
 
-/** Limpa o formulário depois de um envio bem-sucedido (senhas não ficam na tela). */
+/**
+ * Limpa o formulário depois de um envio bem-sucedido (senhas não ficam na tela). Com erro, o que foi digitado fica
+ * (enviarSemLimpar), inclusive a senha, que não volta do servidor.
+ */
 function useLimparAoConcluir(estado: EstadoFormulario) {
   const formulario = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -71,7 +75,7 @@ export function FormularioNovaEmpresa({ fusos }: { fusos: { valor: string; nome:
   const formulario = useLimparAoConcluir(estado);
 
   return (
-    <form ref={formulario} action={acao} className="formulario">
+    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario">
       <div className="campo">
         <label htmlFor="empresa-nome">Nome da empresa</label>
         <input id="empresa-nome" name="nome" autoComplete="off" required />
@@ -100,7 +104,7 @@ export function FormularioCriarDona({ empresaId }: { empresaId: string }) {
   const formulario = useLimparAoConcluir(estado);
 
   return (
-    <form ref={formulario} action={acao} className="formulario">
+    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario">
       <input type="hidden" name="empresaId" value={empresaId} />
       <CamposDona prefixo={empresaId} />
       <Mensagem estado={estado} />
@@ -116,7 +120,7 @@ export function FormularioRedefinirSenha({ usuarioId }: { usuarioId: string }) {
   const formulario = useLimparAoConcluir(estado);
 
   return (
-    <form ref={formulario} action={acao} className="formulario">
+    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario">
       <input type="hidden" name="usuarioId" value={usuarioId} />
       <div className="campo">
         <label htmlFor={`senha-${usuarioId}`}>Nova senha</label>
