@@ -7,6 +7,7 @@ import { Pool } from "pg";
 import { encerrarConexoes } from "@/db/clientes";
 import { comEmpresa } from "@/db/com-empresa";
 import { comPlataforma } from "@/db/com-plataforma";
+import { auth } from "@/modules/acesso/auth";
 import { user } from "@/modules/acesso/schema";
 import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { auditoria } from "@/modules/auditoria/schema";
@@ -57,6 +58,50 @@ export async function criarCadastrosDaAgenda(empresaId: string): Promise<void> {
     const mel = await criarPet(tx, rita.valor.id, { nome: "Mel", especie: "cao", porte: "P" });
     if (!mel.ok) throw new Error(JSON.stringify(mel.erros));
   });
+}
+
+/** Formato do `storageState` do Playwright, só com o cookie de sessão. */
+export type SessaoSalva = {
+  cookies: {
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+    expires: number;
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: "Lax" | "Strict" | "None";
+  }[];
+  origins: never[];
+};
+
+/**
+ * Abre a sessão da usuária pelo Better Auth no servidor (`auth.api`), sem passar pela tela: o limite de 5 logins
+ * por minuto vale só para a rota HTTP, e com dois perfis e vários arquivos a tela bateria nele. Devolve o cookie
+ * no formato do `storageState`, para o navegador do teste já começar com a sessão.
+ */
+export async function abrirSessao(email: string, senha: string, baseURL: string): Promise<SessaoSalva> {
+  const { headers } = await auth.api.signInEmail({ body: { email, password: senha }, returnHeaders: true });
+  const host = new URL(baseURL).hostname;
+  const cookies = headers.getSetCookie().map((linha) => {
+    const [par, ...atributos] = linha.split(";").map((parte) => parte.trim());
+    const igual = par!.indexOf("=");
+    const atributo = (nome: string) =>
+      atributos.find((a) => a.toLowerCase().startsWith(`${nome.toLowerCase()}=`))?.split("=")[1];
+    const maxAge = Number(atributo("Max-Age") ?? 0);
+    return {
+      name: par!.slice(0, igual),
+      value: par!.slice(igual + 1),
+      domain: host,
+      path: atributo("Path") ?? "/",
+      expires: maxAge > 0 ? Math.floor(Date.now() / 1000) + maxAge : -1,
+      httpOnly: atributos.some((a) => a.toLowerCase() === "httponly"),
+      secure: atributos.some((a) => a.toLowerCase() === "secure"),
+      sameSite: (atributo("SameSite") ?? "Lax") as "Lax" | "Strict" | "None",
+    };
+  });
+  if (cookies.length === 0) throw new Error("O Better Auth não devolveu o cookie de sessão.");
+  return { cookies, origins: [] };
 }
 
 /**

@@ -46,7 +46,10 @@ export default async function PaginaAtendimento({ params }: Props) {
       </Link>
       <header className="topo">
         <h1>{a.pet.nome}</h1>
-        <span className={`etiqueta etiqueta-status status-${a.status}`}>{NOMES_DOS_STATUS[a.status]}</span>
+        {/* role="status": o leitor de tela anuncia a mudança; o nome acessível deixa o teste independente do visual. */}
+        <span className={`etiqueta etiqueta-status status-${a.status}`} role="status" aria-label="Status atual">
+          {NOMES_DOS_STATUS[a.status]}
+        </span>
       </header>
       <p>
         {rotuloDoDia(inicio.dia)} · {inicio.hora}–{fim.hora}

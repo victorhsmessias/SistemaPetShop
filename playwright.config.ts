@@ -2,7 +2,9 @@ import { existsSync } from "node:fs";
 
 import { defineConfig, devices } from "@playwright/test";
 
-// Ponta a ponta com tela de iPhone e WebKit (o motor do Safari), contra o build de produção.
+// Ponta a ponta contra o build de produção, em dois perfis: iPhone 15 com WebKit (o motor do Safari, o aparelho da
+// piloto) e desktop 1440x900 com Chromium (o navegador mais comum no computador). Um teste roda nos dois, a menos que
+// tenha a etiqueta @um-perfil (só no iPhone) ou @desktop (só no desktop).
 // Localmente as conexões vêm do .env; no CI, das variáveis do workflow.
 if (existsSync(".env")) process.loadEnvFile(".env");
 
@@ -22,12 +24,13 @@ const comando = process.env.E2E_SEM_BUILD ? iniciar : `npm run build && ${inicia
 
 export default defineConfig({
   testDir: "./e2e",
-  // Uma dona e uma empresa por execução: os testes rodam em sequência.
+  // Um servidor e um banco: os testes rodam em sequência (cada arquivo e perfil tem a própria empresa e dona).
   workers: 1,
   // Cada teste percorre um fluxo inteiro (agendar, concluir, desfazer...) e leva de 20 a 30 s; com o padrão de 30 s,
   // a máquina carregada derrubava um teste por tempo. A margem da meia-noite continua valendo: no
-  // test:e2e:meia-noite, o relógio do servidor começa às 23:50 quando o servidor sobe e a rodada tem 2 testes, então
-  // no pior caso são 240 s de subida (webServer.timeout) + 2 x 60 s = 6 min, antes das 00:00.
+  // test:e2e:meia-noite, o relógio do servidor começa às 23:50 quando o servidor sobe e a rodada tem só os 2 testes
+  // com a etiqueta @meia-noite, no iPhone, então no pior caso são 240 s de subida (webServer.timeout) + 2 x 60 s =
+  // 6 min, antes das 00:00.
   timeout: 60_000,
   forbidOnly: ci,
   retries: 0,
@@ -40,7 +43,14 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "iphone", use: { ...devices["iPhone 15"] } }],
+  projects: [
+    { name: "iphone", use: { ...devices["iPhone 15"] }, grepInvert: /@desktop/ },
+    {
+      name: "desktop",
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
+      grepInvert: /@um-perfil/,
+    },
+  ],
   webServer: {
     command: comando,
     url: `${baseURL}/login`,

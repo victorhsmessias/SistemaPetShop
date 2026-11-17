@@ -24,3 +24,5 @@ Thumbs.db
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# sessões das donas do ponta a ponta (e2e/preparar.ts), apagadas no fim
+/e2e/.sessoes/

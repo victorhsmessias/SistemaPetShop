@@ -87,10 +87,10 @@ jobs:
       - name: Testes, incluindo os de isolamento
         run: npm test
 
-      - name: WebKit do Playwright (motor do Safari)
-        run: npx playwright install --with-deps webkit
+      - name: WebKit (motor do Safari, perfil iPhone) e Chromium (perfil desktop) do Playwright
+        run: npx playwright install --with-deps webkit chromium
 
-      - name: Ponta a ponta com tela de iPhone (build de produção, relógio às 12:00)
+      - name: Ponta a ponta no iPhone e no desktop (build de produção, relógio às 12:00)
         run: npm run test:e2e
 
       - name: Ponta a ponta às 23:50 e às 00:10 de São Paulo (servidor em UTC)
