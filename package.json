@@ -22,7 +22,7 @@
     "test:e2e:meia-noite": "tsx scripts/e2e-meia-noite.mts",
     "test:imagem": "tsx scripts/testar-imagem.mts",
     "test:backup": "tsx scripts/testar-backup.mts",
-    "test:banco-restaurado": "vitest run isolamento.test estrutura.test papel-backup.test"
+    "test:banco-restaurado": "vitest run --reporter=default isolamento.test estrutura.test papel-backup.test"
   },
   "dependencies": {
     "better-auth": "1.7.14",
