@@ -18,14 +18,14 @@ export type ErroTelefoneRepetido = { ok: false; erros: { telefone: string }; tut
 
 const LIMITE_DA_LISTA = 200;
 
+/** Termo só com dígitos e sinais de telefone: "+55 (11) 98765-4321", "98765.4321". */
+const PARECE_TELEFONE = /^[\d\s()+.-]+$/;
+
 /**
  * Lista os tutores, ou busca por nome do tutor, nome de um pet ativo ou telefone, sem diferenciar
  * maiúsculas nem acentos. O telefone só entra quando o termo parece telefone (B7 do QA, sessão 07).
  * Pets desativados não entram na busca nem na lista.
  */
-/** Termo só com dígitos e sinais de telefone: "+55 (11) 98765-4321", "98765.4321". */
-const PARECE_TELEFONE = /^[\d\s()+.-]+$/;
-
 export async function buscarTutores(tx: Transacao, busca = ""): Promise<TutorDaLista[]> {
   const termo = busca.trim();
   let filtro = sql`true`;
