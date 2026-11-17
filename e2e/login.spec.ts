@@ -26,7 +26,10 @@ test.describe("sem sessão", () => {
 
     await tocar(page.getByRole("button", { name: "Sair" }));
     await expect(page).toHaveURL(/\/login$/);
+    // O voltar termina no login (sem sessão, a agenda redireciona). Espera a URL antes de conferir a tela e de abrir
+    // outra: no WebKit, a conferência rodava com o voltar ainda em andamento (falhou no CI).
     await page.goBack();
+    await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { level: 1, name: "Entrar" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: "Agenda" })).toHaveCount(0);
     await page.goto("/clientes");
