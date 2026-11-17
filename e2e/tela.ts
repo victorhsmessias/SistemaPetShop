@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { test as base, expect, type Locator, type Page } from "@playwright/test";
+import { test as base, expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 import { hojeNoFuso, somarDias } from "@/modules/agenda/fuso";
 
@@ -27,10 +27,7 @@ type Fixtures = {
 // O segundo argumento de cada fixture se chama `usar` (e não `use`), para o ESLint não confundir com o hook do React.
 export const test = base.extend<Fixtures>({
   dona: async ({}, usar, testInfo) => {
-    const chave = `${path.basename(testInfo.file, ".spec.ts")}-${testInfo.project.name}`;
-    const dona = donasPreparadas()[chave];
-    if (!dona) throw new Error(`Nenhuma dona preparada para "${chave}": inclua o arquivo em e2e/preparar.ts.`);
-    await usar(dona);
+    await usar(donaDoArquivo(testInfo));
   },
   // O navegador já começa com a sessão da dona (aberta no globalSetup), sem passar pelo limite de logins.
   storageState: async ({ dona }, usar) => {
@@ -42,6 +39,14 @@ export const test = base.extend<Fixtures>({
 });
 
 export { expect };
+
+/** A dona do arquivo e do perfil do teste; `ordem` 2 é a segunda dona do arquivo (e2e/preparar.ts, `donas`). */
+export function donaDoArquivo(testInfo: TestInfo, ordem = 1): DonaPreparada {
+  const chave = `${path.basename(testInfo.file, ".spec.ts")}-${testInfo.project.name}${ordem > 1 ? `-${ordem}` : ""}`;
+  const dona = donasPreparadas()[chave];
+  if (!dona) throw new Error(`Nenhuma dona preparada para "${chave}": inclua o arquivo em e2e/preparar.ts.`);
+  return dona;
+}
 
 /** Hoje no fuso da empresa, pelo relógio do servidor do teste (e2e/relogio.mjs). */
 export function hoje(): string {

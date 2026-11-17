@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
@@ -9,6 +9,7 @@ import { comEmpresa } from "@/db/com-empresa";
 import { comPlataforma } from "@/db/com-plataforma";
 import { auth } from "@/modules/acesso/auth";
 import { user } from "@/modules/acesso/schema";
+import { agendar } from "@/modules/agenda/atendimentos";
 import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { auditoria } from "@/modules/auditoria/schema";
 import { criarUsuaria } from "@/modules/administracao/usuarias";
@@ -19,6 +20,8 @@ import { servico } from "@/modules/catalogo/schema";
 import { criarServico } from "@/modules/catalogo/servicos";
 import { empresa } from "@/modules/empresas/schema";
 import { categoria, formaPagamento, lancamento } from "@/modules/financeiro/schema";
+
+import { NOME_LONGO, SERVICO_LONGO } from "./apoio-dados";
 
 // Dados do teste de ponta a ponta: uma empresa com a dona, criadas como o painel faz, e apagadas no fim
 // pelo migrador (dono das tabelas). Prefixo [teste] e e-mail @teste.banho-e-tosa.local, como os outros testes.
@@ -69,6 +72,101 @@ export async function criarCadastrosDaAgenda(empresaId: string): Promise<void> {
     const mel = await criarPet(tx, rita.valor.id, { nome: "Mel", especie: "cao", porte: "P" });
     if (!mel.ok) throw new Error(JSON.stringify(mel.erros));
   });
+}
+
+type Transacao = Parameters<Parameters<typeof comEmpresa>[2]>[0];
+
+/** Falha o preparo com os erros da operação (só nomes de campos e mensagens, sem dados pessoais). */
+function exigir<T>(resultado: { ok: true; valor: T } | { ok: false; erros: Record<string, string | undefined> }): T {
+  if (!resultado.ok) throw new Error(`Preparação do ponta a ponta falhou: ${JSON.stringify(resultado.erros)}`);
+  return resultado.valor;
+}
+
+async function naEmpresa<T>(empresaId: string, fn: (tx: Transacao) => Promise<T>): Promise<T> {
+  return comEmpresa(empresaId, randomUUID(), fn);
+}
+
+/** Agenda pelas regras do app; com horário ocupado, confirma o aviso (como "Agendar mesmo assim"). */
+async function agendarConfirmando(tx: Transacao, entrada: Parameters<typeof agendar>[1]): Promise<{ id: string }> {
+  let resultado = await agendar(tx, entrada);
+  if (!resultado.ok && "horarioAvisado" in resultado) resultado = await agendar(tx, entrada, resultado.horarioAvisado);
+  return exigir(resultado);
+}
+
+/**
+ * Outra empresa, com tutor, pet, serviço e atendimento, para o teste de isolamento pela URL. Devolve os ids:
+ * a dona do teste tenta abri-los e precisa receber "não encontrado".
+ */
+export async function criarDadosDaOutraEmpresa(empresaId: string, dia: string): Promise<Record<string, string>> {
+  return naEmpresa(empresaId, async (tx) => {
+    const servicoId = exigir(await criarServico(tx, { nome: "Banho da outra", preco: "70,00", duracao: "60" })).id;
+    const tutorId = exigir(await criarTutor(tx, { nome: "Otávio Externo", telefone: "(41) 99555-1234" })).id;
+    const petId = exigir(await criarPet(tx, tutorId, { nome: "Biscoito", especie: "cao", porte: "M" })).id;
+    const atendimentoId = (
+      await agendarConfirmando(tx, { petId, dia, hora: "10:00", itens: [{ servicoId, preco: "70,00", duracao: "60" }] })
+    ).id;
+    return { servicoId, tutorId, petId, atendimentoId };
+  });
+}
+
+/** Tutores para a busca: acento, pet, telefone e um "%" no nome (que não pode virar curinga). */
+export async function criarCadastrosDaBusca(empresaId: string): Promise<void> {
+  await naEmpresa(empresaId, async (tx) => {
+    const edson = exigir(await criarTutor(tx, { nome: "Édson Araújo", telefone: "(11) 98765-4321" })).id;
+    exigir(await criarPet(tx, edson, { nome: "Pipoca", especie: "cao", porte: "P" }));
+    const renata = exigir(await criarTutor(tx, { nome: "Renata Lopes", telefone: "(21) 97000-1111" })).id;
+    exigir(await criarPet(tx, renata, { nome: "Mingau", especie: "gato", porte: "P" }));
+    exigir(await criarTutor(tx, { nome: "Loja 100% Pet", telefone: "(31) 3222-4444" }));
+  });
+}
+
+/** Dados longos: tutor com nome de 120 caracteres e 12 pets, serviço com nome de 120 e 4 atendimentos no mesmo horário. */
+export async function criarDadosLongos(empresaId: string, dia: string): Promise<void> {
+  await naEmpresa(empresaId, async (tx) => {
+    const servicoId = exigir(await criarServico(tx, { nome: SERVICO_LONGO, preco: "1.250,00", duracao: "90" })).id;
+    const tutorId = exigir(await criarTutor(tx, { nome: NOME_LONGO, telefone: "(51) 99888-7766" })).id;
+    for (let i = 1; i <= 12; i++) {
+      const petId = exigir(
+        await criarPet(tx, tutorId, {
+          nome: `Pet número ${i} com nome comprido`,
+          especie: "cao",
+          porte: "G",
+          observacoes: "Cuidados longos: não gosta de secador, é alérgico a xampu de aveia e precisa de focinheira.",
+        }),
+      ).id;
+      if (i <= 4) {
+        await agendarConfirmando(tx, { petId, dia, hora: "09:00", itens: [{ servicoId, preco: "1.250,00", duracao: "90" }] });
+      }
+    }
+  });
+}
+
+/** Tutor com uma palavra longa sem espaço (bug B4 do QA, visual): numa empresa só dele, para não afetar os outros. */
+export async function criarPalavraLonga(empresaId: string): Promise<void> {
+  await naEmpresa(empresaId, async (tx) => {
+    exigir(await criarTutor(tx, { nome: `iP${"W".repeat(100)}`, telefone: "(51) 99777-6655" }));
+  });
+}
+
+/** Suspende a empresa pelo papel plataforma, como o suporte faria (o painel ainda não suspende: H13, M4). */
+export async function suspenderEmpresa(empresaId: string): Promise<void> {
+  await comPlataforma(null, (tx) => tx.update(empresa).set({ status: "suspensa" }).where(eq(empresa.id, empresaId)));
+}
+
+/** Ids das empresas cujo nome começa com o prefixo (as criadas pelo painel no teste do administrador). */
+export async function empresasComPrefixo(prefixo: string): Promise<string[]> {
+  const url = process.env.DATABASE_URL_MIGRADOR;
+  if (!url) throw new Error("DATABASE_URL_MIGRADOR não definida.");
+  const pool = new Pool({ connectionString: url });
+  try {
+    const linhas = await drizzle({ client: pool })
+      .select({ id: empresa.id })
+      .from(empresa)
+      .where(like(empresa.nome, `${prefixo}%`));
+    return linhas.map((l) => l.id);
+  } finally {
+    await pool.end();
+  }
 }
 
 /** Formato do `storageState` do Playwright, só com o cookie de sessão. */
