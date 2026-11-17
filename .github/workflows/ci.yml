@@ -29,6 +29,9 @@ jobs:
   verificar:
     if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
+    # Um teste ou servidor travado não prende o runner por 6 h (o padrão). Estimativa com o ponta a ponta nos dois
+    # perfis: de 10 a 14 min (antes dele, 5 min).
+    timeout-minutes: 30
     # Credenciais descartáveis: o Postgres abaixo só existe dentro do runner, durante o job.
     env:
       PGHOST: localhost
@@ -117,6 +120,7 @@ jobs:
   teste-imagem:
     if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -133,6 +137,7 @@ jobs:
   teste-backup:
     if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
