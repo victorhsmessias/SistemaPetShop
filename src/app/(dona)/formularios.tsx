@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import { salvarPetAcao, salvarServicoAcao, salvarTutorAcao, type EstadoCadastro } from "@/app/(dona)/acoes";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
+import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 
 type Valores = Record<string, string>;
 
@@ -25,7 +26,7 @@ export function FormularioTutor({ id, valores, agendar }: { id?: string; valores
   const v = estado.valores;
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       {id && <input type="hidden" name="id" value={id} />}
       {agendar && <input type="hidden" name="agendar" value={agendar} />}
       <ErroGeral erro={estado.erros.geral} />
@@ -69,7 +70,7 @@ export function FormularioPet({
   const v = estado.valores;
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="tutorId" value={tutorId} />
       {petId && <input type="hidden" name="petId" value={petId} />}
       {agendar && <input type="hidden" name="agendar" value={agendar} />}
@@ -77,8 +78,7 @@ export function FormularioPet({
       <Campo nome="nome" rotulo="Nome do pet" erro={estado.erros.nome}>
         {(props) => <input {...props} defaultValue={v.nome} autoComplete="off" autoCapitalize="words" />}
       </Campo>
-      {/* key no Campo: remonta o select quando o estado muda, para o defaultValue valer. */}
-      <Campo key={`especie-${v.especie}`} nome="especie" rotulo="Espécie" erro={estado.erros.especie}>
+      <Campo nome="especie" rotulo="Espécie" erro={estado.erros.especie}>
         {(props) => (
           <select {...props} defaultValue={v.especie}>
             {especies.map((opcao) => (
@@ -89,7 +89,7 @@ export function FormularioPet({
           </select>
         )}
       </Campo>
-      <Campo key={`porte-${v.porte}`} nome="porte" rotulo="Porte" erro={estado.erros.porte}>
+      <Campo nome="porte" rotulo="Porte" erro={estado.erros.porte}>
         {(props) => (
           <select {...props} defaultValue={v.porte ?? ""}>
             <option value="" disabled>
@@ -124,7 +124,7 @@ export function FormularioServico({ id, valores }: { id?: string; valores?: Valo
   const v = estado.valores;
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       {id && <input type="hidden" name="id" value={id} />}
       <ErroGeral erro={estado.erros.geral} />
       <Campo nome="nome" rotulo="Nome do serviço" erro={estado.erros.nome}>

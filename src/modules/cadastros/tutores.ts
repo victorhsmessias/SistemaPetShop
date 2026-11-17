@@ -18,9 +18,13 @@ export type ErroTelefoneRepetido = { ok: false; erros: { telefone: string }; tut
 
 const LIMITE_DA_LISTA = 200;
 
+/** Termo só com dígitos e sinais de telefone: "+55 (11) 98765-4321", "98765.4321". */
+const PARECE_TELEFONE = /^[\d\s()+.-]+$/;
+
 /**
  * Lista os tutores, ou busca por nome do tutor, nome de um pet ativo ou telefone, sem diferenciar
- * maiúsculas nem acentos. Pets desativados não entram na busca nem na lista.
+ * maiúsculas nem acentos. O telefone só entra quando o termo parece telefone (B7 do QA, sessão 07).
+ * Pets desativados não entram na busca nem na lista.
  */
 export async function buscarTutores(tx: Transacao, busca = ""): Promise<TutorDaLista[]> {
   const termo = busca.trim();
@@ -34,9 +38,10 @@ export async function buscarTutores(tx: Transacao, busca = ""): Promise<TutorDaL
          where ${pet.empresaId} = ${tutor.empresaId} and ${pet.tutorId} = ${tutor.id} and ${pet.ativo}
            and unaccent(lower(${pet.nome})) like unaccent(lower(${padrao}))
       )`;
-    // Telefone pelos dígitos: "98765-4321", "(11) 98765" e "+55 11 9…" encontram +5511987654321.
+    // Telefone pelos dígitos: "98765-4321", "(11) 98765" e "+55 11 9…" encontram +5511987654321. Só quando o termo
+    // parece telefone: em "Rex 2023" ou "ana 98888", os dígitos fazem parte do texto e não buscam no telefone.
     filtro =
-      digitos.length >= 3
+      PARECE_TELEFONE.test(termo) && digitos.length >= 3
         ? sql`(${porTexto} or regexp_replace(${tutor.telefone}, '\\D', '', 'g') like ${`%${digitos}%`})`
         : sql`(${porTexto})`;
   }

@@ -77,6 +77,14 @@ describe("busca de tutores", () => {
     expect(nomes(await emA((tx) => buscarTutores(tx, "")))).toEqual(["Ana Lúcia", "João Conceição", "Tutor Operações A"]);
   });
 
+  it.each([
+    ["ana 98888", "nome de outro tutor com parte do telefone do João"],
+    ["joão 1111", "nome com o fim do telefone"],
+    ["rex 2023", "pet com um ano"],
+  ])("%j, texto com dígitos, procura só no texto: não casa telefone (%s)", async (busca) => {
+    expect(await emA((tx) => buscarTutores(tx, busca))).toEqual([]);
+  });
+
   it("% e _ digitados não viram curinga", async () => {
     expect(await emA((tx) => buscarTutores(tx, "%"))).toEqual([]);
     expect(await emA((tx) => buscarTutores(tx, "_"))).toEqual([]);

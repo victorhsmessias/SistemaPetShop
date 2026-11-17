@@ -20,5 +20,12 @@ export default defineConfig({
     // (src/modules/acesso/senha-dos-testes.ts), o que tira a maior parte do custo desses ganchos.
     testTimeout: 15000,
     hookTimeout: 30000,
+    // Além do terminal, um relatório JUnit com as falhas e a saída de cada teste: uma falha que não se repete fica
+    // registrada (qual arquivo, qual teste, a mensagem). O CI anexa o arquivo quando falha. O test:banco-restaurado
+    // desliga com --reporter=default: roda contra a cópia de um backup, e o relatório guardaria dados reais em disco.
+    reporters: ["default", ["junit", { outputFile: "vitest-report/junit.xml" }]],
+    // Workers no padrão (núcleos - 1). O papel app tem CONNECTION LIMIT 30 e cada arquivo abre o próprio pool, mas usa
+    // poucas conexões: medido em 17/11/2026 (pg_stat_activity a cada 50 ms), o pico foi 11 com 11 workers. Se um dia
+    // passar de 20, limite aqui (maxWorkers) antes de mexer no limite do papel.
   },
 });

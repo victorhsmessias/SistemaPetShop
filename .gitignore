@@ -24,3 +24,7 @@ Thumbs.db
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# relatório do Vitest (vitest.config.mts)
+/vitest-report/
+# sessões das donas do ponta a ponta (e2e/preparar.ts), apagadas no fim
+/e2e/.sessoes/

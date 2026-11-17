@@ -28,7 +28,7 @@ export default async function PaginaAdmin() {
       ) : (
         <ul className="lista-simples">
           {empresas.map((item) => (
-            <li key={item.id} className="cartao">
+            <li key={item.id} id={`empresa-${item.id}`} className="cartao">
               <h2>{item.nome}</h2>
               <p className="suave">
                 <span className="etiqueta">{item.status}</span>{" "}

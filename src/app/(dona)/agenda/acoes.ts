@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
@@ -30,12 +30,15 @@ export type EstadoAgenda = {
   servicos: string[];
   conflitos?: Conflito[];
   horarioAvisado?: string;
+  /** Recusa por estado (ver avisoDaRecusa): a página mostra acima das seções. */
+  aviso?: string;
 };
 
-export type EstadoStatus = { erro?: string };
+/** `erro`: de campo (forma de pagamento), no formulário. `aviso`: recusa por estado (ver avisoDaRecusa). */
+export type EstadoStatus = { erro?: string; aviso?: string };
 
 /** Desfazer a conclusão: o motivo digitado volta com o erro, para não se perder. */
-export type EstadoDesfazer = { erros: Erros; motivo: string };
+export type EstadoDesfazer = { erros: Erros; motivo: string; aviso?: string };
 
 const texto = (dados: FormData, campo: string) => String(dados.get(campo) ?? "");
 
@@ -70,6 +73,20 @@ function revalidarAgenda() {
   revalidatePath("/agenda", "layout");
 }
 
+/**
+ * Recusa por estado (erro `geral`: o status ou o total mudou, o atendimento foi encerrado ou já tinha a conclusão
+ * desfeita, toque duplo): nada foi gravado, mas a tela mostrava um estado velho. `refresh()` re-renderiza a página
+ * na mesma resposta da ação, com o estado atual, sem invalidar cache: a dona não precisa recarregar (o app instalado
+ * no iPhone não tem esse botão). O texto volta em `aviso`, que a página mostra acima das seções
+ * (aviso-da-pagina.tsx), porque o refresh pode trocar a seção do formulário. Erros de campo não atualizam a tela.
+ */
+function avisoDaRecusa(erros: Erros): { erros: Erros; aviso?: string } {
+  const { geral, ...deCampo } = erros;
+  if (!geral) return { erros };
+  refresh();
+  return { erros: deCampo, aviso: geral };
+}
+
 /** Concluir e desfazer mudam a receita: o Financeiro também é revalidado. */
 function revalidarAgendaEFinanceiro() {
   revalidarAgenda();
@@ -96,7 +113,8 @@ export async function mudarStatusAcao(_anterior: EstadoStatus, dados: FormData):
   const resultado = await naEmpresaDaDona((tx) =>
     mudarStatus(tx, texto(dados, "id"), texto(dados, "de"), texto(dados, "para")),
   );
-  if (!resultado.ok) return { erro: resultado.erros.geral };
+  // mudarStatus só recusa com erro geral: tudo vira aviso.
+  if (!resultado.ok) return { aviso: avisoDaRecusa(resultado.erros).aviso };
   revalidarAgenda();
   return {};
 }
@@ -106,7 +124,7 @@ export async function editarServicosAcao(_anterior: EstadoAgenda, dados: FormDat
   const { servicos, itens, valores } = lerItens(dados);
   const horarioAvisado = texto(dados, "horarioAvisado") || undefined;
   const resultado = await naEmpresaDaDona((tx) => editarItens(tx, id, itens, horarioAvisado));
-  if (!resultado.ok) return estadoDe(resultado, valores, servicos);
+  if (!resultado.ok) return { ...estadoDe(resultado, valores, servicos), ...avisoDaRecusa(resultado.erros) };
   revalidarAgenda();
   redirect(`/agenda/${resultado.valor.id}`);
 }
@@ -116,7 +134,7 @@ export async function editarHorarioAcao(_anterior: EstadoAgenda, dados: FormData
   const entrada = { dia: texto(dados, "dia"), hora: texto(dados, "hora"), termino: texto(dados, "termino") };
   const horarioAvisado = texto(dados, "horarioAvisado") || undefined;
   const resultado = await naEmpresaDaDona((tx) => editarHorario(tx, id, entrada, horarioAvisado));
-  if (!resultado.ok) return estadoDe(resultado, entrada, []);
+  if (!resultado.ok) return { ...estadoDe(resultado, entrada, []), ...avisoDaRecusa(resultado.erros) };
   revalidarAgenda();
   redirect(`/agenda/${resultado.valor.id}`);
 }
@@ -144,7 +162,10 @@ export async function concluirAcao(_anterior: EstadoStatus, dados: FormData): Pr
       totalVisto: /^\d+$/.test(total) ? Number(total) : undefined,
     }),
   );
-  if (!resultado.ok) return { erro: resultado.erros.geral ?? resultado.erros.formaPagamento };
+  if (!resultado.ok) {
+    const { erros, aviso } = avisoDaRecusa(resultado.erros);
+    return aviso ? { aviso } : { erro: erros.formaPagamento };
+  }
   revalidarAgendaEFinanceiro();
   return {};
 }
@@ -153,7 +174,7 @@ export async function concluirAcao(_anterior: EstadoStatus, dados: FormData): Pr
 export async function desfazerConclusaoAcao(_anterior: EstadoDesfazer, dados: FormData): Promise<EstadoDesfazer> {
   const motivo = texto(dados, "motivo");
   const resultado = await naEmpresaDaDona((tx) => desfazerConclusao(tx, texto(dados, "id"), motivo));
-  if (!resultado.ok) return { erros: resultado.erros, motivo };
+  if (!resultado.ok) return { ...avisoDaRecusa(resultado.erros), motivo };
   revalidarAgendaEFinanceiro();
   return { erros: {}, motivo: "" };
 }

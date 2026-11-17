@@ -210,7 +210,8 @@ No computador do Victor, sem tocar na produção. Pré-requisitos:
    ```
 
    No Bash, o mesmo com `export NOME=valor` em cada linha. Todos os arquivos precisam passar; uma falha de
-   isolamento no banco restaurado é vazamento, nunca "flaky".
+   isolamento no banco restaurado é vazamento, nunca "flaky". O resultado fica só no terminal: este comando não grava
+   o relatório em `vitest-report/` (o `npm test` grava), para nenhum dado da cópia ficar em arquivo.
 
 4. Anote a data, o nome do backup, as contagens e o tempo total (a meta é restaurar em até 2 h).
 5. Apague tudo: `docker compose -f docker-compose.backup-teste.yml -p restauracao down -v`. Apague também o arquivo da

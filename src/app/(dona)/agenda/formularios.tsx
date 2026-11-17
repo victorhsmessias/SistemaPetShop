@@ -12,8 +12,11 @@ import {
   mudarStatusAcao,
   type EstadoAgenda,
   type EstadoDesfazer,
+  type EstadoStatus,
 } from "@/app/(dona)/agenda/acoes";
+import { useAcaoComAviso } from "@/app/(dona)/agenda/aviso-da-pagina";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
+import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 import { ACOES_DOS_STATUS, NOMES_DOS_STATUS, proximosStatus, statusAnterior, type StatusAtendimento } from "@/modules/agenda/status";
 import { centavosParaTexto, formatarReais } from "@/modules/compartilhado/dinheiro";
 
@@ -53,8 +56,8 @@ function AvisoDeHorario({ estado }: { estado: EstadoAgenda }) {
 }
 
 /**
- * Serviços do atendimento: ao marcar, preço e duração vêm do catálogo e podem ser editados.
- * `key` no componente pai remonta a lista quando o formulário volta do servidor, com o que foi marcado.
+ * Serviços do atendimento: ao marcar, preço e duração vêm do catálogo e podem ser editados. Os marcados ficam no
+ * estado do componente, e o formulário não é limpo quando volta do servidor (enviarSemLimpar).
  */
 function EscolhaDeServicos({
   servicos,
@@ -163,7 +166,7 @@ export function FormularioAgendamento({
   const v = estado.valores;
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="petId" value={petId} />
       <ErroGeral erro={estado.erros.geral ?? estado.erros.pet} />
       <div className="campos-lado-a-lado">
@@ -174,7 +177,7 @@ export function FormularioAgendamento({
           {(props) => <input {...props} type="time" step={300} defaultValue={v.hora} />}
         </Campo>
       </div>
-      <EscolhaDeServicos key={JSON.stringify(estado.servicos)} servicos={servicos} estado={estado} />
+      <EscolhaDeServicos servicos={servicos} estado={estado} />
       <Campo
         nome="observacoes"
         rotulo="Observações (opcional)"
@@ -205,7 +208,8 @@ export function FormularioServicosDoAtendimento({
       [`duracao_${e.servicoId}`, String(e.duracaoMin)],
     ]),
   );
-  const [estado, acao, enviando] = useActionState(
+  // Recusa por estado (atendimento encerrado em outra tela) vai para o aviso da página: a seção some no refresh.
+  const [estado, acao, enviando] = useAcaoComAviso(
     editarServicosAcao,
     inicial(
       valores,
@@ -214,11 +218,9 @@ export function FormularioServicosDoAtendimento({
   );
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
-      <ErroGeral erro={estado.erros.geral} />
       <EscolhaDeServicos
-        key={JSON.stringify(estado.servicos)}
         servicos={servicos}
         estado={estado}
         legendaVisivel={false}
@@ -249,7 +251,7 @@ export function FormularioHorario({
   hora: string;
   termino: string;
 }) {
-  const [estado, acao, enviando] = useActionState(editarHorarioAcao, inicial({ dia, hora, termino }));
+  const [estado, acao, enviando] = useAcaoComAviso(editarHorarioAcao, inicial({ dia, hora, termino }));
   const [inicio, setInicio] = useState(estado.valores.hora ?? hora);
   const [fim, setFim] = useState(estado.valores.termino ?? termino);
 
@@ -263,9 +265,8 @@ export function FormularioHorario({
   };
 
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
-      <ErroGeral erro={estado.erros.geral} />
       <Campo nome="dia" rotulo="Dia" erro={estado.erros.dia}>
         {(props) => <input {...props} type="date" defaultValue={estado.valores.dia} />}
       </Campo>
@@ -288,7 +289,7 @@ export function FormularioHorario({
 export function FormularioObservacoes({ id, observacoes }: { id: string; observacoes: string }) {
   const [estado, acao, enviando] = useActionState(editarObservacoesAcao, inicial({ observacoes }));
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
       <ErroGeral erro={estado.erros.geral} />
       <Campo
@@ -318,7 +319,7 @@ export function BotoesDeStatus({
   /** confirmado_em preenchido: decide para onde o desfazer volta. */
   confirmado: boolean;
 }) {
-  const [estado, acao, enviando] = useActionState(mudarStatusAcao, {});
+  const [, acao, enviando] = useAcaoComAviso(mudarStatusAcao, {} as EstadoStatus);
   const proximos = proximosStatus(status);
   const principais = proximos.filter((p) => p !== "cancelado" && p !== "faltou");
   const encerrar = proximos.filter((p) => p === "cancelado" || p === "faltou");
@@ -329,7 +330,6 @@ export function BotoesDeStatus({
     <form action={acao} className="formulario">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="de" value={status} />
-      <ErroGeral erro={estado.erro} />
       {principais.map((para, i) => (
         <button
           key={para}
@@ -378,7 +378,8 @@ export function FormularioConcluir({
   totalCentavos: number;
   formas: OpcaoFormaPagamento[];
 }) {
-  const [estado, acao, enviando] = useActionState(concluirAcao, {});
+  // `erro`: escolha da forma de pagamento, aqui; recusa por estado vai para o aviso da página.
+  const [estado, acao, enviando] = useAcaoComAviso(concluirAcao, {} as EstadoStatus);
   const [escolhendo, setEscolhendo] = useState(false);
   const total = formatarReais(totalCentavos);
 
@@ -426,7 +427,7 @@ export function FormularioConcluir({
  * receita). O motivo digitado volta com o erro.
  */
 export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; temReceita: boolean }) {
-  const [estado, acao, enviando] = useActionState(desfazerConclusaoAcao, { erros: {}, motivo: "" } as EstadoDesfazer);
+  const [estado, acao, enviando] = useAcaoComAviso(desfazerConclusaoAcao, { erros: {}, motivo: "" } as EstadoDesfazer);
   const [aberto, setAberto] = useState(false);
 
   if (!aberto) {
@@ -437,9 +438,8 @@ export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; te
     );
   }
   return (
-    <form action={acao} className="formulario" noValidate>
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="id" value={id} />
-      <ErroGeral erro={estado.erros.geral} />
       {temReceita && (
         <Campo
           nome="motivo"

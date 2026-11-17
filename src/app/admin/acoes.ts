@@ -12,12 +12,20 @@ import { DadosInvalidosError } from "@/modules/administracao/usuarias";
 // Server Actions do painel. Cada uma chega ao módulo de administração, que confere role = 'admin'
 // no servidor antes de qualquer coisa. Nenhuma senha vai para os logs.
 
-export type EstadoFormulario = { tipo: "inicial" } | { tipo: "erro"; mensagem: string } | { tipo: "ok"; mensagem: string };
+export type EstadoFormulario =
+  | { tipo: "inicial" }
+  /** `campo`: o erro é de um campo só (a senha) e aparece nele. */
+  | { tipo: "erro"; mensagem: string; campo?: "senha" }
+  | { tipo: "ok"; mensagem: string }
+  /** A empresa foi criada e a dona não: o formulário é limpo e aponta para "Criar dona" no cartão dela. */
+  | { tipo: "parcial"; mensagem: string; empresaId: string; empresaNome: string };
 
 const texto = (dados: FormData, campo: string) => String(dados.get(campo) ?? "");
 
 function falha(erro: unknown, acao: string): EstadoFormulario {
-  if (erro instanceof DadosInvalidosError) return { tipo: "erro", mensagem: erro.message };
+  if (erro instanceof DadosInvalidosError) {
+    return { tipo: "erro", mensagem: erro.message, ...(erro.campo ? { campo: erro.campo } : {}) };
+  }
   if (erro instanceof AcessoNegadoError || erro instanceof NaoAutenticadoError) {
     return { tipo: "erro", mensagem: "Acesso negado." };
   }
@@ -34,7 +42,15 @@ export async function criarEmpresaAcao(_anterior: EstadoFormulario, dados: FormD
       dona: { nome: texto(dados, "donaNome"), email: texto(dados, "donaEmail"), senha: texto(dados, "donaSenha") },
     });
     revalidatePath("/admin");
-    if (resultado.situacao === "sem_dona") return { tipo: "erro", mensagem: resultado.erro };
+    // Reenviar o mesmo formulário criaria outra empresa: ele é limpo, e a dona é criada no cartão da empresa.
+    if (resultado.situacao === "sem_dona") {
+      return {
+        tipo: "parcial",
+        mensagem: `${resultado.erro} Crie a dona em "Criar dona", no cartão da empresa.`,
+        empresaId: resultado.empresaId,
+        empresaNome: texto(dados, "nome").trim(),
+      };
+    }
     return { tipo: "ok", mensagem: "Empresa e dona criadas. Passe a senha provisória para a dona." };
   } catch (erro) {
     return falha(erro, "criar a empresa");
