@@ -27,6 +27,11 @@ export function AvisoDaPagina() {
 /**
  * `useActionState` que publica o `aviso` da resposta na página (e o apaga quando a ação passa). Os erros de campo
  * continuam no estado do formulário.
+ *
+ * Custo aceito (revisão do PR #4): a ação passada ao `useActionState` é uma função do cliente que embrulha a Server
+ * Action, e não a Server Action em si. Por isso, sem JavaScript, estes formulários (status, concluir, desfazer a
+ * conclusão, horário e serviços) não enviam mais; antes enviavam. Aceito porque o React guarda o envio feito
+ * enquanto o JavaScript carrega e o repete depois da hidratação, e a piloto usa o app instalado no iPhone.
  */
 export function useAcaoComAviso<E extends { aviso?: string }>(
   acao: (anterior: E, dados: FormData) => Promise<E>,
