@@ -13,23 +13,32 @@ import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 
 const inicial: EstadoFormulario = { tipo: "inicial" };
 
+const CLASSES = { erro: "mensagem-erro", ok: "mensagem-sucesso", parcial: "mensagem-aviso" } as const;
+
 function Mensagem({ estado }: { estado: EstadoFormulario }) {
   if (estado.tipo === "inicial") return null;
   return (
-    <p className={`mensagem ${estado.tipo === "ok" ? "mensagem-sucesso" : "mensagem-erro"}`} role="status">
+    <p className={`mensagem ${CLASSES[estado.tipo]}`} role="status">
       {estado.mensagem}
+      {estado.tipo === "parcial" && (
+        <>
+          {" "}
+          <a href={`#empresa-${estado.empresaId}`}>Ir para {estado.empresaNome}</a>
+        </>
+      )}
     </p>
   );
 }
 
 /**
- * Limpa o formulário depois de um envio bem-sucedido (senhas não ficam na tela). Com erro, o que foi digitado fica
- * (enviarSemLimpar), inclusive a senha, que não volta do servidor.
+ * Limpa o formulário depois de um envio bem-sucedido (senhas não ficam na tela) e depois da criação parcial (a
+ * empresa já existe: reenviar criaria outra). Com erro, o que foi digitado fica (enviarSemLimpar), inclusive a senha,
+ * que não volta do servidor.
  */
 function useLimparAoConcluir(estado: EstadoFormulario) {
   const formulario = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    if (estado.tipo === "ok") formulario.current?.reset();
+    if (estado.tipo === "ok" || estado.tipo === "parcial") formulario.current?.reset();
   }, [estado]);
   return formulario;
 }

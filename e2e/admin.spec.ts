@@ -77,6 +77,40 @@ test("o e-mail já em uso mostra a mensagem e mantém o que foi digitado (B2)", 
   await expect(cartaoDaEmpresa(page, nome)).toHaveCount(0);
 });
 
+test("empresa criada sem a dona: o formulário é limpo e aponta para Criar dona na empresa já criada", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  const nome = `${PREFIXO_DO_PAINEL} ${randomUUID().slice(0, 8)}`;
+  const email = `dona-painel-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`;
+  await page.goto("/admin");
+  await abrir(page, "Nova empresa");
+  const formulario = page.locator("details", { has: page.locator("summary", { hasText: "Nova empresa" }) });
+  await formulario.getByLabel("Nome da empresa").fill(nome);
+  await formulario.getByLabel("Nome da dona").fill("Dona tardia");
+  await formulario.getByLabel("E-mail da dona").fill(email);
+  // Senha acima do máximo do Better Auth (128): o painel aceita, a empresa é criada e a criação da dona falha.
+  await formulario.getByLabel("Senha provisória").fill("s".repeat(129));
+  await formulario.getByRole("button", { name: "Criar empresa e dona" }).click();
+
+  const mensagem = formulario.getByRole("status");
+  await expect(mensagem).toContainText("Empresa criada, mas a dona não");
+  await expect(mensagem).toContainText(`Crie a dona em "Criar dona", no cartão da empresa.`);
+  // Limpo: reenviar não cria outra empresa.
+  await expect(formulario.getByLabel("Nome da empresa")).toHaveValue("");
+  await expect(formulario.getByLabel("Senha provisória")).toHaveValue("");
+
+  await mensagem.getByRole("link", { name: `Ir para ${nome}` }).click();
+  const cartao = cartaoDaEmpresa(page, nome);
+  await expect(cartao).toContainText("Esta empresa ainda não tem usuária.");
+  await abrir(cartao, "Criar dona");
+  await cartao.getByLabel("Nome da dona").fill("Dona tardia");
+  await cartao.getByLabel("E-mail da dona").fill(email);
+  await cartao.getByLabel("Senha provisória").fill(`e2e-${randomBytes(6).toString("hex")}`);
+  await cartao.getByRole("button", { name: "Criar dona" }).click();
+  await expect(cartao).toContainText(email);
+  await expect(page.getByRole("heading", { level: 2, name: nome, exact: true })).toHaveCount(1);
+});
+
 test("encerrar as sessões desconecta a dona do outro aparelho", { tag: "@desktop" }, async ({ page, browser, dona }) => {
   const aparelho = await aparelhoDaDona(browser, dona.sessao!);
 
