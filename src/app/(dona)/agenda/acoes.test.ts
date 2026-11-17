@@ -28,7 +28,8 @@ const requisicao = vi.hoisted(() => ({ cookie: "" }));
 vi.mock("next/headers", () => ({
   headers: async () => new Headers(requisicao.cookie ? { cookie: requisicao.cookie } : {}),
 }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+const cache = vi.hoisted(() => ({ revalidatePath: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/cache", () => cache);
 
 const {
   agendarAcao,
@@ -259,9 +260,12 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
     const id = await novoAtendimentoDeA();
     expect(await mudarStatusAcao({}, formulario({ id, de: "agendado", para: "confirmado" }))).toEqual({});
     expect(await mudarStatusAcao({}, formulario({ id, de: "confirmado", para: "agendado" }))).toEqual({});
+    cache.refresh.mockClear();
     const repetido = await mudarStatusAcao({}, formulario({ id, de: "confirmado", para: "agendado" }));
     expect(repetido.erro).toContain("acabou de ser alterado");
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
+    // A tela desatualizada é re-renderizada na mesma resposta, com o status atual (B1).
+    expect(cache.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("horário ocupado volta como aviso, com os dados digitados; confirmado, agenda", async () => {
@@ -379,8 +383,11 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
 
   it("total diferente do que a tela mostrava volta com mensagem, sem concluir", async () => {
     const id = await novoAtendimentoDeA();
+    cache.refresh.mockClear();
     const r = await concluirAcao({}, conclusao(id, a.formaPagamentoId, "agendado", "1"));
     expect(r.erro).toMatch(/O total mudou para R\$\s50,00/);
+    // A tela é re-renderizada com o total atual (B1).
+    expect(cache.refresh).toHaveBeenCalledTimes(1);
     expect(await receitasDoAtendimento(a, id)).toEqual([]);
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("agendado");
   });

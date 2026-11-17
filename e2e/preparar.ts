@@ -65,6 +65,7 @@ const PEDIDOS: Pedido[] = [
   { arquivo: "atendimento", perfis: PERFIS, cadastrosDaAgenda: true },
   { arquivo: "login", perfis: PERFIS },
   { arquivo: "agendamento", perfis: IPHONE, cadastrosDaAgenda: true },
+  { arquivo: "concorrencia", perfis: IPHONE, cadastrosDaAgenda: true },
   { arquivo: "navegacao", perfis: IPHONE },
   { arquivo: "busca", perfis: IPHONE, preparar: (empresaId) => criarCadastrosDaBusca(empresaId) },
   {

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
@@ -70,6 +70,15 @@ function revalidarAgenda() {
   revalidatePath("/agenda", "layout");
 }
 
+/**
+ * Recusa por página desatualizada (status ou total mudou, toque duplo): nada foi gravado, mas a tela mostrava um
+ * estado velho. `refresh()` re-renderiza a página na mesma resposta da ação, com o estado atual e o aviso, sem
+ * invalidar cache: a dona não precisa recarregar (o app instalado no iPhone não tem esse botão).
+ */
+function mostrarEstadoAtual() {
+  refresh();
+}
+
 /** Concluir e desfazer mudam a receita: o Financeiro também é revalidado. */
 function revalidarAgendaEFinanceiro() {
   revalidarAgenda();
@@ -96,7 +105,10 @@ export async function mudarStatusAcao(_anterior: EstadoStatus, dados: FormData):
   const resultado = await naEmpresaDaDona((tx) =>
     mudarStatus(tx, texto(dados, "id"), texto(dados, "de"), texto(dados, "para")),
   );
-  if (!resultado.ok) return { erro: resultado.erros.geral };
+  if (!resultado.ok) {
+    mostrarEstadoAtual();
+    return { erro: resultado.erros.geral };
+  }
   revalidarAgenda();
   return {};
 }
@@ -144,7 +156,10 @@ export async function concluirAcao(_anterior: EstadoStatus, dados: FormData): Pr
       totalVisto: /^\d+$/.test(total) ? Number(total) : undefined,
     }),
   );
-  if (!resultado.ok) return { erro: resultado.erros.geral ?? resultado.erros.formaPagamento };
+  if (!resultado.ok) {
+    mostrarEstadoAtual();
+    return { erro: resultado.erros.geral ?? resultado.erros.formaPagamento };
+  }
   revalidarAgendaEFinanceiro();
   return {};
 }
