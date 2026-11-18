@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import { salvarPetAcao, salvarServicoAcao, salvarTutorAcao, type EstadoCadastro } from "@/app/(dona)/acoes";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
+import { Icone } from "@/app/componentes/icone";
 import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 
 type Valores = Record<string, string>;
@@ -37,14 +38,15 @@ export function FormularioTutor({ id, valores, agendar }: { id?: string; valores
         {(props) => <input {...props} type="tel" inputMode="tel" defaultValue={v.telefone} autoComplete="off" />}
       </Campo>
       {estado.tutorExistenteId && (
-        <p className="mensagem mensagem-aviso">
-          <Link href={`/clientes/${estado.tutorExistenteId}`}>Abrir o tutor já cadastrado</Link>
-        </p>
+        <Link href={`/clientes/${estado.tutorExistenteId}`} className="botao-link botao-secundario">
+          <Icone nome="clientes" />
+          Abrir o cliente já cadastrado
+        </Link>
       )}
       <Campo nome="observacoes" rotulo="Observações" erro={estado.erros.observacoes} dica={DICA_OBSERVACOES}>
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
-      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Cadastrar tutor"} />
+      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Salvar cliente"} />
     </form>
   );
 }
@@ -114,7 +116,7 @@ export function FormularioPet({
       >
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
-      <BotaoSalvar enviando={enviando} rotulo={petId ? "Salvar alterações" : "Cadastrar pet"} />
+      <BotaoSalvar enviando={enviando} rotulo={petId ? "Salvar alterações" : "Salvar pet"} />
     </form>
   );
 }

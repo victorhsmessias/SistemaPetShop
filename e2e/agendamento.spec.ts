@@ -15,7 +15,7 @@ test("o atalho ?agendar= inválido não leva a outro endereço: o cadastro segue
   await page.goto(`/clientes/novo?agendar=${encodeURIComponent("https://exemplo.invalido/agenda")}`);
   await page.getByLabel("Nome do tutor").fill("Paula Atalho");
   await page.getByLabel("Telefone (WhatsApp)").fill("(61) 99111-2233");
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}$`));
   await expect(page.getByRole("heading", { level: 1, name: "Paula Atalho" })).toBeVisible();
 
@@ -24,11 +24,11 @@ test("o atalho ?agendar= inválido não leva a outro endereço: o cadastro segue
   await page.goto(`/clientes/novo?agendar=${dia}T25:00`);
   await page.getByLabel("Nome do tutor").fill("Pedro Atalho");
   await page.getByLabel("Telefone (WhatsApp)").fill("(61) 99111-4455");
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}/pets/novo\\?agendar=${dia}$`));
   await page.getByLabel("Nome do pet").fill("Bolinha");
   await page.getByLabel("Porte").selectOption({ label: "Pequeno (P)" });
-  await tocar(page.getByRole("button", { name: "Cadastrar pet" }));
+  await tocar(page.getByRole("button", { name: "Salvar pet" }));
   await expect(page).toHaveURL(new RegExp(`/agenda/novo\\?dia=${dia}&pet=${UUID}$`));
   await expect(page.getByRole("heading", { level: 2, name: "Bolinha" })).toBeVisible();
   await expect(page.getByLabel("Hora")).toHaveValue("");

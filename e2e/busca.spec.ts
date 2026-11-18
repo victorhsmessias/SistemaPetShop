@@ -41,7 +41,7 @@ test("texto com dígitos procura só no texto: o nome de um tutor com o telefone
   await expect(porTelefone.first()).toContainText("Édson Araújo");
 });
 
-test("sem resultado, a busca diz o que procurou; o % é literal, não curinga", { tag: "@um-perfil" }, async ({ page, tocar }) => {
+test("sem resultado, a busca diz o que procurou; o % é literal, não curinga", { tag: "@um-perfil" }, async ({ page }) => {
   await buscar(page, "xyz");
   await expect(page.getByText('Nada encontrado para "xyz".')).toBeVisible();
 
@@ -49,10 +49,9 @@ test("sem resultado, a busca diz o que procurou; o % é literal, não curinga", 
   await expect(comPorcento).toHaveCount(1);
   await expect(comPorcento.first()).toContainText("Loja 100% Pet");
 
-  // A busca pela tela (campo e botão) leva ao mesmo resultado.
+  // A busca pela tela (o campo filtra ao digitar) leva ao mesmo resultado.
   await page.goto("/clientes");
   await page.getByLabel("Buscar por tutor, pet ou telefone").fill("renata");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await expect(page).toHaveURL(/busca=renata/);
   await expect(page.getByRole("list", { name: "Tutores" }).getByRole("listitem")).toHaveCount(1);
 });

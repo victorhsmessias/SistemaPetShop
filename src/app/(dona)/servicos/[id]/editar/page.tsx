@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { alternarServicoAtivoAcao } from "@/app/(dona)/acoes";
 import { FormularioServico } from "@/app/(dona)/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Icone } from "@/app/componentes/icone";
 import { Voltar } from "@/app/componentes/voltar";
 import { obterServico } from "@/modules/catalogo/servicos";
 import { centavosParaTexto } from "@/modules/compartilhado/dinheiro";
@@ -42,9 +43,17 @@ export default async function PaginaEditarServico({ params }: Props) {
         <form action={alternarServicoAtivoAcao}>
           <input type="hidden" name="id" value={servico.id} />
           <input type="hidden" name="ativo" value={servico.ativo ? "false" : "true"} />
-          <button type="submit" className="botao-secundario" style={{ width: "100%" }}>
-            {servico.ativo ? "Desativar serviço" : "Reativar serviço"}
-          </button>
+          {servico.ativo ? (
+            <button type="submit" className="botao-perigo botao-largo">
+              <Icone nome="proibido" />
+              Desativar serviço
+            </button>
+          ) : (
+            <button type="submit" className="botao-secundario botao-largo">
+              <Icone nome="desfazer" />
+              Reativar serviço
+            </button>
+          )}
         </form>
       </section>
     </main>

@@ -2,86 +2,156 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { alternarPetAtivoAcao } from "@/app/(dona)/acoes";
+import { urlDoAgendamento } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { EstadoVazio } from "@/app/componentes/estado-vazio";
+import { Icone } from "@/app/componentes/icone";
+import { SeloDeStatus } from "@/app/componentes/selo-status";
 import { Voltar } from "@/app/componentes/voltar";
+import { proximoEUltimoPorPet } from "@/modules/agenda/atendimentos";
+import { hojeNoFuso, noFuso, rotuloCurtoDoDia } from "@/modules/agenda/fuso";
 import { listarPetsDoTutor, NOMES_DAS_ESPECIES, NOMES_DOS_PORTES } from "@/modules/cadastros/pets";
-import { formatarTelefone } from "@/modules/cadastros/telefone";
+import { formatarTelefone, linkDoWhatsApp } from "@/modules/cadastros/telefone";
 import { obterTutor } from "@/modules/cadastros/tutores";
+import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
 export const metadata: Metadata = { title: "Cliente · banho-e-tosa" };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ inativos?: string }> };
 
+// Ficha do cliente: telefone com WhatsApp (principal) e Ligar, e cada pet com o próximo e o último atendimento e o
+// atalho para agendar. Desativar e reativar o pet ficam na edição dele, como em Serviços.
 export default async function PaginaCliente({ params, searchParams }: Props) {
   const { id } = await params;
   const comInativos = (await searchParams).inativos === "1";
   const dados = await naEmpresaDaDona(async (tx) => {
     const tutor = await obterTutor(tx, id);
-    return tutor ? { tutor, pets: await listarPetsDoTutor(tx, id, comInativos) } : null;
+    if (!tutor) return null;
+    const fuso = await fusoDaEmpresa(tx);
+    return {
+      tutor,
+      fuso,
+      hoje: hojeNoFuso(fuso),
+      pets: await listarPetsDoTutor(tx, id, comInativos),
+      historico: await proximoEUltimoPorPet(tx, id),
+    };
   });
   if (!dados) notFound();
-  const { tutor, pets } = dados;
+  const { tutor, fuso, hoje, pets, historico } = dados;
+  const whatsapp = linkDoWhatsApp(tutor.telefone);
+  const quando = (inicio: Date) => {
+    const { dia, hora } = noFuso(inicio, fuso);
+    return `${dia === hoje ? "hoje" : rotuloCurtoDoDia(dia)}, ${hora}`;
+  };
 
   return (
     <main className="pagina">
       <Voltar href="/clientes" destino="Clientes" />
       <h1>{tutor.nome}</h1>
-      <section className="cartao">
+      <section className="cartao ficha-cliente" aria-label="Contato">
         {tutor.telefone && (
-          <p>
-            <a className="link-de-toque" href={`tel:${tutor.telefone}`}>
+          <>
+            <p className="telefone-grande">
+              <Icone nome="fone" />
               {formatarTelefone(tutor.telefone)}
-            </a>
-          </p>
+            </p>
+            <div className="acoes">
+              {whatsapp && (
+                <a className="botao-link botao-primario" href={whatsapp} target="_blank" rel="noopener noreferrer">
+                  <Icone nome="conversa" />
+                  WhatsApp
+                </a>
+              )}
+              <a className="botao-link botao-secundario" href={`tel:${tutor.telefone}`}>
+                <Icone nome="fone" />
+                Ligar
+              </a>
+            </div>
+          </>
         )}
-        {tutor.observacoes && <p className="suave">{tutor.observacoes}</p>}
-        <Link href={`/clientes/${tutor.id}/editar`} className="botao-link botao-secundario">
-          Editar tutor
+        {tutor.observacoes && (
+          <>
+            <h2 className="rotulo">Observações</h2>
+            <p>{tutor.observacoes}</p>
+          </>
+        )}
+        <Link href={`/clientes/${tutor.id}/editar`} className="botao-link botao-texto">
+          <Icone nome="lapis" />
+          Editar cliente
         </Link>
       </section>
 
-      <header className="topo">
-        <h2>Pets</h2>
-        <Link href={`/clientes/${tutor.id}/pets/novo`} className="botao-link botao-primario">
+      <header className="secao-cab">
+        <h2>
+          Pets <span className="contagem">{pets.length}</span>
+        </h2>
+        <Link href={`/clientes/${tutor.id}/pets/novo`} className="botao-link botao-secundario">
+          <Icone nome="mais" />
           Novo pet
         </Link>
       </header>
 
       {pets.length === 0 ? (
-        <p className="suave">{comInativos ? "Nenhum pet cadastrado." : "Nenhum pet ativo."}</p>
+        <EstadoVazio icone="pata" titulo={comInativos ? "Nenhum pet cadastrado." : "Nenhum pet ativo."} />
       ) : (
         <ul className="lista-simples" aria-label="Pets">
-          {pets.map((pet) => (
-            <li key={pet.id} className={`cartao${pet.ativo ? "" : " inativo"}`}>
-              <h3>
-                {pet.nome} {!pet.ativo && <span className="etiqueta">inativo</span>}
-              </h3>
-              <p className="suave">
-                {[NOMES_DAS_ESPECIES[pet.especie as keyof typeof NOMES_DAS_ESPECIES], pet.raca, NOMES_DOS_PORTES[pet.porte as keyof typeof NOMES_DOS_PORTES]]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-              {pet.observacoes && (
-                <p className="cuidado">
-                  <strong>Cuidados</strong>
-                  {pet.observacoes}
+          {pets.map((pet) => {
+            const h = historico.get(pet.id);
+            return (
+              <li key={pet.id} className={`cartao cartao-pet${pet.ativo ? "" : " inativo"}`}>
+                <h3>
+                  {pet.nome} {!pet.ativo && <span className="etiqueta">inativo</span>}
+                </h3>
+                <p className="suave">
+                  {[
+                    NOMES_DAS_ESPECIES[pet.especie as keyof typeof NOMES_DAS_ESPECIES],
+                    pet.raca,
+                    NOMES_DOS_PORTES[pet.porte as keyof typeof NOMES_DOS_PORTES],
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
-              )}
-              <div className="acoes" style={{ marginTop: 12 }}>
-                <Link href={`/clientes/${tutor.id}/pets/${pet.id}/editar`} className="botao-link botao-secundario">
-                  Editar
-                </Link>
-                <form action={alternarPetAtivoAcao}>
-                  <input type="hidden" name="petId" value={pet.id} />
-                  <input type="hidden" name="ativo" value={pet.ativo ? "false" : "true"} />
-                  <button type="submit" className="botao-secundario" style={{ width: "100%" }}>
-                    {pet.ativo ? "Desativar" : "Reativar"}
-                  </button>
-                </form>
-              </div>
-            </li>
-          ))}
+                {pet.observacoes && (
+                  <div className="cuidado">
+                    <strong>
+                      <Icone nome="alerta" />
+                      Cuidados
+                    </strong>
+                    {pet.observacoes}
+                  </div>
+                )}
+                {(h?.proximo || h?.ultimo) && (
+                  <div className="historico">
+                    {h.proximo && (
+                      <p>
+                        <Icone nome="agenda" />
+                        <Link href={`/agenda/${h.proximo.id}`}>Próximo: {quando(h.proximo.inicio)}</Link>
+                        <SeloDeStatus status={h.proximo.status} mini />
+                      </p>
+                    )}
+                    {h.ultimo && (
+                      <p>
+                        <Icone nome="checkcirc" />
+                        <Link href={`/agenda/${h.ultimo.id}`}>Último: {quando(h.ultimo.inicio)}</Link>
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="acoes">
+                  {pet.ativo && (
+                    <Link href={urlDoAgendamento({ dia: hoje, petId: pet.id })} className="botao-link botao-secundario">
+                      <Icone nome="calcheck" />
+                      Agendar
+                    </Link>
+                  )}
+                  <Link href={`/clientes/${tutor.id}/pets/${pet.id}/editar`} className="botao-link botao-secundario">
+                    <Icone nome="lapis" />
+                    Editar
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 

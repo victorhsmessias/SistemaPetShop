@@ -807,6 +807,147 @@ a {
   flex: 0 0 auto;
 }
 
+/* Busca que filtra ao digitar (componentes/busca-ao-digitar.tsx): rótulo visível e lupa dentro do campo. */
+.busca-ao-digitar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.busca-ao-digitar label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.busca-campo {
+  position: relative;
+  display: block;
+}
+
+.busca-campo .ic {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--suave);
+  pointer-events: none;
+}
+
+.busca-campo input {
+  padding-left: 44px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--suave);
+  opacity: 1;
+}
+
+/* Linha de cliente: iniciais, pets em destaque, tutor e telefone menores, seta. */
+.lista-clientes a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.linha-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.seta-linha {
+  color: var(--suave);
+}
+
+/* Ficha do cliente. */
+.ficha-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ficha-cliente p {
+  margin: 0;
+}
+
+.ficha-cliente .botao-texto {
+  align-self: flex-start;
+  margin-left: -10px;
+}
+
+.telefone-grande {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.secao-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.secao-cab h2 {
+  margin: 0;
+}
+
+.contagem {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: var(--raio-selo);
+  background: var(--superficie2);
+  color: var(--texto);
+  font-size: var(--fs-mini);
+  font-weight: 600;
+  vertical-align: 2px;
+}
+
+.cartao-pet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cartao-pet h3,
+.cartao-pet p,
+.cartao-pet .cuidado {
+  margin: 0;
+}
+
+.historico {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-p);
+}
+
+.historico p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.historico .ic {
+  width: 18px;
+  height: 18px;
+  color: var(--suave);
+}
+
+.historico a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+}
+
 .lista-toque {
   list-style: none;
   padding: 0;

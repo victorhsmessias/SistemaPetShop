@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
 
 import type { Transacao } from "@/db/clientes";
 import { codigoPgDe } from "@/db/erros";
@@ -534,4 +534,51 @@ export async function editarObservacoes(
     .returning({ id: atendimento.id });
   if (!alterado) return falhou("geral", MENSAGEM_NAO_ENCONTRADO);
   return { ok: true, valor: alterado };
+}
+
+export type HistoricoDoPet = {
+  /** Próximo atendimento ainda por terminar (agendado, confirmado, em atendimento ou pronto). */
+  proximo?: { id: string; inicio: Date; status: StatusAtendimento };
+  /** Último atendimento concluído. */
+  ultimo?: { id: string; inicio: Date };
+};
+
+/**
+ * Próximo e último atendimento de cada pet do tutor, para a ficha do cliente. Só a empresa da transação (RLS): um
+ * tutor de outra empresa devolve um mapa vazio. `agora` é o instante de referência (o relógio, nos testes).
+ */
+export async function proximoEUltimoPorPet(
+  tx: Transacao,
+  tutorId: string,
+  agora: Date = new Date(),
+): Promise<Map<string, HistoricoDoPet>> {
+  const historico = new Map<string, HistoricoDoPet>();
+  if (!ehUuid(tutorId)) return historico;
+  const doTutor = eq(pet.tutorId, tutorId);
+
+  const proximos = await tx
+    .selectDistinctOn([atendimento.petId], {
+      petId: atendimento.petId,
+      id: atendimento.id,
+      inicio: atendimento.inicio,
+      status: atendimento.status,
+    })
+    .from(atendimento)
+    .innerJoin(pet, eq(pet.id, atendimento.petId))
+    .where(and(doTutor, inArray(atendimento.status, ["agendado", "confirmado", "em_atendimento", "pronto"]), gt(atendimento.fim, agora)))
+    .orderBy(atendimento.petId, asc(atendimento.inicio));
+  for (const p of proximos) {
+    historico.set(p.petId, { proximo: { id: p.id, inicio: p.inicio, status: p.status as StatusAtendimento } });
+  }
+
+  const ultimos = await tx
+    .selectDistinctOn([atendimento.petId], { petId: atendimento.petId, id: atendimento.id, inicio: atendimento.inicio })
+    .from(atendimento)
+    .innerJoin(pet, eq(pet.id, atendimento.petId))
+    .where(and(doTutor, eq(atendimento.status, "concluido")))
+    .orderBy(atendimento.petId, desc(atendimento.inicio));
+  for (const u of ultimos) {
+    historico.set(u.petId, { ...historico.get(u.petId), ultimo: { id: u.id, inicio: u.inicio } });
+  }
+  return historico;
 }
