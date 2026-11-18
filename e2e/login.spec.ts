@@ -36,6 +36,24 @@ test.describe("sem sessão", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
+  // Não conta no limite de logins: os campos são conferidos no servidor antes de o Better Auth receber a tentativa.
+  test("campos vazios ou e-mail sem formato mostram a mensagem em português no campo (B6)", { tag: "@um-perfil" }, async ({
+    page,
+    tocar,
+  }) => {
+    await page.goto("/login");
+    const entrar = page.getByRole("button", { name: "Entrar" });
+    await tocar(entrar);
+    await expect(page.getByLabel("E-mail")).toHaveAccessibleDescription(/Informe o e-mail\./);
+    await expect(page.getByLabel("Senha")).toHaveAccessibleDescription(/Informe a senha\./);
+    await page.getByLabel("E-mail").fill("dona");
+    await expect(entrar).toBeEnabled();
+    await tocar(entrar);
+    await expect(page.getByLabel("E-mail")).toHaveAccessibleDescription(/nome@exemplo\.com/);
+    await expect(page.getByLabel("E-mail")).toHaveValue("dona");
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
   test("a senha errada mostra a mensagem e não entra", { tag: "@um-perfil" }, async ({ page, tocar, dona }) => {
     await page.goto("/login");
     await page.getByLabel("E-mail").fill(dona.email);

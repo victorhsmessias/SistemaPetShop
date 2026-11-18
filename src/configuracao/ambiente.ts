@@ -55,6 +55,18 @@ function problemaDoProxy(item: string): string | null {
   return null;
 }
 
+/** Só dígitos, com o código do país e o DDD (ex.: 55 + 11 + número): o formato do link wa.me. */
+const FORMATO_WHATSAPP = /^[1-9]\d{9,14}$/;
+
+/**
+ * WhatsApp do suporte (SUPORTE_WHATSAPP), mostrado na tela de empresa suspensa. Null sem a variável ou com valor
+ * inválido (o servidor já não sobe com valor inválido; ver problemasDoAmbiente).
+ */
+export function whatsappDoSuporte(ambiente: Ambiente = process.env): string | null {
+  const valor = ambiente.SUPORTE_WHATSAPP?.trim();
+  return valor && FORMATO_WHATSAPP.test(valor) ? valor : null;
+}
+
 function urlDoBanco(ambiente: Ambiente, variavel: string, problemas: string[]) {
   const valor = ambiente[variavel];
   if (!valor) {
@@ -103,7 +115,19 @@ export function problemasDoAmbiente(ambiente: Ambiente): string[] {
     if (problema) problemas.push(`BETTER_AUTH_TRUSTED_PROXIES: ${problema}. Use a faixa do proxy (${CHECKLIST_PROXY}).`);
   }
 
+  const suporte = ambiente.SUPORTE_WHATSAPP?.trim();
+  if (suporte && !FORMATO_WHATSAPP.test(suporte)) {
+    problemas.push(
+      `SUPORTE_WHATSAPP precisa ter só dígitos, com o código do país e o DDD (por exemplo 55 11 e o número, tudo junto) (${VEJA}).`,
+    );
+  }
+
   if (ehProducaoPublica(ambiente)) {
+    if (!suporte) {
+      problemas.push(
+        `SUPORTE_WHATSAPP não definida: a tela de empresa suspensa precisa do WhatsApp do suporte (${VEJA}).`,
+      );
+    }
     if (proxies.length === 0) {
       problemas.push(
         "BETTER_AUTH_TRUSTED_PROXIES não definida: atrás do proxy do EasyPanel, sem ela cinco senhas erradas de " +

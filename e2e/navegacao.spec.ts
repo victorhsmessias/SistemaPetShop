@@ -66,3 +66,20 @@ test("a dona anda pelos meses do Financeiro; o mês sem receita diz que não há
   await tocar(meses.getByRole("link", { name: "Próximo mês" }));
   await expect(meses).toContainText(rotuloDoMes(somarMeses(mes, 1)));
 });
+
+test("endereço que não existe e registro inexistente: 404 em português, com a volta para a agenda", {
+  tag: "@um-perfil",
+}, async ({ page, tocar }) => {
+  // Endereço que não existe: fora das telas da dona, sem a navegação.
+  let resposta = await page.goto("/pagina-que-nao-existe");
+  expect(resposta?.status()).toBe(404);
+  await expect(page.getByRole("heading", { level: 1, name: "Não encontramos esta página" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegação principal" })).toHaveCount(0);
+
+  // Registro que não existe (ou de outra empresa) numa tela da dona: o mesmo aviso, dentro da moldura dela.
+  resposta = await page.goto("/clientes/00000000-0000-4000-8000-000000000000");
+  expect(resposta?.status()).toBe(404);
+  await expect(page.getByRole("heading", { level: 1, name: "Não encontramos esta página" })).toBeVisible();
+  await tocar(page.getByRole("link", { name: "Voltar para a agenda" }));
+  await expect(page.getByRole("heading", { level: 1, name: "Agenda" })).toBeVisible();
+});

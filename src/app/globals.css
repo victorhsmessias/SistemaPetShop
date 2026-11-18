@@ -459,9 +459,47 @@ details.grupo {
 }
 
 .marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--primaria);
+}
+
+/* Telas de exceção (404, empresa suspensa): centradas, com um ícone e uma saída clara. */
+.pagina-excecao {
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.pagina-excecao > * {
+  width: 100%;
+  margin: 0;
+}
+
+.pagina-excecao .mensagem {
+  text-align: left;
+}
+
+.excecao-icone {
+  display: grid;
+  place-items: center;
+  width: 72px !important;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--primaria-suave);
+  color: var(--primaria);
+}
+
+.excecao-icone .ic {
+  width: 36px;
+  height: 36px;
+}
+
+.pagina-excecao .botao-largo {
+  margin: 0;
 }
 
 .etiqueta {
@@ -489,10 +527,14 @@ details {
   margin-top: 12px;
 }
 
+/* 48 px de toque (QA B5: os do painel tinham 32 px), mantendo a seta do navegador. */
 summary {
   cursor: pointer;
   font-weight: 600;
-  min-height: 32px;
+  min-height: var(--toque);
+  padding: 12px 0;
+  line-height: 24px;
+  touch-action: manipulation;
 }
 
 .cartao > details:first-child {

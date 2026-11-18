@@ -61,7 +61,8 @@ Esse token lê **todos** os pacotes que a conta alcança, não pode ser restrito
 
 ## 3. Serviço do app (ainda sem deploy)
 
-O app **não sobe** em homologação e produção sem `BETTER_AUTH_URL` com https e sem `BETTER_AUTH_TRUSTED_PROXIES`.
+O app **não sobe** em homologação e produção sem `BETTER_AUTH_URL` com https, sem `BETTER_AUTH_TRUSTED_PROXIES` e sem
+`SUPORTE_WHATSAPP`.
 Por isso tudo é configurado antes do primeiro deploy, no passo 4.
 
 - [ ] Na VPS (SSH), descubra a faixa da rede do proxy do EasyPanel (Traefik). A rede `easypanel` existe desde a
@@ -77,6 +78,8 @@ Por isso tudo é configurado antes do primeiro deploy, no passo 4.
         (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
       - `BETTER_AUTH_URL`: passo 4 (antes do deploy).
       - `BETTER_AUTH_TRUSTED_PROXIES=<faixa>`: a faixa descoberta acima.
+      - `SUPORTE_WHATSAPP=<número real do suporte>`: só dígitos, com 55 e o DDD (aparece na tela de empresa
+        suspensa). Confira abrindo `https://wa.me/<número>` no celular.
 - [ ] **Credencial do migrador em arquivo, não em variável** (ADR 0015): Mounts → **File Mount**, caminho
       `/segredos/database_url_migrador` (exatamente esse), conteúdo
       `postgres://migrador:<SENHA_MIGRADOR>@<host interno>:5432/banho_e_tosa` numa linha. A imagem lê o arquivo como
@@ -95,8 +98,8 @@ Por isso tudo é configurado antes do primeiro deploy, no passo 4.
       automático).
 - [ ] `BETTER_AUTH_URL` = essa URL exata, com `https://` e sem barra no fim. Ela precisa ser a URL que o navegador
       abre (protocolo, host e porta). O app **não sobe** em homologação e produção sem https.
-- [ ] Confira que as três exigências da subida estão no serviço: `BETTER_AUTH_URL` (https), `BETTER_AUTH_TRUSTED_PROXIES`
-      (passo 3) e a montagem `/segredos/database_url_migrador` (passo 3).
+- [ ] Confira que as exigências da subida estão no serviço: `BETTER_AUTH_URL` (https), `BETTER_AUTH_TRUSTED_PROXIES`
+      e `SUPORTE_WHATSAPP` (passo 3) e a montagem `/segredos/database_url_migrador` (passo 3).
 - [ ] Primeiro deploy. No log: `Migrations: aplicando como migrador...`, depois `Migrations: em dia` e o servidor
       pronto. Se aparecer "O app não vai iniciar", a mensagem diz qual variável corrigir. Se aparecer
       `falta o arquivo /segredos/database_url_migrador` ou `o usuário node consegue ler`, confira o caminho da

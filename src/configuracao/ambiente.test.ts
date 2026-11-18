@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ehProducaoPublica, listaDeProxies, problemasDoAmbiente, urlUsaHttps } from "@/configuracao/ambiente";
+import { ehProducaoPublica, listaDeProxies, problemasDoAmbiente, urlUsaHttps, whatsappDoSuporte } from "@/configuracao/ambiente";
 
 // Validação das variáveis de ambiente na subida do servidor (docs/operacao/variaveis.md).
 
@@ -16,6 +16,8 @@ const PRODUCAO = {
   BETTER_AUTH_URL: "https://app.exemplo.com.br",
   BETTER_AUTH_SECRET: SEGREDO,
   BETTER_AUTH_TRUSTED_PROXIES: "10.0.1.0/24",
+  // Número fictício: nenhum número real no repositório.
+  SUPORTE_WHATSAPP: "5511900000000",
 };
 
 const texto = (ambiente: Record<string, string | undefined>) => problemasDoAmbiente(ambiente).join("\n");
@@ -39,6 +41,19 @@ describe("problemasDoAmbiente", () => {
     const resultado = texto({ ...DESENVOLVIMENTO, DATABASE_URL: "mysql://app:segredo123@db/x" });
     expect(resultado).toContain("DATABASE_URL precisa ser uma URL postgres://");
     expect(resultado).not.toContain("segredo123");
+  });
+
+  it("WhatsApp do suporte: opcional fora de produção, só dígitos com país e DDD, obrigatório em produção", () => {
+    expect(problemasDoAmbiente({ ...DESENVOLVIMENTO, SUPORTE_WHATSAPP: "5511900000000" })).toEqual([]);
+    expect(texto({ ...DESENVOLVIMENTO, SUPORTE_WHATSAPP: "(11) 90000-0000" })).toContain("SUPORTE_WHATSAPP precisa ter só dígitos");
+    expect(texto({ ...DESENVOLVIMENTO, SUPORTE_WHATSAPP: "+5511900000000" })).toContain("SUPORTE_WHATSAPP precisa ter só dígitos");
+    expect(texto({ ...PRODUCAO, SUPORTE_WHATSAPP: undefined })).toContain("SUPORTE_WHATSAPP não definida");
+  });
+
+  it("whatsappDoSuporte devolve o número válido e null sem ele ou com valor inválido", () => {
+    expect(whatsappDoSuporte({ SUPORTE_WHATSAPP: " 5511900000000 " })).toBe("5511900000000");
+    expect(whatsappDoSuporte({})).toBeNull();
+    expect(whatsappDoSuporte({ SUPORTE_WHATSAPP: "11 90000-0000" })).toBeNull();
   });
 
   it("segredo curto não sobe", () => {
