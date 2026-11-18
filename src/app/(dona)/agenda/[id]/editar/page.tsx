@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AvisoDaPagina, ComAvisoDaPagina } from "@/app/(dona)/agenda/aviso-da-pagina";
 import { FormularioHorario, FormularioObservacoes, FormularioServicosDoAtendimento } from "@/app/(dona)/agenda/formularios";
 import { Aviso } from "@/app/componentes/aviso";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 import { obterAtendimento } from "@/modules/agenda/atendimentos";
 import { noFuso } from "@/modules/agenda/fuso";
 import { atendimentoAtivo, NOMES_DOS_STATUS } from "@/modules/agenda/status";
@@ -37,9 +37,7 @@ export default async function PaginaEditarAtendimento({ params }: Props) {
   return (
     <main className="pagina">
       <ComAvisoDaPagina>
-        <Link href={`/agenda/${a.id}`} className="voltar">
-          ‹ {a.pet.nome}
-        </Link>
+        <Voltar href={`/agenda/${a.id}`} destino={a.pet.nome} />
         <h1>Editar atendimento</h1>
         <AvisoDaPagina />
 

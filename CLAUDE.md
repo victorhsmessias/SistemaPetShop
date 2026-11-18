@@ -52,8 +52,12 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
   `testes/apoio.ts`.
 - `src/app/`: telas e Server Actions; regra de negócio fica nos módulos. `api/health` (saúde, sem autenticação).
   - `(dona)/`: telas da dona (Agenda, que é a tela inicial; Clientes; Serviços; Financeiro). Toda página e
-    toda ação começam por `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`); o layout do grupo é só visual.
-    `/empresa` só mostra o aviso de empresa suspensa. O atalho `?agendar=` do cadastro de tutor e pet volta
+    toda ação começam por `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`). O layout do grupo também a chama, só
+    para mostrar o nome da empresa e o da dona (barra do topo, barra lateral e menu da conta com o Sair), e nunca
+    substitui a conferência de cada página e ação.
+  - `empresa/`: só o aviso de empresa suspensa, fora do grupo `(dona)` (sem a navegação e sem laço de
+    redirecionamento com o layout). Confere a sessão por conta própria.
+  - `componentes/`: peças visuais comuns (ícones SVG à mão, selo de status, aviso, grupo recolhível, voltar). O atalho `?agendar=` do cadastro de tutor e pet volta
     para o agendamento por uma URL montada em `(dona)/agenda/retorno.ts`, nunca vinda do navegador.
   - Operações dos módulos recebem a transação (`tx`) e nunca o `empresaId`; ids de registros vindos da URL ou do
     formulário são conferidos com `ehUuid`, e o RLS faz o de outra empresa voltar como "não encontrado".

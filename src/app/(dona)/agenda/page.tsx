@@ -4,7 +4,6 @@ import Link from "next/link";
 import { GradeDoDia } from "@/app/(dona)/agenda/grade";
 import { urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
-import { BotaoSair } from "@/app/botao-sair";
 import { GrupoRecolhivel } from "@/app/componentes/grupo-recolhivel";
 import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { ocupaHorario } from "@/modules/agenda/calculos";
@@ -90,10 +89,6 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       <section aria-label={`Atendimentos de ${rotuloDoDia(dia)}`}>
         <GradeDoDia dia={dia} fuso={fuso} atendimentos={atendimentos} />
       </section>
-
-      <footer className="rodape">
-        <BotaoSair />
-      </footer>
     </main>
   );
 }

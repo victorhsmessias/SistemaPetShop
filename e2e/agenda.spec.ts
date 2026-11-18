@@ -106,6 +106,6 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   await tocarStatus("Marcar como pronto", "Pronto");
   await expect(page.getByRole("button", { name: "Desfazer: voltar para Em atendimento" })).toBeVisible();
 
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(thor).toContainText("Pronto · 09:00–10:30");
 });

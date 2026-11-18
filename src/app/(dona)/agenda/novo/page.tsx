@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormularioAgendamento } from "@/app/(dona)/agenda/formularios";
 import { parametroDeRetorno, urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 import { buscarPetsParaAgendar, obterPetParaAgendar } from "@/modules/agenda/atendimentos";
 import { ehDia, ehHora, hojeNoFuso, rotuloDoDia } from "@/modules/agenda/fuso";
 import { NOMES_DAS_ESPECIES, NOMES_DOS_PORTES } from "@/modules/cadastros/pets";
@@ -31,9 +32,7 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
 
   return (
     <main className="pagina">
-      <Link href={urlDoDia(dia)} className="voltar">
-        ‹ Agenda
-      </Link>
+      <Voltar href={urlDoDia(dia)} destino="Agenda" />
       <h1>Novo agendamento</h1>
       <p className="suave">{quando}</p>
 

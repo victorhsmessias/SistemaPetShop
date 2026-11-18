@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { lerRetorno, parametroDeRetorno, urlDoAgendamento } from "@/app/(dona)/agenda/retorno";
 import { FormularioTutor } from "@/app/(dona)/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 
 export const metadata: Metadata = { title: "Novo cliente · banho-e-tosa" };
 
@@ -16,9 +16,7 @@ export default async function PaginaNovoCliente({ searchParams }: Props) {
 
   return (
     <main className="pagina">
-      <Link href={retorno ? urlDoAgendamento(retorno) : "/clientes"} className="voltar">
-        ‹ {retorno ? "Agendamento" : "Clientes"}
-      </Link>
+      <Voltar href={retorno ? urlDoAgendamento(retorno) : "/clientes"} destino={retorno ? "Agendamento" : "Clientes"} />
       <h1>Novo cliente</h1>
       {retorno && <p className="suave">Depois do tutor, cadastre o pet e volte para o agendamento.</p>}
       <div className="cartao">

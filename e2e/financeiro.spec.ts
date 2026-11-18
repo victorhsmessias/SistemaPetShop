@@ -47,7 +47,7 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   await expect(page.getByRole("button", { name: /^Concluir/ })).toHaveCount(0);
 
   // Na agenda, o concluído continua na grade, com a marca de concluído.
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(mel).toContainText("Concluído · 10:00–11:30");
 
   // No Financeiro: hoje e o mês com R$ 80,00 e um atendimento concluído; a receita na lista.

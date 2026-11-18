@@ -1,5 +1,5 @@
 import { adminPreparado } from "./donas";
-import { erroGeral, expect, test } from "./tela";
+import { erroGeral, expect, sair, test } from "./tela";
 
 // Entrar e sair. O login pela tela conta no limite de 5 por minuto (auth.ts): este arquivo faz 4 (dona no iPhone e
 // no desktop, senha errada e administrador, só no iPhone) e o da empresa suspensa faz 1. Os outros arquivos já
@@ -24,7 +24,7 @@ test.describe("sem sessão", () => {
     await expect(page).toHaveURL(/\/agenda$/);
     await expect(page.getByRole("heading", { level: 1, name: "Agenda" })).toBeVisible();
 
-    await tocar(page.getByRole("button", { name: "Sair" }));
+    await sair(page, tocar);
     await expect(page).toHaveURL(/\/login$/);
     // O voltar termina no login (sem sessão, a agenda redireciona). Espera a URL antes de conferir a tela e de abrir
     // outra: no WebKit, a conferência rodava com o voltar ainda em andamento (falhou no CI).

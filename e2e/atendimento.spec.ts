@@ -58,7 +58,7 @@ test("a dona edita o horário (o término acompanha o início), os serviços (fi
   await expect(page.getByText("Usar toalha extra.")).toBeVisible();
 
   // Na grade, o bloco no novo horário.
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(blocoNaGrade(page, "Mel")).toContainText("Agendado · 11:00–12:30");
 });
 
@@ -98,7 +98,7 @@ test("a dona cancela, reabre, marca falta e reabre; cancelado e falta saem da gr
   // Reabrir a falta volta para Confirmado (deduzido de confirmado_em), e o atendimento volta à grade.
   await tocar(page.getByRole("button", { name: "Reabrir como Confirmado" }));
   await expect(statusAtual(page)).toHaveText("Confirmado");
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(blocoNaGrade(page, "Mel")).toContainText("Confirmado · 14:00–15:00");
   await expect(page.getByText(/cancelado ou falta/)).toHaveCount(0);
 });

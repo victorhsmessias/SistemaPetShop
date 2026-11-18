@@ -87,6 +87,15 @@ export function statusAtual(page: Page): Locator {
   return page.getByRole("status", { name: /^Status: / });
 }
 
+/**
+ * Sai pela conta: no iPhone, o Sair fica no menu da conta (botão no topo); no desktop, no pé da barra lateral.
+ */
+export async function sair(page: Page, tocar: (alvo: Locator) => Promise<void>): Promise<void> {
+  const menu = page.getByRole("button", { name: "Menu da conta" });
+  if (await menu.isVisible()) await tocar(menu);
+  await tocar(page.getByRole("button", { name: "Sair" }));
+}
+
 /** Mensagem de erro geral do formulário (role="alert"), sem pegar o anunciador de rota do Next. */
 export function erroGeral(page: Page, texto: string | RegExp): Locator {
   return page.getByRole("alert").filter({ hasText: texto });

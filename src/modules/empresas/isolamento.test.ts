@@ -13,6 +13,7 @@ import {
   usuarioTeste,
   type DadosEmpresa,
 } from "@/db/testes/apoio";
+import { nomeDaEmpresa } from "@/modules/empresas/consultas";
 import { empresa } from "@/modules/empresas/schema";
 
 let a: DadosEmpresa;
@@ -36,6 +37,19 @@ describe("empresa com o papel app", () => {
   it("só enxerga a própria empresa", async () => {
     const empresas = await comEmpresa(a.empresaId, usuarioTeste, (tx) => tx.select().from(empresa));
     expect(empresas.map((e) => e.id)).toEqual([a.empresaId]);
+  });
+
+  it("nomeDaEmpresa lê só o nome da empresa da transação", async () => {
+    const [nomeA, nomeB] = await Promise.all(
+      [a, b].map((dados) => comEmpresa(dados.empresaId, usuarioTeste, (tx) => nomeDaEmpresa(tx))),
+    );
+    const esperados = await bancoPlataforma()
+      .select({ id: empresa.id, nome: empresa.nome })
+      .from(empresa)
+      .orderBy(empresa.id);
+    expect(nomeA).toBe(esperados.find((e) => e.id === a.empresaId)!.nome);
+    expect(nomeB).toBe(esperados.find((e) => e.id === b.empresaId)!.nome);
+    expect(nomeA).not.toBe(nomeB);
   });
 
   it("não altera a própria empresa", async () => {

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { alternarServicoAtivoAcao } from "@/app/(dona)/acoes";
 import { FormularioServico } from "@/app/(dona)/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 import { obterServico } from "@/modules/catalogo/servicos";
 import { centavosParaTexto } from "@/modules/compartilhado/dinheiro";
 
@@ -19,9 +19,7 @@ export default async function PaginaEditarServico({ params }: Props) {
 
   return (
     <main className="pagina">
-      <Link href="/servicos" className="voltar">
-        ‹ Serviços
-      </Link>
+      <Voltar href="/servicos" destino="Serviços" />
       <h1>
         Editar serviço {!servico.ativo && <span className="etiqueta">inativo</span>}
       </h1>

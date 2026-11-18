@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { alternarPetAtivoAcao } from "@/app/(dona)/acoes";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 import { listarPetsDoTutor, NOMES_DAS_ESPECIES, NOMES_DOS_PORTES } from "@/modules/cadastros/pets";
 import { formatarTelefone } from "@/modules/cadastros/telefone";
 import { obterTutor } from "@/modules/cadastros/tutores";
@@ -24,9 +25,7 @@ export default async function PaginaCliente({ params, searchParams }: Props) {
 
   return (
     <main className="pagina">
-      <Link href="/clientes" className="voltar">
-        ‹ Clientes
-      </Link>
+      <Voltar href="/clientes" destino="Clientes" />
       <h1>{tutor.nome}</h1>
       <section className="cartao">
         {tutor.telefone && (

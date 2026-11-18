@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { lerRetorno, parametroDeRetorno } from "@/app/(dona)/agenda/retorno";
 import { FormularioPet } from "@/app/(dona)/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 import { opcoesDeEspecie, opcoesDePorte } from "@/modules/cadastros/pets";
 import { obterTutor } from "@/modules/cadastros/tutores";
 
@@ -21,9 +21,7 @@ export default async function PaginaNovoPet({ params, searchParams }: Props) {
 
   return (
     <main className="pagina">
-      <Link href={`/clientes/${tutor.id}`} className="voltar">
-        ‹ {tutor.nome}
-      </Link>
+      <Voltar href={`/clientes/${tutor.id}`} destino={tutor.nome} />
       <h1>Novo pet</h1>
       {retorno && <p className="suave">Depois de cadastrar, você volta para o agendamento.</p>}
       <div className="cartao">

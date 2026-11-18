@@ -505,42 +505,240 @@ details[open] summary {
   margin-bottom: 12px;
 }
 
-/* Telas da dona: navegação inferior, listas e cadastros. Toque mínimo de 48px (acima dos 44px pedidos). */
+/*
+ * Telas da dona: moldura com barra do topo e abas no rodapé (celular) ou barra lateral (a partir de 1024 px).
+ * Toque mínimo de 48 px (acima dos 44 px pedidos).
+ */
 
 .com-navegacao {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 
-.navegacao-inferior {
-  position: fixed;
-  inset: auto 0 0 0;
-  display: flex;
-  justify-content: center;
-  background: var(--superficie);
-  border-top: 1px solid var(--borda);
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 10;
+/* A barra do topo já respeita a área segura do iPhone. */
+.com-navegacao .pagina {
+  padding-top: 8px;
 }
 
-/* Quatro abas numa tela de 375 px: cerca de 94 px cada, com o texto um pouco menor. */
-.navegacao-inferior a {
-  flex: 1;
-  min-width: 0;
-  max-width: 240px;
-  min-height: 56px;
-  padding: 0 4px;
-  font-size: 0.9rem;
+.barra-topo {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--suave);
-  text-decoration: none;
-  font-weight: 600;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
 }
 
-.navegacao-inferior a[aria-current="page"] {
+.marca-app {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.marca-icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--primaria);
+  color: var(--primaria-texto);
+}
+
+.marca-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.marca-texto strong {
+  font-size: var(--fs-p);
+}
+
+.marca-texto small {
+  font-size: var(--fs-mini);
+  color: var(--suave);
+}
+
+.avatar,
+.avatar-botao {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primaria-suave);
   color: var(--primaria);
-  box-shadow: inset 0 3px 0 var(--primaria);
+  font-weight: 700;
+  font-size: var(--fs-p);
+}
+
+.avatar-botao {
+  width: var(--toque);
+  height: var(--toque);
+  min-height: var(--toque);
+  padding: 0;
+  border: 0;
+}
+
+/* Menu da conta: popover do HTML (abre e fecha sem JavaScript, fecha ao tocar fora). */
+.menu-conta {
+  position: fixed;
+  inset: calc(max(8px, env(safe-area-inset-top)) + 56px) max(16px, env(safe-area-inset-right)) auto auto;
+  margin: 0;
+  width: min(280px, calc(100vw - 32px));
+  padding: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-flutuante);
+}
+
+.menu-conta .botao-largo {
+  margin: 0;
+}
+
+.lateral > .marca-app,
+.lateral-conta {
+  display: none;
+}
+
+.navegacao-principal {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px 6px max(6px, env(safe-area-inset-bottom));
+  background: var(--superficie);
+  border-top: 1px solid var(--borda);
+}
+
+.navegacao-principal a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 56px;
+  border-radius: var(--raio-controle);
+  color: var(--suave);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: normal;
+}
+
+.navegacao-principal .ic {
+  width: 24px;
+  height: 24px;
+}
+
+.navegacao-principal a[aria-current="page"] {
+  background: var(--primaria-suave);
+  color: var(--primaria);
+  font-weight: 800;
+}
+
+@media (min-width: 1024px) {
+  .moldura-dona {
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+    min-height: 100dvh;
+  }
+
+  .barra-topo {
+    display: none;
+  }
+
+  .lateral {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 14px;
+    background: var(--superficie);
+    border-right: 1px solid var(--borda);
+  }
+
+  .lateral > .marca-app {
+    display: flex;
+    padding: 4px 8px 18px;
+  }
+
+  .navegacao-principal {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .navegacao-principal a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: var(--toque);
+    padding: 0 12px;
+    color: var(--texto);
+    font-size: 16px;
+  }
+
+  .navegacao-principal a[aria-current="page"] {
+    font-weight: 700;
+  }
+
+  .lateral-conta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: auto;
+    padding: 12px 4px 0;
+    border-top: 1px solid var(--borda);
+  }
+
+  .lateral-nome {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    font-weight: 600;
+    font-size: var(--fs-p);
+    line-height: 1.2;
+  }
+
+  .lateral-nome small {
+    color: var(--suave);
+    font-weight: 400;
+  }
+
+  .lateral-conta .botao-texto {
+    padding: 0 8px;
+  }
+
+  .com-navegacao {
+    padding-bottom: 0;
+  }
+
+  .com-navegacao .pagina {
+    max-width: 760px;
+    padding: 28px 32px 40px;
+  }
+
+  .com-navegacao .pagina-larga {
+    max-width: 1180px;
+  }
 }
 
 a {
@@ -583,8 +781,12 @@ a {
 .voltar {
   display: inline-flex;
   align-items: center;
+  gap: 2px;
   min-height: var(--toque);
-  margin-bottom: 4px;
+  min-width: var(--toque);
+  margin: 0 0 4px -6px;
+  padding: 0 12px 0 6px;
+  border-radius: var(--raio-controle);
   text-decoration: none;
   font-weight: 600;
 }
