@@ -1738,36 +1738,73 @@ textarea[aria-invalid="true"] {
   text-align: right;
 }
 
-/* Financeiro e "Recebido hoje". */
-.resumo h2 {
+/* Financeiro (H10): "Hoje" em destaque e o mês num cartão só (navegação, total e quantidade). */
+.destaque h2,
+.resumo-mes h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-p);
   color: var(--suave);
 }
 
-.resumo p {
-  margin: 4px 0 0;
+.destaque p,
+.resumo-mes p {
+  margin: 0;
+}
+
+.valor-destaque {
+  font-size: var(--fs-valor);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 4px 0 2px;
+  color: var(--sucesso);
+  font-variant-numeric: tabular-nums;
 }
 
 .valor-grande {
-  font-size: 1.75rem;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
-.recebido-hoje {
+.resumo-mes {
+  text-align: center;
+}
+
+.resumo-mes .navegacao-dias {
+  text-align: left;
+}
+
+/* Receita: pet, dia e forma; o valor à direita. */
+.lista-receitas a,
+.lista-receitas li > div {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  min-height: var(--toque);
-  color: var(--texto);
-  text-decoration: none;
+}
+
+.linha-receita-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.linha-receita-valor {
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .financeiro-colunas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 24px;
+    align-items: start;
+  }
 }
 
 .recebido-hoje strong {
-  font-size: 1.15rem;
-  color: var(--primaria);
+  color: var(--sucesso);
 }
 
 /* Linha sem link (receita manual): o mesmo espaço das linhas tocáveis. */

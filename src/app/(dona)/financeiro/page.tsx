@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { EstadoVazio } from "@/app/componentes/estado-vazio";
 import { GrupoRecolhivel } from "@/app/componentes/grupo-recolhivel";
+import { NavegacaoPeriodo } from "@/app/componentes/navegacao-periodo";
 import { contarConcluidos } from "@/modules/agenda/conclusao";
 import {
   ehMes,
@@ -11,6 +13,7 @@ import {
   mesDoDia,
   primeiroDiaDoMes,
   rotuloDiaMes,
+  rotuloDoDia,
   rotuloDoMes,
   somarDias,
   somarMeses,
@@ -31,17 +34,19 @@ function quantosConcluidos(n: number): string {
   return n === 1 ? "1 atendimento concluído" : `${n} atendimentos concluídos`;
 }
 
+/** Linha da receita: pet (nunca o tutor, regra 18), dia e forma, e o valor à direita. */
 function Receita({ r }: { r: ReceitaDaLista }) {
   const conteudo = (
     <>
-      <span className="titulo">
-        {r.petNome ?? r.descricao} · {formatarReais(r.valorCentavos)}
+      <span className="linha-receita-corpo">
+        <span className="titulo">{r.petNome ?? r.descricao}</span>
+        <span className="detalhe">
+          {rotuloDiaMes(r.data)}
+          {r.forma ? ` · ${r.forma}` : ""}
+          {r.motivoCancelamento ? ` · Motivo: ${r.motivoCancelamento}` : ""}
+        </span>
       </span>
-      <span className="detalhe">
-        {rotuloDiaMes(r.data)}
-        {r.forma ? ` · ${r.forma}` : ""}
-        {r.motivoCancelamento ? ` · Motivo: ${r.motivoCancelamento}` : ""}
-      </span>
+      <span className="linha-receita-valor">{formatarReais(r.valorCentavos)}</span>
     </>
   );
   return (
@@ -76,68 +81,68 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
   const rotulo = rotuloDoMes(mes);
 
   return (
-    <main className="pagina">
+    <main className="pagina pagina-larga pagina-financeiro">
       <header className="topo">
         <h1>Financeiro</h1>
       </header>
 
-      <section className="cartao resumo" aria-labelledby="titulo-hoje">
-        <h2 id="titulo-hoje">Hoje</h2>
-        <p className="valor-grande">{formatarReais(dados.recebidoHoje.totalCentavos)}</p>
-        <p className="suave">{quantosConcluidos(dados.concluidosHoje)}</p>
-      </section>
+      <div className="financeiro-colunas">
+        <div className="financeiro-resumo">
+          <section className="cartao destaque" aria-labelledby="titulo-hoje">
+            <h2 id="titulo-hoje">Hoje</h2>
+            <p className="suave">{rotuloDoDia(hoje)}</p>
+            <p className="valor-destaque">{formatarReais(dados.recebidoHoje.totalCentavos)}</p>
+            <p className="suave">{quantosConcluidos(dados.concluidosHoje)}</p>
+          </section>
 
-      <nav className="navegacao-dias" aria-label="Meses">
-        <Link href={urlDoMes(somarMeses(mes, -1))} aria-label="Mês anterior">
-          ‹
-        </Link>
-        <span className="navegacao-dias-atual">
-          <span className="titulo">{rotulo}</span>
-          {mes === mesAtual ? (
-            <span className="suave">Este mês</span>
-          ) : (
-            <Link href={urlDoMes(mesAtual)}>Voltar para este mês</Link>
+          <section className="cartao resumo-mes" aria-labelledby="titulo-mes">
+            <NavegacaoPeriodo
+              rotulo="Meses"
+              titulo={rotulo}
+              anterior={{ href: urlDoMes(somarMeses(mes, -1)), rotulo: "Mês anterior" }}
+              proximo={{ href: urlDoMes(somarMeses(mes, 1)), rotulo: "Próximo mês" }}
+              atual={mes === mesAtual ? "Este mês" : null}
+              voltar={{ href: urlDoMes(mesAtual), rotulo: "Voltar para este mês" }}
+            />
+            <h2 id="titulo-mes">Entrou em {rotulo}</h2>
+            <p className="valor-grande">{formatarReais(dados.recebidoNoMes.totalCentavos)}</p>
+            <p className="suave">{quantosConcluidos(dados.concluidosNoMes)}</p>
+          </section>
+        </div>
+
+        <div className="financeiro-lista">
+          <section aria-labelledby="titulo-receitas">
+            <h2 id="titulo-receitas">Receitas</h2>
+            {receitas.validas.length === 0 ? (
+              <EstadoVazio icone="financeiro" titulo={`Nenhuma receita em ${rotulo}.`}>
+                As receitas aparecem aqui quando você conclui um atendimento.
+              </EstadoVazio>
+            ) : (
+              <ul className="lista-toque lista-receitas" aria-label={`Receitas de ${rotulo}`}>
+                {receitas.validas.map((r) => (
+                  <Receita key={r.id} r={r} />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {receitas.canceladas.length > 0 && (
+            <GrupoRecolhivel
+              resumo={
+                receitas.canceladas.length === 1
+                  ? "1 receita cancelada (fora da soma)"
+                  : `${receitas.canceladas.length} receitas canceladas (fora da soma)`
+              }
+            >
+              <ul className="lista-toque lista-receitas" aria-label="Receitas canceladas">
+                {receitas.canceladas.map((r) => (
+                  <Receita key={r.id} r={r} />
+                ))}
+              </ul>
+            </GrupoRecolhivel>
           )}
-        </span>
-        <Link href={urlDoMes(somarMeses(mes, 1))} aria-label="Próximo mês">
-          ›
-        </Link>
-      </nav>
-
-      <section className="cartao resumo" aria-labelledby="titulo-mes">
-        <h2 id="titulo-mes">Entrou em {rotulo}</h2>
-        <p className="valor-grande">{formatarReais(dados.recebidoNoMes.totalCentavos)}</p>
-        <p className="suave">{quantosConcluidos(dados.concluidosNoMes)}</p>
-      </section>
-
-      <section aria-labelledby="titulo-receitas">
-        <h2 id="titulo-receitas">Receitas</h2>
-        {receitas.validas.length === 0 ? (
-          <p className="suave">Nenhuma receita em {rotulo}.</p>
-        ) : (
-          <ul className="lista-toque" aria-label={`Receitas de ${rotulo}`}>
-            {receitas.validas.map((r) => (
-              <Receita key={r.id} r={r} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {receitas.canceladas.length > 0 && (
-        <GrupoRecolhivel
-          resumo={
-            receitas.canceladas.length === 1
-              ? "1 receita cancelada (fora da soma)"
-              : `${receitas.canceladas.length} receitas canceladas (fora da soma)`
-          }
-        >
-          <ul className="lista-toque" aria-label="Receitas canceladas">
-            {receitas.canceladas.map((r) => (
-              <Receita key={r.id} r={r} />
-            ))}
-          </ul>
-        </GrupoRecolhivel>
-      )}
+        </div>
+      </div>
     </main>
   );
 }
