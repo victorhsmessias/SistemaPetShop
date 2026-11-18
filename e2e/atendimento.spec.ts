@@ -1,4 +1,4 @@
-import { agendar, blocoNaGrade, diaDaqui, expect, statusAtual, test } from "./tela";
+import { acaoDoMenu, agendar, blocoNaGrade, diaDaqui, expect, statusAtual, test } from "./tela";
 
 // O atendimento depois de agendado: editar horário, serviços e observações (no iPhone e no desktop); cancelar,
 // marcar falta e reabrir; concluir com total zero (só no iPhone). A empresa tem "Banho M" (R$ 50,00, 60 min),
@@ -69,8 +69,8 @@ test("a dona cancela, reabre, marca falta e reabre; cancelado e falta saem da gr
   await agendar(page, tocar, { dia, hora: "14:00", servicos: ["Banho M"] });
   await tocar(blocoNaGrade(page, "Mel"));
 
-  // Cancelar: sem motivo; o desfazer vira "Reabrir".
-  await tocar(page.getByRole("button", { name: "Cancelar", exact: true }));
+  // Cancelar (no menu "Mais ações"): sem motivo; o desfazer vira "Reabrir".
+  await acaoDoMenu(page, tocar, "Cancelar");
   await expect(statusAtual(page)).toHaveText("Cancelado");
   await expect(page.getByRole("button", { name: /^Concluir/ })).toHaveCount(0);
   await tocar(page.getByRole("link", { name: "Editar observações" }));
@@ -92,7 +92,7 @@ test("a dona cancela, reabre, marca falta e reabre; cancelado e falta saem da gr
   await expect(statusAtual(page)).toHaveText("Agendado");
   await tocar(page.getByRole("button", { name: "Confirmar" }));
   await expect(statusAtual(page)).toHaveText("Confirmado");
-  await tocar(page.getByRole("button", { name: "Marcar falta" }));
+  await acaoDoMenu(page, tocar, "Marcar falta");
   await expect(statusAtual(page)).toHaveText("Faltou");
 
   // Reabrir a falta volta para Confirmado (deduzido de confirmado_em), e o atendimento volta à grade.

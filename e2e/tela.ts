@@ -82,7 +82,7 @@ export function blocoNaGrade(page: Page, pet: string): Locator {
   return page.getByRole("link", { name: new RegExp(`^${pet} · `) });
 }
 
-/** Status do atendimento na página dele (a etiqueta tem o nome acessível "Status: <status>", como "Status: Confirmado"). */
+/** Status do atendimento na página dele (o selo tem o nome acessível "Status: <status>", como "Status: Confirmado"). */
 export function statusAtual(page: Page): Locator {
   return page.getByRole("status", { name: /^Status: / });
 }
@@ -94,6 +94,12 @@ export async function sair(page: Page, tocar: (alvo: Locator) => Promise<void>):
   const menu = page.getByRole("button", { name: "Menu da conta" });
   if (await menu.isVisible()) await tocar(menu);
   await tocar(page.getByRole("button", { name: "Sair" }));
+}
+
+/** Ação do menu "Mais ações" do atendimento (Cancelar, Marcar falta e o segundo próximo status): abre o menu e toca. */
+export async function acaoDoMenu(page: Page, tocar: (alvo: Locator) => Promise<void>, nome: string): Promise<void> {
+  await tocar(page.getByRole("button", { name: "Mais ações" }));
+  await tocar(page.getByRole("button", { name: nome, exact: true }));
 }
 
 /** Mensagem de erro geral do formulário (role="alert"), sem pegar o anunciador de rota do Next. */

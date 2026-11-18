@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatarTelefone, normalizarTelefone } from "@/modules/cadastros/telefone";
+import { formatarTelefone, linkDoWhatsApp, normalizarTelefone } from "@/modules/cadastros/telefone";
 
 describe("normalizarTelefone", () => {
   it.each([
@@ -45,5 +45,17 @@ describe("formatarTelefone", () => {
     expect(formatarTelefone("+5511987654321")).toBe("(11) 98765-4321");
     expect(formatarTelefone("+551134567890")).toBe("(11) 3456-7890");
     expect(formatarTelefone(null)).toBe("");
+  });
+});
+
+describe("linkDoWhatsApp", () => {
+  it("monta o link wa.me só com os dígitos do telefone guardado", () => {
+    expect(linkDoWhatsApp("+5511987654321")).toBe("https://wa.me/5511987654321");
+    expect(linkDoWhatsApp("+551134567890")).toBe("https://wa.me/551134567890");
+  });
+
+  it("sem telefone, não há link", () => {
+    expect(linkDoWhatsApp(null)).toBeNull();
+    expect(linkDoWhatsApp("")).toBeNull();
   });
 });

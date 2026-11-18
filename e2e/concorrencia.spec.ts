@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 
-import { agendar, blocoNaGrade, diaDaqui, erroGeral, expect, statusAtual, test } from "./tela";
+import { acaoDoMenu, agendar, blocoNaGrade, diaDaqui, erroGeral, expect, statusAtual, test } from "./tela";
 
 // Página desatualizada e toque duplo (iPhone, duas abas no mesmo navegador, como a dona com a tela aberta no
 // iPhone e outra no computador). O servidor recusa a mudança feita sobre o que a tela mostrava; depois do aviso, a
@@ -33,7 +33,7 @@ test("na aba desatualizada, mudar o status mostra o aviso, não grava e passa a 
   await expect(statusAtual(page)).toHaveText("Em atendimento");
 
   // Na aba desatualizada, "Cancelar": o aviso aparece, nada é gravado e a tela mostra o atual, com os botões dele.
-  await tocar(outraAba.getByRole("button", { name: "Cancelar", exact: true }));
+  await acaoDoMenu(outraAba, tocar, "Cancelar");
   await expect(erroGeral(outraAba, MENSAGEM_MUDOU)).toBeVisible();
   await expect(statusAtual(outraAba)).toHaveText("Em atendimento");
   await expect(outraAba.getByRole("button", { name: "Marcar como pronto" })).toBeVisible();
@@ -110,7 +110,7 @@ test("na edição desatualizada, salvar os serviços de um atendimento cancelado
   const outraAba = await page.context().newPage();
   await outraAba.goto(`${url}/editar`);
   await expect(outraAba.getByRole("heading", { level: 1, name: "Editar atendimento" })).toBeVisible();
-  await tocar(page.getByRole("button", { name: "Cancelar", exact: true }));
+  await acaoDoMenu(page, tocar, "Cancelar");
   await expect(statusAtual(page)).toHaveText("Cancelado");
 
   await outraAba.getByRole("checkbox", { name: /Hidratação/ }).check();

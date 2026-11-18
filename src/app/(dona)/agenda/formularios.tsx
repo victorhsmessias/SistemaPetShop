@@ -309,10 +309,64 @@ export function FormularioObservacoes({ id, observacoes }: { id: string; observa
 }
 
 /**
- * Botões de status: um formulário só, e cada botão envia o `para` dele. `de` é o status que a tela mostra,
- * para um toque duplo ou uma página desatualizada não aplicar a mudança errada.
+ * Próximo status, na barra de ação: o primeiro como botão secundário (a ação principal da barra é Concluir); os
+ * outros e as ações de encerramento (Cancelar, Marcar falta) no menu "Mais ações", estas como perigo, com ícone e só
+ * contorno. `de` é o status que a tela mostra, para um toque duplo ou uma página desatualizada não aplicar a
+ * mudança errada.
  */
-export function BotoesDeStatus({
+export function BotoesDeStatus({ id, status }: { id: string; status: StatusAtendimento }) {
+  const [, acao, enviando] = useAcaoComAviso(mudarStatusAcao, {} as EstadoStatus);
+  const proximos = proximosStatus(status);
+  const [principal, ...outros] = proximos.filter((p) => p !== "cancelado" && p !== "faltou");
+  const encerrar = proximos.filter((p) => p === "cancelado" || p === "faltou");
+  const menu = `mais-acoes-${id}`;
+  if (!principal && outros.length === 0 && encerrar.length === 0) return null;
+
+  return (
+    <form action={acao} className="botoes-status">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="de" value={status} />
+      {principal && (
+        <button type="submit" name="para" value={principal} className="botao-secundario botao-grande" disabled={enviando}>
+          {ACOES_DOS_STATUS[principal]}
+        </button>
+      )}
+      {(outros.length > 0 || encerrar.length > 0) && (
+        <>
+          <button
+            type="button"
+            className="botao-secundario botao-grande botao-icone"
+            popoverTarget={menu}
+            aria-label="Mais ações"
+            disabled={enviando}
+          >
+            <Icone nome="pontos" />
+          </button>
+          <div id={menu} popover="auto" className="menu-flutuante">
+            {outros.map((para) => (
+              <button key={para} type="submit" name="para" value={para} className="menu-item" disabled={enviando}>
+                <Icone nome={para === "confirmado" ? "calcheck" : para === "pronto" ? "sino" : "gota"} />
+                {ACOES_DOS_STATUS[para]}
+              </button>
+            ))}
+            {encerrar.map((para) => (
+              <button key={para} type="submit" name="para" value={para} className="menu-item perigo" disabled={enviando}>
+                <Icone nome={para === "cancelado" ? "xcirc" : "proibido"} />
+                {ACOES_DOS_STATUS[para]}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </form>
+  );
+}
+
+/**
+ * Desfazer um toque errado (volta ao status anterior, deduzido de confirmado_em) ou reabrir um cancelado ou uma
+ * falta. Discreto (botão de texto) quando desfaz; secundário quando reabre, que é a única ação da tela.
+ */
+export function DesfazerStatus({
   id,
   status,
   confirmado,
@@ -323,47 +377,36 @@ export function BotoesDeStatus({
   confirmado: boolean;
 }) {
   const [, acao, enviando] = useAcaoComAviso(mudarStatusAcao, {} as EstadoStatus);
-  const proximos = proximosStatus(status);
-  const principais = proximos.filter((p) => p !== "cancelado" && p !== "faltou");
-  const encerrar = proximos.filter((p) => p === "cancelado" || p === "faltou");
   const anterior = statusAnterior(status, confirmado ? new Date() : null);
+  if (!anterior) return null;
   const reabrir = status === "cancelado" || status === "faltou";
-
   return (
-    <form action={acao} className="formulario">
+    <form action={acao} className="desfazer-status">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="de" value={status} />
-      {principais.map((para, i) => (
-        <button
-          key={para}
-          type="submit"
-          name="para"
-          value={para}
-          className={i === 0 ? "botao-primario" : "botao-secundario"}
-          disabled={enviando}
-        >
-          {ACOES_DOS_STATUS[para]}
-        </button>
-      ))}
-      {encerrar.length > 0 && (
-        <div className="acoes">
-          {encerrar.map((para) => (
-            <button key={para} type="submit" name="para" value={para} className="botao-secundario" disabled={enviando}>
-              {ACOES_DOS_STATUS[para]}
-            </button>
-          ))}
-        </div>
-      )}
-      {anterior && (
-        <button type="submit" name="para" value={anterior} className="botao-secundario botao-desfazer" disabled={enviando}>
-          {reabrir ? `Reabrir como ${NOMES_DOS_STATUS[anterior]}` : `Desfazer: voltar para ${NOMES_DOS_STATUS[anterior]}`}
-        </button>
-      )}
+      <button
+        type="submit"
+        name="para"
+        value={anterior}
+        className={reabrir ? "botao-secundario botao-largo" : "botao-texto botao-desfazer"}
+        disabled={enviando}
+      >
+        <Icone nome="desfazer" />
+        {reabrir ? `Reabrir como ${NOMES_DOS_STATUS[anterior]}` : `Desfazer: voltar para ${NOMES_DOS_STATUS[anterior]}`}
+      </button>
     </form>
   );
 }
 
 export type OpcaoFormaPagamento = { id: string; nome: string };
+
+/** Ícone da forma de pagamento pelo nome (as padrão nascem com a empresa: Pix, Dinheiro, cartões). */
+function iconeDaForma(nome: string) {
+  const n = nome.toLocaleLowerCase("pt-BR");
+  if (n.includes("pix")) return "pix" as const;
+  if (n.includes("dinheiro")) return "dinheiro" as const;
+  return "cartao" as const;
+}
 
 /**
  * Concluir (H7): o botão mostra o total; ao tocar, aparecem as formas de pagamento, e um toque numa delas
@@ -395,12 +438,12 @@ export function FormularioConcluir({
       {totalCentavos === 0 ? (
         <>
           <p className="suave">O total é {total}: o atendimento é concluído sem receita.</p>
-          <button type="submit" className="botao-primario" disabled={enviando}>
+          <button type="submit" className="botao-primario botao-grande" disabled={enviando}>
             {enviando ? "Concluindo…" : "Concluir sem cobrança"}
           </button>
         </>
       ) : !escolhendo ? (
-        <button type="button" className="botao-primario" onClick={() => setEscolhendo(true)}>
+        <button type="button" className="botao-primario botao-grande" onClick={() => setEscolhendo(true)}>
           Concluir · {total}
         </button>
       ) : (
@@ -411,7 +454,8 @@ export function FormularioConcluir({
           {formas.length === 0 && <p className="suave">Nenhuma forma de pagamento ativa.</p>}
           <div className="formas-pagamento-opcoes">
             {formas.map((f) => (
-              <button key={f.id} type="submit" name="formaPagamentoId" value={f.id} className="botao-primario">
+              <button key={f.id} type="submit" name="formaPagamentoId" value={f.id} className="botao-secundario botao-grande">
+                <Icone nome={iconeDaForma(f.nome)} />
                 {f.nome}
               </button>
             ))}

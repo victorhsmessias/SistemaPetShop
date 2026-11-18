@@ -652,6 +652,8 @@ details[open] summary {
     display: grid;
     grid-template-columns: 256px minmax(0, 1fr);
     min-height: 100dvh;
+    /* O fundo da coluna da barra lateral continua até o fim da página (a barra é fixa na tela). */
+    background: linear-gradient(to right, var(--superficie) 255px, var(--borda) 255px 256px, var(--fundo) 256px);
   }
 
   .barra-topo {
@@ -1247,7 +1249,245 @@ textarea[aria-invalid="true"] {
 }
 
 .botao-desfazer {
-  margin-top: 8px;
+  margin: -4px 0 8px -10px;
+  color: var(--suave);
+}
+
+.quando {
+  margin-bottom: 4px;
+}
+
+.rotulo {
+  font-size: var(--fs-p);
+  font-weight: 600;
+  color: var(--suave);
+  margin: 12px 0 2px;
+}
+
+.cartao-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cliente-linha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cliente-nome {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.cliente-nome a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-weight: 600;
+}
+
+.cartao-cliente .cuidado {
+  margin: 0;
+}
+
+.cuidado strong .ic {
+  width: 16px;
+  height: 16px;
+  margin: -2px 6px 0 0;
+}
+
+/*
+ * Barra de ação do atendimento: no celular, fixa acima das abas, com o próximo status (secundário), o menu "Mais
+ * ações" e a ação principal (Concluir). No desktop, no fim do detalhe.
+ */
+.com-barra-de-acao {
+  padding-bottom: 112px;
+}
+
+.barra-acao {
+  position: fixed;
+  inset: auto 0 calc(68px + max(0px, env(safe-area-inset-bottom) - 6px)) 0;
+  z-index: 9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+  background: var(--superficie);
+  border-top: 1px solid var(--borda);
+  box-shadow: var(--sombra-flutuante);
+}
+
+.botoes-status {
+  display: flex;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.botoes-status > button:first-child:not(.botao-icone) {
+  flex: 1 1 auto;
+  padding: 0 12px;
+}
+
+.botao-icone {
+  flex: none;
+  width: var(--acao);
+  padding: 0;
+}
+
+.barra-acao-principal {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.barra-acao-principal .formulario {
+  gap: 10px;
+}
+
+.barra-acao-principal p {
+  margin: 0;
+  font-size: var(--fs-p);
+}
+
+/* Escolhendo a forma de pagamento, a barra vira só a escolha. */
+.barra-acao:has(.formas-pagamento) .botoes-status {
+  display: none;
+}
+
+/* Menu "Mais ações": popover do HTML; no celular, uma folha que sobe do rodapé. */
+.menu-flutuante {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 12px 12px max(16px, env(safe-area-inset-bottom));
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-cartao) var(--raio-cartao) 0 0;
+  box-shadow: var(--sombra-flutuante);
+}
+
+.menu-flutuante::backdrop {
+  background: rgb(0 0 0 / 25%);
+}
+
+.menu-item {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--toque);
+  padding: 0 12px;
+  background: transparent;
+  color: var(--texto);
+  border: var(--borda-larg) solid transparent;
+  border-radius: var(--raio-controle);
+  text-align: left;
+}
+
+.menu-item + .menu-item {
+  margin-top: 6px;
+}
+
+/* Perigo no menu: contorno e ícone, nunca cheio. */
+.menu-item.perigo {
+  color: var(--perigo);
+  border-color: var(--perigo);
+}
+
+/* Mestre-detalhe: a lista do dia só aparece a partir de 1024 px. */
+.lista-do-dia {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .mestre-detalhe {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .detalhe {
+    max-width: 720px;
+  }
+
+  .lista-do-dia {
+    display: block;
+    position: sticky;
+    top: 24px;
+    background: var(--superficie);
+    border: 1px solid var(--borda);
+    border-radius: var(--raio-cartao);
+    box-shadow: var(--sombra-cartao);
+    padding: 8px;
+  }
+
+  .lista-do-dia .rotulo {
+    margin: 4px 8px 8px;
+  }
+
+  .lista-do-dia ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .lista-do-dia a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--toque);
+    padding: 6px 8px;
+    border-radius: var(--raio-controle);
+    color: var(--texto);
+    text-decoration: none;
+  }
+
+  .lista-do-dia a[aria-current="page"] {
+    background: var(--primaria-suave);
+  }
+
+  .lista-do-dia-hora {
+    font-variant-numeric: tabular-nums;
+    color: var(--suave);
+    font-size: var(--fs-p);
+  }
+
+  .lista-do-dia-pet {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+  }
+
+  .com-barra-de-acao {
+    padding-bottom: 40px;
+  }
+
+  .barra-acao {
+    position: static;
+    margin-top: 8px;
+    padding: 12px;
+    border: 1px solid var(--borda);
+    border-radius: var(--raio-cartao);
+    box-shadow: var(--sombra-cartao);
+  }
+
+  .menu-flutuante {
+    inset: 0;
+    width: 340px;
+    height: fit-content;
+    margin: auto;
+    border-radius: var(--raio-cartao);
+    padding: 12px;
+  }
 }
 
 /* Concluir o atendimento e a receita (sessão 05). */
@@ -1273,7 +1513,7 @@ textarea[aria-invalid="true"] {
   gap: 10px;
 }
 
-.formas-pagamento-opcoes .botao-primario {
+.formas-pagamento-opcoes .botao-secundario {
   min-height: 56px;
 }
 

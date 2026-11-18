@@ -41,3 +41,13 @@ export function formatarTelefone(telefone: string | null): string {
   const meio = resto.length === 9 ? 5 : 4;
   return `(${ddd}) ${resto.slice(0, meio)}-${resto.slice(meio)}`;
 }
+
+/**
+ * Link que abre a conversa no WhatsApp (ADR 0005: sem API, só o link `wa.me`). Recebe o telefone guardado
+ * (`+55` + DDD + número) e devolve `https://wa.me/55DDDNUMERO`, ou null sem telefone.
+ */
+export function linkDoWhatsApp(telefone: string | null): string | null {
+  if (!telefone) return null;
+  const digitos = telefone.replace(/\D/g, "");
+  return digitos ? `https://wa.me/${digitos}` : null;
+}
