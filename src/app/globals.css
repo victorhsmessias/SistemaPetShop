@@ -939,7 +939,6 @@ textarea[aria-invalid="true"] {
 
 .bloco.status-concluido {
   background: var(--superficie2);
-  box-shadow: none;
 }
 
 .status-cancelado {
@@ -979,7 +978,6 @@ textarea[aria-invalid="true"] {
   justify-content: center;
   border: var(--borda-larg) solid var(--borda-controle);
   border-radius: var(--raio-controle);
-  font-size: 1.6rem;
   line-height: 1;
   text-decoration: none;
   color: var(--texto);
@@ -1002,16 +1000,19 @@ textarea[aria-invalid="true"] {
 .navegacao-dias-atual a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--toque);
+  font-weight: 600;
 }
 
 /* Grade do dia: horários vazios tocáveis por baixo, blocos por cima. */
 .grade {
   display: flex;
+  margin-bottom: 16px;
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--raio-cartao);
-  padding: 12px 8px 12px 0;
+  box-shadow: var(--sombra-cartao);
+  padding: 14px 6px 14px 0;
 }
 
 .grade-horas {
@@ -1021,9 +1022,10 @@ textarea[aria-invalid="true"] {
 
 .grade-horas span {
   position: absolute;
-  right: 6px;
+  right: 8px;
   transform: translateY(-50%);
-  font-size: 0.75rem;
+  font-size: var(--fs-mini);
+  font-variant-numeric: tabular-nums;
   color: var(--suave);
 }
 
@@ -1033,12 +1035,23 @@ textarea[aria-invalid="true"] {
   min-width: 0;
 }
 
+/* Horário livre: faixa de 30 min tocável, com um "+" discreto que mostra que dá para agendar ali. */
 .horario-vazio {
   position: absolute;
   left: 0;
   right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
   border-top: 1px dashed var(--borda);
+  color: var(--borda-controle);
   touch-action: manipulation;
+}
+
+.horario-vazio .ic {
+  width: 18px;
+  height: 18px;
 }
 
 .horario-vazio.hora-cheia {
@@ -1046,42 +1059,226 @@ textarea[aria-invalid="true"] {
 }
 
 .horario-vazio:active,
-.horario-vazio:hover {
-  background: var(--fundo);
+.horario-vazio:hover,
+.horario-vazio:focus-visible {
+  background: var(--primaria-suave);
+  color: var(--primaria);
 }
 
+/*
+ * Bloco do atendimento: texto em várias linhas (sem reticências), cortado só pela altura da duração. A coluna vem
+ * do grade.tsx: --col/--cols na tela larga e --col-e/--cols-e na estreita (no máximo 2 colunas, ADR 0016).
+ */
 .bloco {
   position: absolute;
   z-index: 1;
+  left: calc(var(--col-e, 0) / var(--cols-e, 1) * 100% + 2px);
+  width: calc(100% / var(--cols-e, 1) - 4px);
   display: flex;
   flex-direction: column;
+  gap: 2px;
   overflow: hidden;
-  padding: 4px 6px;
-  border-radius: 8px;
+  padding: 5px 7px;
+  border-radius: calc(var(--raio-controle) - 2px);
   border: 1px solid var(--borda);
   border-left: var(--faixa-larg) solid var(--cor-status, var(--borda-controle));
   background: var(--superficie);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  box-shadow: var(--sombra-cartao);
   color: var(--texto);
   text-decoration: none;
-  font-size: 0.85rem;
-  line-height: 1.3;
+  font-size: var(--fs-mini);
+  line-height: 1.25;
   touch-action: manipulation;
+}
+
+.bloco.oculto-na-tela-estreita {
+  display: none;
+}
+
+.bloco.status-concluido {
+  color: var(--suave);
+}
+
+/* Recém-agendado: anel verde por alguns segundos. */
+.bloco-novo {
+  box-shadow: 0 0 0 3px var(--sucesso-fundo), 0 0 0 5px var(--sucesso);
 }
 
 .bloco-linha {
   display: block;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+}
+
+.bloco-linha strong {
+  font-size: var(--fs-p);
+}
+
+.bloco .selo-mini {
+  vertical-align: 1px;
 }
 
 .bloco-cuidado {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  align-self: flex-start;
+  max-width: 100%;
   background: var(--cuidado-fundo);
   color: var(--cuidado-texto);
   border-radius: 4px;
-  padding: 0 4px;
+  padding: 1px 5px;
   font-weight: 600;
+}
+
+.bloco-cuidado .ic {
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+}
+
+/* "+N": o que não cabe em 2 colunas na tela estreita, numa lista que abre por cima (popover). */
+.mais-n {
+  position: absolute;
+  z-index: 1;
+  left: calc(50% + 2px);
+  width: calc(50% - 4px);
+  min-height: var(--toque);
+  padding: 0;
+  border: var(--borda-larg) dashed var(--borda-controle);
+  border-radius: calc(var(--raio-controle) - 2px);
+  background: var(--superficie2);
+  color: var(--primaria);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.lista-mais-n {
+  display: none;
+}
+
+.lista-mais-n:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bloco.bloco-na-lista {
+  position: static;
+  width: auto;
+  min-height: 56px;
+}
+
+/* Linha "agora", no dia de hoje. */
+.agora {
+  position: absolute;
+  left: -4px;
+  right: 0;
+  z-index: 2;
+  border-top: 2px solid var(--perigo);
+  pointer-events: none;
+}
+
+.agora::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--perigo);
+}
+
+.agora span {
+  position: absolute;
+  left: -48px;
+  top: -11px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--perigo);
+  color: var(--superficie);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .bloco {
+    left: calc(var(--col, 0) / var(--cols, 1) * 100% + 2px);
+    width: calc(100% / var(--cols, 1) - 4px);
+    font-size: var(--fs-p);
+  }
+
+  .bloco.oculto-na-tela-estreita {
+    display: flex;
+  }
+
+  .mais-n {
+    display: none;
+  }
+}
+
+/* Resumos acima da grade: "Recebido hoje" e o próximo atendimento. */
+.resumos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.resumos .cartao {
+  margin: 0;
+}
+
+.resumo-mini {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 64px;
+  padding: 10px 14px;
+  color: var(--texto);
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.resumo-mini .suave {
+  font-size: var(--fs-mini);
+}
+
+.resumo-mini strong {
+  font-size: 17px;
+}
+
+/* Estado vazio: diz o que fazer. */
+.estado-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 24px 16px;
+  text-align: center;
+  background: var(--superficie);
+  border: var(--borda-larg) dashed var(--borda-controle);
+  border-radius: var(--raio-cartao);
+}
+
+.estado-vazio p {
+  margin: 0;
+}
+
+.estado-vazio-icone {
+  width: 40px;
+  height: 40px;
+  color: var(--suave);
+}
+
+.estado-vazio-titulo {
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.estado-vazio .botao-link {
+  margin-top: 8px;
 }
 
 /* Semana: um link por dia, com blocos compactos só para mostrar a ocupação. */

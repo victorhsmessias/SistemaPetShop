@@ -1,6 +1,8 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import { urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
+import { Icone } from "@/app/componentes/icone";
 import { SeloDeStatus } from "@/app/componentes/selo-status";
 import type { AtendimentoDaAgenda } from "@/modules/agenda/atendimentos";
 import { DURACAO_VISUAL_MINIMA_MIN, distribuirEmColunas, ocupaHorario } from "@/modules/agenda/calculos";
@@ -54,9 +56,16 @@ function RotulosDasHoras({ faixa, pxPorMin }: { faixa: { inicio: number; fim: nu
   );
 }
 
+/** Até 2 colunas abaixo de 1024 px (ADR 0016): num grupo com mais, o resto vai para o "+N". */
+const COLUNAS_NA_TELA_ESTREITA = 2;
+
+type Posicao = { coluna: number; colunas: number; grupo: number };
+
+/** Topo e altura do bloco, e a coluna na tela larga (--col/--cols) e na estreita (--col-e/--cols-e), pelo CSS. */
 function estiloDoBloco(
   b: NaGrade,
   posicao: { coluna: number; colunas: number },
+  estreita: { coluna: number; colunas: number },
   faixaInicio: number,
   pxPorMin: number,
   alturaMinima: number,
@@ -64,28 +73,130 @@ function estiloDoBloco(
   return {
     top: (b.inicioMin - faixaInicio) * pxPorMin,
     height: Math.max((b.fimMin - b.inicioMin) * pxPorMin, alturaMinima),
-    left: `calc(${(posicao.coluna / posicao.colunas) * 100}% + 2px)`,
-    width: `calc(${100 / posicao.colunas}% - 4px)`,
-  };
+    "--col": posicao.coluna,
+    "--cols": posicao.colunas,
+    "--col-e": estreita.coluna,
+    "--cols-e": estreita.colunas,
+  } as CSSProperties;
 }
 
-/** Agenda do dia: horários vazios tocáveis por baixo e os blocos dos atendimentos ativos por cima. */
-export function GradeDoDia({ dia, fuso, atendimentos }: { dia: Dia; fuso: string; atendimentos: AtendimentoDaAgenda[] }) {
+/** Conteúdo do bloco: o nome acessível começa por "Pet · Tutor"; o cuidado vem logo depois do status. */
+function ConteudoDoBloco({ a, fuso }: { a: AtendimentoDaAgenda; fuso: string }) {
+  const horario = `${noFuso(a.inicio, fuso).hora}–${noFuso(a.fim, fuso).hora}`;
+  return (
+    <>
+      <span className="bloco-linha">
+        <strong>{a.pet.nome}</strong> · {a.tutor.nome}
+      </span>
+      <span className="bloco-linha">
+        <SeloDeStatus status={a.status} mini /> · {horario}
+      </span>
+      {a.pet.observacoes && (
+        <span className="bloco-linha bloco-cuidado">
+          <Icone nome="alerta" />
+          {a.pet.observacoes}
+        </span>
+      )}
+      <span className="bloco-linha">{a.itens.map((i) => i.descricao).join(", ")}</span>
+      {a.observacoes && <span className="bloco-linha suave">{a.observacoes}</span>}
+    </>
+  );
+}
+
+/**
+ * Agenda do dia: os blocos dos atendimentos ativos por cima e os horários livres tocáveis por baixo. Na ordem da
+ * página (leitor de tela, teclado), os atendimentos vêm antes dos horários livres. No dia de hoje, a linha "agora".
+ */
+export function GradeDoDia({
+  dia,
+  fuso,
+  atendimentos,
+  agora,
+  destaque,
+}: {
+  dia: Dia;
+  fuso: string;
+  atendimentos: AtendimentoDaAgenda[];
+  /** Minutos desde a meia-noite, só quando o dia aberto é hoje. */
+  agora?: number;
+  /** Atendimento recém-agendado, com destaque. */
+  destaque?: string;
+}) {
   const blocos = posicionarNoDia(
     atendimentos.filter((a) => ocupaHorario(a.status)),
     dia,
     fuso,
   );
   const faixa = faixaDe(blocos);
-  const posicoes = new Map(distribuirEmColunas(blocos.map((b) => ({ id: b.atendimento.id, ...b }))).map((p) => [p.id, p]));
+  const posicoes = new Map<string, Posicao>(
+    distribuirEmColunas(blocos.map((b) => ({ id: b.atendimento.id, ...b }))).map((p) => [p.id, p]),
+  );
   const vazios: number[] = [];
   for (let m = faixa.inicio; m < faixa.fim; m += INTERVALO_DOS_HORARIOS_VAZIOS) vazios.push(m);
   const altura = (faixa.fim - faixa.inicio) * PX_POR_MIN_DIA;
+
+  // Grupos com mais colunas do que cabem na tela estreita: a 1ª coluna fica, e o resto vai para o "+N".
+  const excedentes = new Map<number, NaGrade[]>();
+  for (const b of blocos) {
+    const p = posicoes.get(b.atendimento.id)!;
+    if (p.colunas > COLUNAS_NA_TELA_ESTREITA && p.coluna > 0) {
+      excedentes.set(p.grupo, [...(excedentes.get(p.grupo) ?? []), b]);
+    }
+  }
+  const estreita = (p: Posicao) =>
+    p.colunas > COLUNAS_NA_TELA_ESTREITA ? { coluna: 0, colunas: COLUNAS_NA_TELA_ESTREITA } : p;
 
   return (
     <div className="grade grade-dia">
       <RotulosDasHoras faixa={faixa} pxPorMin={PX_POR_MIN_DIA} />
       <div className="grade-corpo" style={{ height: altura }}>
+        {blocos.map((b) => {
+          const a = b.atendimento;
+          const p = posicoes.get(a.id)!;
+          const oculto = p.colunas > COLUNAS_NA_TELA_ESTREITA && p.coluna > 0;
+          return (
+            <Link
+              key={a.id}
+              href={`/agenda/${a.id}`}
+              className={`bloco status-${a.status}${oculto ? " oculto-na-tela-estreita" : ""}${a.id === destaque ? " bloco-novo" : ""}`}
+              style={estiloDoBloco(b, p, estreita(p), faixa.inicio, PX_POR_MIN_DIA, 44)}
+            >
+              <ConteudoDoBloco a={a} fuso={fuso} />
+            </Link>
+          );
+        })}
+        {[...excedentes.entries()].map(([grupo, ocultos]) => {
+          const doGrupo = blocos.filter((b) => posicoes.get(b.atendimento.id)!.grupo === grupo);
+          const inicio = Math.min(...doGrupo.map((b) => b.inicioMin));
+          const fim = Math.max(...doGrupo.map((b) => Math.max(b.fimMin, b.inicioMin + DURACAO_VISUAL_MINIMA_MIN)));
+          const lista = `mais-no-horario-${grupo}`;
+          return (
+            <span key={grupo} className="mais-n-grupo">
+              <button
+                type="button"
+                className="mais-n"
+                popoverTarget={lista}
+                style={{ top: (inicio - faixa.inicio) * PX_POR_MIN_DIA, height: (fim - inicio) * PX_POR_MIN_DIA }}
+                aria-label={`Mais ${ocultos.length} atendimentos às ${horaDoMinuto(inicio)}`}
+              >
+                +{ocultos.length}
+              </button>
+              <span id={lista} popover="auto" className="menu-flutuante lista-mais-n">
+                <span className="rotulo">A partir das {horaDoMinuto(inicio)}</span>
+                {ocultos.map(({ atendimento: a }) => (
+                  <Link key={a.id} href={`/agenda/${a.id}`} className={`bloco bloco-na-lista status-${a.status}`}>
+                    <ConteudoDoBloco a={a} fuso={fuso} />
+                  </Link>
+                ))}
+              </span>
+            </span>
+          );
+        })}
+        {agora !== undefined && agora >= faixa.inicio && agora <= faixa.fim && (
+          <span className="agora" style={{ top: (agora - faixa.inicio) * PX_POR_MIN_DIA }} aria-hidden="true">
+            <span>{horaDoMinuto(agora)}</span>
+          </span>
+        )}
         {vazios.map((m) => (
           <Link
             key={m}
@@ -93,31 +204,10 @@ export function GradeDoDia({ dia, fuso, atendimentos }: { dia: Dia; fuso: string
             className={`horario-vazio${m % 60 === 0 ? " hora-cheia" : ""}`}
             style={{ top: (m - faixa.inicio) * PX_POR_MIN_DIA, height: INTERVALO_DOS_HORARIOS_VAZIOS * PX_POR_MIN_DIA }}
             aria-label={`Agendar às ${horaDoMinuto(m)}`}
-          />
+          >
+            <Icone nome="mais" />
+          </Link>
         ))}
-        {blocos.map((b) => {
-          const a = b.atendimento;
-          const horario = `${noFuso(a.inicio, fuso).hora}–${noFuso(a.fim, fuso).hora}`;
-          return (
-            <Link
-              key={a.id}
-              href={`/agenda/${a.id}`}
-              className={`bloco status-${a.status}`}
-              style={estiloDoBloco(b, posicoes.get(a.id)!, faixa.inicio, PX_POR_MIN_DIA, 44)}
-            >
-              <span className="bloco-linha">
-                <strong>{a.pet.nome}</strong> · {a.tutor.nome}
-              </span>
-              {/* Status antes do horário: em bloco estreito, o que se corta é o horário, não o status. */}
-              <span className="bloco-linha">
-                <SeloDeStatus status={a.status} mini /> · {horario}
-              </span>
-              {a.pet.observacoes && <span className="bloco-linha bloco-cuidado">⚠ {a.pet.observacoes}</span>}
-              <span className="bloco-linha">{a.itens.map((i) => i.descricao).join(", ")}</span>
-              {a.observacoes && <span className="bloco-linha suave">{a.observacoes}</span>}
-            </Link>
-          );
-        })}
       </div>
     </div>
   );
@@ -159,7 +249,7 @@ export function GradeDaSemana({
             className={`grade-semana-dia${dia === hoje ? " hoje" : ""}`}
             aria-label={`${rotuloDoDia(dia)}: ${quantos === 0 ? "nenhum atendimento" : quantos === 1 ? "1 atendimento" : `${quantos} atendimentos`}`}
           >
-            <span className="grade-semana-cabecalho">{rotuloCurtoDoDia(dia).replace(".", "")}</span>
+            <span className="grade-semana-cabecalho">{rotuloCurtoDoDia(dia).replace(/[.,]/g, "")}</span>
             <span className="grade-corpo" style={{ height: altura }}>
               {blocos.map((b) => {
                 const a = b.atendimento;
@@ -167,7 +257,14 @@ export function GradeDaSemana({
                   <span
                     key={a.id}
                     className={`bloco bloco-compacto status-${a.status}`}
-                    style={estiloDoBloco(b, posicoes.get(a.id)!, faixa.inicio, PX_POR_MIN_SEMANA, DURACAO_VISUAL_MINIMA_MIN)}
+                    style={estiloDoBloco(
+                      b,
+                      posicoes.get(a.id)!,
+                      posicoes.get(a.id)!,
+                      faixa.inicio,
+                      PX_POR_MIN_SEMANA,
+                      DURACAO_VISUAL_MINIMA_MIN,
+                    )}
                   >
                     {a.status === "concluido" ? "✓ " : ""}
                     {noFuso(a.inicio, fuso).hora} {a.pet.observacoes ? "⚠ " : ""}

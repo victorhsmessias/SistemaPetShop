@@ -9,7 +9,7 @@ Os documentos em `docs/` mandam. Leia a parte relevante antes de mexer no que el
 
 - `docs/planejamento/sistema-banho-e-tosa.md`: escopo, requisitos (H1 a H13), arquitetura e marcos.
 - `docs/planejamento/modelo-de-dados.md`: tabelas, isolamento, papéis, permissões, Better Auth e teste de isolamento.
-- `docs/adr/`: decisões (0001 a 0015).
+- `docs/adr/`: decisões (0001 a 0016).
 - `docs/operacao/`: runbook (`README.md`), checklist de lançamento e variáveis de ambiente (`variaveis.md`).
 
 Se um pedido contradisser os documentos, valem os documentos: avise da contradição. Mudar uma decisão exige

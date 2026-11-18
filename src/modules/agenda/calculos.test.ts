@@ -48,8 +48,8 @@ describe("blocos lado a lado", () => {
         { id: "b", inicioMin: 60, fimMin: 120 },
       ]),
     ).toEqual([
-      { id: "a", coluna: 0, colunas: 1 },
-      { id: "b", coluna: 0, colunas: 1 },
+      { id: "a", coluna: 0, colunas: 1, grupo: 0 },
+      { id: "b", coluna: 0, colunas: 1, grupo: 1 },
     ]);
   });
 
@@ -60,9 +60,9 @@ describe("blocos lado a lado", () => {
       { id: "c", inicioMin: 60, fimMin: 120 },
     ]);
     expect(resultado).toEqual([
-      { id: "a", coluna: 0, colunas: 2 },
-      { id: "b", coluna: 1, colunas: 2 },
-      { id: "c", coluna: 0, colunas: 2 },
+      { id: "a", coluna: 0, colunas: 2, grupo: 0 },
+      { id: "b", coluna: 1, colunas: 2, grupo: 0 },
+      { id: "c", coluna: 0, colunas: 2, grupo: 0 },
     ]);
   });
 
@@ -73,11 +73,11 @@ describe("blocos lado a lado", () => {
       { id: "c", inicioMin: 10, fimMin: 40 },
       { id: "d", inicioMin: 120, fimMin: 150 },
     ]);
-    expect(resultado.map((r) => [r.id, r.coluna, r.colunas])).toEqual([
-      ["a", 0, 3],
-      ["b", 1, 3],
-      ["c", 2, 3],
-      ["d", 0, 1],
+    expect(resultado.map((r) => [r.id, r.coluna, r.colunas, r.grupo])).toEqual([
+      ["a", 0, 3, 0],
+      ["b", 1, 3, 0],
+      ["c", 2, 3, 0],
+      ["d", 0, 1, 1],
     ]);
   });
 
@@ -88,8 +88,8 @@ describe("blocos lado a lado", () => {
       { id: "seguinte", inicioMin: 15, fimMin: 75 },
     ]);
     expect(resultado).toEqual([
-      { id: "curto", coluna: 0, colunas: 2 },
-      { id: "seguinte", coluna: 1, colunas: 2 },
+      { id: "curto", coluna: 0, colunas: 2, grupo: 0 },
+      { id: "seguinte", coluna: 1, colunas: 2, grupo: 0 },
     ]);
   });
 });

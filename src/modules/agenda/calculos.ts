@@ -39,7 +39,8 @@ export function conflitos<T extends Intervalo & { id: string; status: StatusAten
 /** Bloco na grade, em minutos desde o início da grade. */
 export type BlocoNaGrade = { id: string; inicioMin: number; fimMin: number };
 
-export type BlocoPosicionado = { id: string; coluna: number; colunas: number };
+/** `grupo`: índice do grupo de blocos que se tocam (0, 1, 2… na ordem do dia); os do mesmo grupo dividem a largura. */
+export type BlocoPosicionado = { id: string; coluna: number; colunas: number; grupo: number };
 
 /** Altura mínima do bloco, em minutos de grade: 22 min × 2 px = 44 px, o alvo de toque mínimo. */
 export const DURACAO_VISUAL_MINIMA_MIN = 22;
@@ -56,11 +57,13 @@ export function distribuirEmColunas(blocos: BlocoNaGrade[]): BlocoPosicionado[] 
 
   const resultado: BlocoPosicionado[] = [];
   let grupo: { id: string; coluna: number }[] = [];
+  let indiceDoGrupo = -1;
   let fimDoGrupo = -Infinity;
   let fimDasColunas: number[] = [];
 
   const fecharGrupo = () => {
-    for (const b of grupo) resultado.push({ ...b, colunas: fimDasColunas.length });
+    if (grupo.length > 0) indiceDoGrupo++;
+    for (const b of grupo) resultado.push({ ...b, colunas: fimDasColunas.length, grupo: indiceDoGrupo });
     grupo = [];
     fimDasColunas = [];
   };

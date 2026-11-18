@@ -4,6 +4,8 @@ import Link from "next/link";
 import { GradeDaSemana } from "@/app/(dona)/agenda/grade";
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Icone } from "@/app/componentes/icone";
+import { NavegacaoPeriodo } from "@/app/componentes/navegacao-periodo";
 import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { diasDaSemana, ehDia, hojeNoFuso, rotuloDiaMes, somarDias } from "@/modules/agenda/fuso";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
@@ -24,32 +26,23 @@ export default async function PaginaSemana({ searchParams }: Props) {
   });
 
   return (
-    <main className="pagina">
+    <main className="pagina pagina-larga">
       <header className="topo">
         <h1>Semana</h1>
         <Link href={urlDoDia(dia)} className="botao-link botao-secundario">
+          <Icone nome="agenda" />
           Dia
         </Link>
       </header>
 
-      <nav className="navegacao-dias" aria-label="Semanas">
-        <Link href={`/agenda/semana?dia=${somarDias(dias[0]!, -7)}`} aria-label="Semana anterior">
-          ‹
-        </Link>
-        <span className="navegacao-dias-atual">
-          <span className="titulo">
-            {rotuloDiaMes(dias[0]!)} a {rotuloDiaMes(dias[6]!)}
-          </span>
-          {dias.includes(hoje) ? (
-            <span className="suave">Esta semana</span>
-          ) : (
-            <Link href={`/agenda/semana?dia=${hoje}`}>Voltar para esta semana</Link>
-          )}
-        </span>
-        <Link href={`/agenda/semana?dia=${somarDias(dias[0]!, 7)}`} aria-label="Próxima semana">
-          ›
-        </Link>
-      </nav>
+      <NavegacaoPeriodo
+        rotulo="Semanas"
+        titulo={`${rotuloDiaMes(dias[0]!)} a ${rotuloDiaMes(dias[6]!)}`}
+        anterior={{ href: `/agenda/semana?dia=${somarDias(dias[0]!, -7)}`, rotulo: "Semana anterior" }}
+        proximo={{ href: `/agenda/semana?dia=${somarDias(dias[0]!, 7)}`, rotulo: "Próxima semana" }}
+        atual={dias.includes(hoje) ? "Esta semana" : null}
+        voltar={{ href: `/agenda/semana?dia=${hoje}`, rotulo: "Voltar para esta semana" }}
+      />
 
       <p className="dica">Toque num dia para ver os atendimentos.</p>
       <GradeDaSemana dias={dias} hoje={hoje} fuso={fuso} atendimentos={atendimentos} />
