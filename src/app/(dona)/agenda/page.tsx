@@ -5,28 +5,30 @@ import { GradeDoDia } from "@/app/(dona)/agenda/grade";
 import { urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { RolarParaAgora } from "@/app/(dona)/agenda/rolar-para-agora";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { EstadoVazio } from "@/app/componentes/estado-vazio";
 import { GrupoRecolhivel } from "@/app/componentes/grupo-recolhivel";
 import { Icone } from "@/app/componentes/icone";
 import { NavegacaoPeriodo } from "@/app/componentes/navegacao-periodo";
 import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { ocupaHorario } from "@/modules/agenda/calculos";
-import { ehDia, hojeNoFuso, noFuso, rotuloDoDia, somarDias } from "@/modules/agenda/fuso";
+import { ehDia, hojeNoFuso, noFuso, rotuloCurtoDoDia, rotuloDoDia, somarDias } from "@/modules/agenda/fuso";
 import { NOMES_DOS_STATUS } from "@/modules/agenda/status";
 import { formatarReais } from "@/modules/compartilhado/dinheiro";
+import { ehUuid } from "@/modules/compartilhado/validacao";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 import { recebidoNoPeriodo } from "@/modules/financeiro/resumo";
 
 export const metadata: Metadata = { title: "Agenda · banho-e-tosa" };
 
-type Props = { searchParams: Promise<{ dia?: string }> };
+type Props = { searchParams: Promise<{ dia?: string; novo?: string }> };
 
 const minutosDaHora = (hora: string) => Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
 
 // Tela inicial da dona: a agenda do dia, com navegação entre os dias. O dia de hoje é o do fuso da empresa, e a
 // grade abre na linha "agora". Acima da grade, "Recebido hoje" e o próximo atendimento.
 export default async function PaginaAgenda({ searchParams }: Props) {
-  const pedido = (await searchParams).dia;
+  const { dia: pedido, novo } = await searchParams;
   const { dia, hoje, fuso, atendimentos, recebidoHoje, agora } = await naEmpresaDaDona(async (tx) => {
     const fusoEmpresa = await fusoDaEmpresa(tx);
     const hojeEmpresa = hojeNoFuso(fusoEmpresa);
@@ -43,6 +45,8 @@ export default async function PaginaAgenda({ searchParams }: Props) {
   const foraDaGrade = atendimentos.filter((a) => !ocupaHorario(a.status));
   const ehHoje = dia === hoje;
   const agoraNoDia = ehHoje ? minutosDaHora(noFuso(agora, fuso).hora) : undefined;
+  // Recém-agendado (?novo=<id>, de agendarAcao): só um id que está mesmo neste dia vira aviso e destaque.
+  const agendado = ehUuid(novo) ? atendimentos.find((a) => a.id === novo) : undefined;
   const proximo = ehHoje
     ? atendimentos.find((a) => (a.status === "agendado" || a.status === "confirmado") && a.inicio >= agora)
     : undefined;
@@ -56,6 +60,13 @@ export default async function PaginaAgenda({ searchParams }: Props) {
           Semana
         </Link>
       </header>
+
+      {agendado && (
+        <AvisoDeSucesso
+          mensagem={`Atendimento agendado para ${rotuloCurtoDoDia(dia)} às ${noFuso(agendado.inicio, fuso).hora}.`}
+          parametros={["novo"]}
+        />
+      )}
 
       <NavegacaoPeriodo
         rotulo="Dias"
@@ -93,7 +104,7 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       )}
 
       <section aria-label={`Atendimentos de ${rotuloDoDia(dia)}`}>
-        <GradeDoDia dia={dia} fuso={fuso} atendimentos={atendimentos} agora={agoraNoDia} />
+        <GradeDoDia dia={dia} fuso={fuso} atendimentos={atendimentos} agora={agoraNoDia} destaque={agendado?.id} />
       </section>
       {ehHoje && <RolarParaAgora />}
 

@@ -34,17 +34,16 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   await page.goto(`/agenda?dia=${DIA}`);
   await expect(page.getByText(rotuloDoDia(DIA))).toBeVisible();
 
-  // Toca no horário vazio das 9h. O pet ainda não existe: o atalho cadastra tutor e pet e volta.
+  // Toca no horário vazio das 9h. O pet ainda não existe: "Novo cliente e pet" cadastra os dois numa tela e volta.
   await tocar(page.getByRole("link", { name: "Agendar às 09:00" }));
   await expect(page.getByText(`${rotuloDoDia(DIA)}, 09:00`)).toBeVisible();
-  await tocar(page.getByRole("link", { name: "Cadastrar tutor e pet" }));
+  await tocar(page.getByRole("link", { name: "Novo cliente e pet" }));
   await page.getByLabel("Nome do tutor").fill("Joana Prado");
   await page.getByLabel("Telefone (WhatsApp)").fill("(21) 97766-5544");
-  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await page.getByLabel("Nome do pet").fill("Thor");
   await page.getByRole("radio", { name: "Grande (G)" }).check();
   await page.getByLabel("Cuidados: comportamento e alergias").fill("Alérgico a xampu de aveia.");
-  await tocar(page.getByRole("button", { name: "Salvar pet" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente e pet" }));
 
   // De volta ao agendamento, com o Thor escolhido, o dia e a hora preenchidos.
   await expect(page).toHaveURL(new RegExp(`/agenda/novo\\?dia=${DIA}&hora=09%3A00&pet=`));

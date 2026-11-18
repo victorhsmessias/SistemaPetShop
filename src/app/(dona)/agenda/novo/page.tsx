@@ -3,7 +3,9 @@ import Link from "next/link";
 
 import { FormularioAgendamento } from "@/app/(dona)/agenda/formularios";
 import { parametroDeRetorno, urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
+import { textoDoAviso } from "@/app/(dona)/avisos";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { BuscaAoDigitar } from "@/app/componentes/busca-ao-digitar";
 import { EstadoVazio } from "@/app/componentes/estado-vazio";
 import { Icone } from "@/app/componentes/icone";
@@ -16,7 +18,7 @@ import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
 export const metadata: Metadata = { title: "Novo agendamento · banho-e-tosa" };
 
-type Props = { searchParams: Promise<{ dia?: string; hora?: string; pet?: string; busca?: string }> };
+type Props = { searchParams: Promise<{ dia?: string; hora?: string; pet?: string; busca?: string; salvo?: string }> };
 
 // Agendar em poucos toques (H5): busca o pet pelo nome dele ou do tutor, escolhe os serviços e confirma.
 // Só pets e serviços ativos. Se o pet não existe, o atalho cadastra tutor e pet e volta para cá.
@@ -31,12 +33,14 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
     return { dia, hora, pet: null, servicos: [], pets: await buscarPetsParaAgendar(tx, busca) };
   });
   const { dia, hora, pet } = dados;
+  const aviso = pet ? textoDoAviso(pedido.salvo) : null;
   const quando = `${rotuloDoDia(dia)}${hora ? `, ${hora}` : ""}`;
 
   return (
     <main className="pagina">
       <Voltar href={urlDoDia(dia)} destino="Agenda" />
       <h1>Novo agendamento</h1>
+      {aviso && <AvisoDeSucesso mensagem={aviso} parametros={["salvo"]} />}
       <p className="suave">{quando}</p>
 
       {pet ? (
@@ -112,9 +116,10 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
 
           <Link
             href={`/clientes/novo?agendar=${parametroDeRetorno({ dia, hora })}`}
-            className="botao-link botao-secundario botao-largo"
+            className={`botao-link ${dados.pets.length === 0 ? "botao-primario" : "botao-secundario"} botao-largo`}
           >
-            Cadastrar tutor e pet
+            <Icone nome="mais" />
+            Novo cliente e pet
           </Link>
         </>
       )}

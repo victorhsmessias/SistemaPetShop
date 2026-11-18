@@ -29,6 +29,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const {
   alternarPetAtivoAcao,
   alternarServicoAtivoAcao,
+  cadastrarClienteEPetAcao,
   salvarPetAcao,
   salvarServicoAcao,
   salvarTutorAcao,
@@ -91,12 +92,26 @@ describe("sem sessão, toda ação é recusada e manda para o login", () => {
     ["alternarPetAtivoAcao", () => alternarPetAtivoAcao(formulario({ petId: "", ativo: "false" }))],
     ["salvarServicoAcao", () => salvarServicoAcao(vazio, formulario({ nome: "X", preco: "1", duracao: "1" }))],
     ["alternarServicoAtivoAcao", () => alternarServicoAtivoAcao(formulario({ id: "", ativo: "false" }))],
+    [
+      "cadastrarClienteEPetAcao",
+      () =>
+        cadastrarClienteEPetAcao(
+          vazio,
+          formulario({ nome: "X", telefone: "(11) 98765-4321", pet_nome: "Y", especie: "cao", porte: "P" }),
+        ),
+    ],
   ])("%s", async (_nome, chamar) => {
     expect(await destinoDoRedirect(chamar())).toBe("/login");
   });
 
   it("e nada é gravado", async () => {
     await destinoDoRedirect(salvarTutorAcao(vazio, formulario({ nome: "Fantasma", telefone: "(11) 91111-0000" })));
+    await destinoDoRedirect(
+      cadastrarClienteEPetAcao(
+        vazio,
+        formulario({ nome: "Fantasma", telefone: "(11) 91111-0001", pet_nome: "Assombro", especie: "cao", porte: "P" }),
+      ),
+    );
     const { buscarTutores } = await import("@/modules/cadastros/tutores");
     expect(await daEmpresa(a, (tx) => buscarTutores(tx, "Fantasma"))).toEqual([]);
   });
@@ -116,11 +131,12 @@ describe("a dona da empresa A, pelas ações das telas", () => {
     requisicao.cookie = cookieDonaA;
   });
 
-  it("cria um tutor na própria empresa e vai para a página dele", async () => {
+  it("cria um tutor na própria empresa e vai para a página dele, com o aviso de sucesso", async () => {
     const destino = await destinoDoRedirect(
       salvarTutorAcao(vazio, formulario({ nome: "Marta", telefone: "(11) 97654-3210", observacoes: "" })),
     );
-    const id = destino.replace("/clientes/", "");
+    expect(destino).toMatch(/^\/clientes\/[0-9a-f-]{36}\?salvo=cliente$/);
+    const id = destino.replace("/clientes/", "").replace("?salvo=cliente", "");
     expect(await daEmpresa(a, (tx) => obterTutor(tx, id))).toMatchObject({
       nome: "Marta",
       telefone: "+5511976543210",
@@ -172,7 +188,7 @@ describe("a dona da empresa A, pelas ações das telas", () => {
     const destino = await destinoDoRedirect(
       salvarTutorAcao(vazio, formulario({ nome: "Esperto", telefone: "(11) 95555-4444", empresaId: b.empresaId })),
     );
-    const id = destino.replace("/clientes/", "");
+    const id = destino.replace("/clientes/", "").replace("?salvo=cliente", "");
     expect(await daEmpresa(a, (tx) => obterTutor(tx, id))).toMatchObject({ empresaId: a.empresaId });
   });
 });

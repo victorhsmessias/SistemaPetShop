@@ -1375,6 +1375,42 @@ textarea[aria-invalid="true"] {
   font-size: 17px;
 }
 
+/* Aviso de sucesso depois de salvar (componentes/aviso-de-sucesso.tsx): flutua no alto, some sozinho. */
+.aviso-de-sucesso {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(440px, calc(100vw - 32px));
+  min-height: 52px;
+  padding: 4px 4px 4px 14px;
+  border-radius: var(--raio-cartao);
+  background: var(--texto);
+  color: var(--fundo);
+  box-shadow: var(--sombra-flutuante);
+  font-weight: 600;
+  font-size: var(--fs-p);
+  /* Não bloqueia o toque no que está por baixo; só o × recebe o toque. */
+  pointer-events: none;
+}
+
+.aviso-de-sucesso button {
+  pointer-events: auto;
+}
+
+.aviso-de-sucesso span {
+  flex: 1;
+}
+
+.aviso-de-sucesso .botao-texto {
+  color: inherit;
+  min-width: var(--toque);
+}
+
 /* Estado vazio: diz o que fazer. */
 .estado-vazio {
   display: flex;

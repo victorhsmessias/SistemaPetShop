@@ -54,11 +54,15 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
   - `(dona)/`: telas da dona (Agenda, que é a tela inicial; Clientes; Serviços; Financeiro). Toda página e
     toda ação começam por `naEmpresaDaDona(fn)` (`(dona)/sessao-da-dona.ts`). O layout do grupo também a chama, só
     para mostrar o nome da empresa e o da dona (barra do topo, barra lateral e menu da conta com o Sair), e nunca
-    substitui a conferência de cada página e ação. O atalho `?agendar=` do cadastro de tutor e pet volta
-    para o agendamento por uma URL montada em `(dona)/agenda/retorno.ts`, nunca vinda do navegador.
+    substitui a conferência de cada página e ação. O atalho `?agendar=` abre "Novo cliente e pet"
+    (`cadastrarClienteEPetAcao`: tutor e pet numa transação só, nada gravado se um dos dois tiver erro) e volta para
+    o agendamento por uma URL montada em `(dona)/agenda/retorno.ts`, nunca vinda do navegador. Depois de salvar, o
+    destino leva `?salvo=<código>` (lista fechada em `(dona)/avisos.ts`) ou `?novo=<id>` na agenda, e o
+    `AvisoDeSucesso` mostra o texto e tira o parâmetro da URL.
   - `empresa/`: só o aviso de empresa suspensa, fora do grupo `(dona)` (sem a navegação e sem laço de
     redirecionamento com o layout). Confere a sessão por conta própria.
-  - `componentes/`: peças visuais comuns (ícones SVG à mão, selo de status, aviso, grupo recolhível, voltar).
+  - `componentes/`: peças visuais comuns, em CSS puro e ícones SVG à mão (selo de status, aviso, aviso de sucesso,
+    grupo recolhível, segmentado, busca ao digitar, estado vazio, navegação do período, voltar).
   - Operações dos módulos recebem a transação (`tx`) e nunca o `empresaId`; ids de registros vindos da URL ou do
     formulário são conferidos com `ehUuid`, e o RLS faz o de outra empresa voltar como "não encontrado".
 - `src/configuracao/ambiente.ts`: variáveis de ambiente conferidas na subida (`instrumentation.ts`).
@@ -106,7 +110,10 @@ um ADR novo em `docs/adr/` (próximo número, mesmo formato), não editar o anti
 12. **Telefone** sempre por `normalizarTelefone` (`cadastros/telefone.ts`): guardado como `+55` + DDD + número,
     único na empresa. No M3 ele recebe lembretes: nada de afrouxar a validação.
 13. **Telas para o celular:** alvos de toque de 48 px (mínimo 44), campos de 16 px, `noValidate` nos formulários
-    (as mensagens em português vêm do servidor) e dados mantidos quando o formulário volta com erro.
+    (as mensagens em português vêm do servidor) e dados mantidos quando o formulário volta com erro. Uma ação
+    principal por tela; ação de perigo (cancelar, desativar, falta) sempre com ícone e só contorno, nunca cheia (a
+    primária terracota e o perigo bordô são parecidos). Cores só pelos tokens do `globals.css`; mudou uma cor, o
+    `src/app/contraste.test.ts` confere o contraste nos dois temas.
 14. **Cookie de sessão** com `Secure` quando `BETTER_AUTH_URL` é https; em produção o servidor não sobe sem https
     (exceto localhost, para o teste de ponta a ponta).
 15. **Nenhum segredo no repositório.** Valores só no `.env` (ignorado) ou nas variáveis do EasyPanel.

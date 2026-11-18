@@ -19,16 +19,14 @@ test("o atalho ?agendar= inválido não leva a outro endereço: o cadastro segue
   await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}$`));
   await expect(page.getByRole("heading", { level: 1, name: "Paula Atalho" })).toBeVisible();
 
-  // Hora inválida (T25:00): o dia vale, a hora é ignorada; o pet volta para o agendamento sem hora.
+  // Hora inválida (T25:00): o dia vale, a hora é ignorada; "Novo cliente e pet" volta para o agendamento sem hora.
   const dia = diaDaqui(30);
   await page.goto(`/clientes/novo?agendar=${dia}T25:00`);
   await page.getByLabel("Nome do tutor").fill("Pedro Atalho");
   await page.getByLabel("Telefone (WhatsApp)").fill("(61) 99111-4455");
-  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
-  await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}/pets/novo\\?agendar=${dia}$`));
   await page.getByLabel("Nome do pet").fill("Bolinha");
   await page.getByRole("radio", { name: "Pequeno (P)" }).check();
-  await tocar(page.getByRole("button", { name: "Salvar pet" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente e pet" }));
   await expect(page).toHaveURL(new RegExp(`/agenda/novo\\?dia=${dia}&pet=${UUID}$`));
   await expect(page.getByRole("heading", { level: 2, name: "Bolinha" })).toBeVisible();
   await expect(page.getByLabel("Hora")).toHaveValue("");

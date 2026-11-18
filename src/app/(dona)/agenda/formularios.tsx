@@ -50,16 +50,23 @@ function BotaoEnviar({ enviando, rotulo, resumo }: { enviando: boolean; rotulo: 
   );
 }
 
-/** "R$ 80,00 · 90 min" dos serviços marcados, com o preço e a duração como estão digitados. */
-function resumoDosServicos(formulario: HTMLFormElement): string {
+/**
+ * "R$ 80,00 · 90 min" dos serviços marcados, com o preço e a duração como estão digitados. No toque que marca o
+ * serviço, os campos dele ainda não apareceram: aí valem o preço e a duração do catálogo.
+ */
+function resumoDosServicos(formulario: HTMLFormElement, servicos: OpcaoServico[]): string {
   const dados = new FormData(formulario);
   const marcados = dados.getAll("servico").map(String);
   if (marcados.length === 0) return "Nenhum serviço escolhido";
   let centavos = 0;
   let minutos = 0;
   for (const id of marcados) {
-    const preco = reaisParaCentavos(String(dados.get(`preco_${id}`) ?? ""));
-    const duracao = Number(dados.get(`duracao_${id}`));
+    const catalogo = servicos.find((s) => s.id === id);
+    const precoDigitado = dados.get(`preco_${id}`);
+    const duracaoDigitada = dados.get(`duracao_${id}`);
+    const preco =
+      precoDigitado === null ? { ok: true as const, centavos: catalogo?.precoCentavos ?? 0 } : reaisParaCentavos(String(precoDigitado));
+    const duracao = duracaoDigitada === null ? (catalogo?.duracaoMin ?? 0) : Number(duracaoDigitada);
     if (preco.ok) centavos += preco.centavos;
     if (Number.isInteger(duracao) && duracao > 0) minutos += duracao;
   }
@@ -201,7 +208,7 @@ export function FormularioAgendamento({
     <form
       action={acao}
       onSubmit={enviarSemLimpar(acao)}
-      onChange={(evento) => setResumo(resumoDosServicos(evento.currentTarget))}
+      onChange={(evento) => setResumo(resumoDosServicos(evento.currentTarget, servicos))}
       className="formulario"
       noValidate
     >

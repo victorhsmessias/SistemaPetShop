@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { urlDoAgendamento } from "@/app/(dona)/agenda/retorno";
+import { textoDoAviso } from "@/app/(dona)/avisos";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { EstadoVazio } from "@/app/componentes/estado-vazio";
 import { Icone } from "@/app/componentes/icone";
 import { SeloDeStatus } from "@/app/componentes/selo-status";
@@ -17,13 +19,15 @@ import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
 export const metadata: Metadata = { title: "Cliente · banho-e-tosa" };
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ inativos?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ inativos?: string; salvo?: string }> };
 
 // Ficha do cliente: telefone com WhatsApp (principal) e Ligar, e cada pet com o próximo e o último atendimento e o
 // atalho para agendar. Desativar e reativar o pet ficam na edição dele, como em Serviços.
 export default async function PaginaCliente({ params, searchParams }: Props) {
   const { id } = await params;
-  const comInativos = (await searchParams).inativos === "1";
+  const pedido = await searchParams;
+  const comInativos = pedido.inativos === "1";
+  const aviso = textoDoAviso(pedido.salvo);
   const dados = await naEmpresaDaDona(async (tx) => {
     const tutor = await obterTutor(tx, id);
     if (!tutor) return null;
@@ -41,13 +45,14 @@ export default async function PaginaCliente({ params, searchParams }: Props) {
   const whatsapp = linkDoWhatsApp(tutor.telefone);
   const quando = (inicio: Date) => {
     const { dia, hora } = noFuso(inicio, fuso);
-    return `${dia === hoje ? "hoje" : rotuloCurtoDoDia(dia)}, ${hora}`;
+    return `${dia === hoje ? "hoje" : rotuloCurtoDoDia(dia)} às ${hora}`;
   };
 
   return (
     <main className="pagina">
       <Voltar href="/clientes" destino="Clientes" />
       <h1>{tutor.nome}</h1>
+      {aviso && <AvisoDeSucesso mensagem={aviso} parametros={["salvo"]} />}
       <section className="cartao ficha-cliente" aria-label="Contato">
         {tutor.telefone && (
           <>

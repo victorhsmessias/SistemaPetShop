@@ -105,7 +105,8 @@ export async function agendarAcao(_anterior: EstadoAgenda, dados: FormData): Pro
   const resultado = await naEmpresaDaDona((tx) => agendar(tx, { ...entrada, itens }, horarioAvisado));
   if (!resultado.ok) return estadoDe(resultado, { ...entrada, ...valoresItens }, servicos);
   revalidarAgenda();
-  redirect(urlDoDia(resultado.valor.dia));
+  // ?novo=<id>: a agenda mostra o aviso "Atendimento agendado para…" e destaca o bloco (avisos.ts, decisão D2).
+  redirect(`${urlDoDia(resultado.valor.dia)}&novo=${resultado.valor.id}`);
 }
 
 /** Avança ou desfaz o status. O botão envia `para`; `de` é o status que a tela mostrava. */
