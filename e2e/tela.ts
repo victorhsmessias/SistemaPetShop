@@ -69,7 +69,6 @@ export async function agendar(
 ): Promise<void> {
   await page.goto(`/agenda/novo?dia=${dia}`);
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill(busca);
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: new RegExp(`^${pet}`) }));
   await page.getByLabel("Hora").fill(hora);
   for (const servico of servicos) await page.getByRole("checkbox", { name: new RegExp(servico) }).check();

@@ -27,7 +27,7 @@ test("o atalho ?agendar= inválido não leva a outro endereço: o cadastro segue
   await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}/pets/novo\\?agendar=${dia}$`));
   await page.getByLabel("Nome do pet").fill("Bolinha");
-  await page.getByLabel("Porte").selectOption({ label: "Pequeno (P)" });
+  await page.getByRole("radio", { name: "Pequeno (P)" }).check();
   await tocar(page.getByRole("button", { name: "Salvar pet" }));
   await expect(page).toHaveURL(new RegExp(`/agenda/novo\\?dia=${dia}&pet=${UUID}$`));
   await expect(page.getByRole("heading", { level: 2, name: "Bolinha" })).toBeVisible();
@@ -40,7 +40,6 @@ test("cada erro do agendamento aparece no campo e mantém serviços, hora e obse
   const dia = diaDaqui(31);
   await page.goto(`/agenda/novo?dia=${dia}`);
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("mel");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   const agendarBotao = page.getByRole("button", { name: "Agendar", exact: true });
   const hora = page.getByLabel("Hora");
@@ -89,7 +88,6 @@ test("mudar a hora depois do aviso de horário ocupado avisa de novo", { tag: "@
   await page.goto(`/agenda/novo?dia=${dia}`);
   await expect(page.getByText(rotuloDoDia(dia))).toBeVisible();
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("mel");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   await page.getByLabel("Hora").fill("09:30");
   await page.getByRole("checkbox", { name: /Hidratação/ }).check();

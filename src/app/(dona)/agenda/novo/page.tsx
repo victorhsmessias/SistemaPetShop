@@ -4,6 +4,9 @@ import Link from "next/link";
 import { FormularioAgendamento } from "@/app/(dona)/agenda/formularios";
 import { parametroDeRetorno, urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { BuscaAoDigitar } from "@/app/componentes/busca-ao-digitar";
+import { EstadoVazio } from "@/app/componentes/estado-vazio";
+import { Icone } from "@/app/componentes/icone";
 import { Voltar } from "@/app/componentes/voltar";
 import { buscarPetsParaAgendar, obterPetParaAgendar } from "@/modules/agenda/atendimentos";
 import { ehDia, ehHora, hojeNoFuso, rotuloDoDia } from "@/modules/agenda/fuso";
@@ -48,12 +51,16 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
               ].join(" · ")}
             </p>
             {pet.observacoes && (
-              <p className="cuidado">
-                <strong>Cuidados</strong>
+              <div className="cuidado">
+                <strong>
+                  <Icone nome="alerta" />
+                  Cuidados
+                </strong>
                 {pet.observacoes}
-              </p>
+              </div>
             )}
-            <Link href={urlDoAgendamento({ dia, hora })} className="link-de-toque">
+            <Link href={urlDoAgendamento({ dia, hora })} className="botao-link botao-texto">
+              <Icone nome="desfazer" />
               Trocar o pet
             </Link>
           </section>
@@ -73,27 +80,20 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
         </>
       ) : (
         <>
-          <form className="busca" role="search" action="/agenda/novo">
-            <input type="hidden" name="dia" value={dia} />
-            {hora && <input type="hidden" name="hora" value={hora} />}
-            <label htmlFor="busca" className="visualmente-oculto">
-              Buscar pelo nome do pet ou do tutor
-            </label>
-            <input
-              id="busca"
-              name="busca"
-              type="search"
-              defaultValue={busca}
-              placeholder="Nome do pet ou do tutor"
-              autoComplete="off"
-            />
-            <button type="submit" className="botao-secundario">
-              Buscar
-            </button>
-          </form>
+          <BuscaAoDigitar
+            rotulo="Buscar pelo nome do pet ou do tutor"
+            valorInicial={busca}
+            placeholder="Digite para filtrar"
+            ocultos={hora ? { dia, hora } : { dia }}
+          />
 
           {dados.pets.length === 0 ? (
-            <p className="suave">{busca ? `Nenhum pet ativo encontrado para "${busca}".` : "Nenhum pet ativo cadastrado."}</p>
+            <EstadoVazio
+              icone="pata"
+              titulo={busca ? `Nenhum pet ativo encontrado para "${busca}".` : "Nenhum pet ativo cadastrado."}
+            >
+              Cadastre o cliente e o pet aqui embaixo e volte direto para este agendamento.
+            </EstadoVazio>
           ) : (
             <ul className="lista-toque" aria-label="Pets">
               {dados.pets.map((p) => (

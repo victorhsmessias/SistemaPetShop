@@ -793,20 +793,6 @@ a {
   font-weight: 600;
 }
 
-.busca {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.busca input {
-  flex: 1;
-}
-
-.busca button {
-  flex: 0 0 auto;
-}
-
 /* Busca que filtra ao digitar (componentes/busca-ao-digitar.tsx): rótulo visível e lupa dentro do campo. */
 .busca-ao-digitar {
   display: flex;
@@ -1480,6 +1466,101 @@ textarea[aria-invalid="true"] {
   overflow-wrap: normal;
   word-break: normal;
   box-shadow: none;
+}
+
+/* Salvar no rodapé: acompanha a rolagem enquanto o formulário está na tela, acima das abas. */
+.barra-salvar {
+  position: sticky;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px -8px 0;
+  padding: 8px;
+  background: var(--superficie);
+  border-radius: var(--raio-cartao);
+}
+
+.resumo-do-envio {
+  text-align: center;
+  font-size: var(--fs-p);
+  font-weight: 600;
+  color: var(--suave);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .barra-salvar {
+    bottom: 16px;
+  }
+}
+
+/* Segmentado (componentes/segmentado.tsx): rádios com cara de botão. */
+.segmentado-campo {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.segmentado-campo legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.segmentado {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
+  overflow: hidden;
+  background: var(--superficie);
+}
+
+.segmentado label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: var(--toque);
+  padding: 0 8px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.segmentado label + label {
+  border-left: var(--borda-larg) solid var(--borda-controle);
+}
+
+/* O rádio cobre o botão inteiro (o toque cai nele), invisível; o visual vem do rótulo. */
+.segmentado input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segmentado label:has(input:checked) {
+  background: var(--primaria);
+  color: var(--primaria-texto);
+}
+
+.segmentado label:has(input:focus-visible) {
+  outline: 3px solid var(--foco);
+  outline-offset: -3px;
+}
+
+.segmentado-campo[aria-describedby] .segmentado {
+  border-color: var(--perigo);
+  border-width: 2px;
 }
 
 /* Formulário de agendamento. */

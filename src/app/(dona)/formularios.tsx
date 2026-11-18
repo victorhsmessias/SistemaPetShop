@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { salvarPetAcao, salvarServicoAcao, salvarTutorAcao, type EstadoCadastro } from "@/app/(dona)/acoes";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
 import { Icone } from "@/app/componentes/icone";
+import { Segmentado } from "@/app/componentes/segmentado";
 import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 
 type Valores = Record<string, string>;
@@ -13,11 +14,14 @@ type Valores = Record<string, string>;
 /** Estado inicial com os valores atuais do registro (edição) ou vazio (cadastro). */
 const inicial = (valores: Valores = {}): EstadoCadastro => ({ erros: {}, valores });
 
+/** Salvar no rodapé: a barra acompanha a rolagem enquanto o formulário está na tela, ao alcance do polegar. */
 function BotaoSalvar({ enviando, rotulo }: { enviando: boolean; rotulo: string }) {
   return (
-    <button type="submit" className="botao-primario" disabled={enviando}>
-      {enviando ? "Salvando…" : rotulo}
-    </button>
+    <div className="barra-salvar">
+      <button type="submit" className="botao-primario botao-grande" disabled={enviando}>
+        {enviando ? "Salvando…" : rotulo}
+      </button>
+    </div>
   );
 }
 
@@ -80,31 +84,14 @@ export function FormularioPet({
       <Campo nome="nome" rotulo="Nome do pet" erro={estado.erros.nome}>
         {(props) => <input {...props} defaultValue={v.nome} autoComplete="off" autoCapitalize="words" />}
       </Campo>
-      <Campo nome="especie" rotulo="Espécie" erro={estado.erros.especie}>
-        {(props) => (
-          <select {...props} defaultValue={v.especie}>
-            {especies.map((opcao) => (
-              <option key={opcao.valor} value={opcao.valor}>
-                {opcao.nome}
-              </option>
-            ))}
-          </select>
-        )}
-      </Campo>
-      <Campo nome="porte" rotulo="Porte" erro={estado.erros.porte}>
-        {(props) => (
-          <select {...props} defaultValue={v.porte ?? ""}>
-            <option value="" disabled>
-              Escolha…
-            </option>
-            {portes.map((opcao) => (
-              <option key={opcao.valor} value={opcao.valor}>
-                {opcao.nome}
-              </option>
-            ))}
-          </select>
-        )}
-      </Campo>
+      <Segmentado nome="especie" rotulo="Espécie" opcoes={especies} valor={v.especie} erro={estado.erros.especie} />
+      <Segmentado
+        nome="porte"
+        rotulo="Porte"
+        opcoes={portes.map((opcao) => ({ ...opcao, curto: opcao.valor }))}
+        valor={v.porte}
+        erro={estado.erros.porte}
+      />
       <Campo nome="raca" rotulo="Raça (opcional)" erro={estado.erros.raca}>
         {(props) => <input {...props} defaultValue={v.raca} autoComplete="off" autoCapitalize="words" />}
       </Campo>
@@ -138,7 +125,7 @@ export function FormularioServico({ id, valores }: { id?: string; valores?: Valo
       <Campo nome="duracao" rotulo="Duração (minutos)" erro={estado.erros.duracao}>
         {(props) => <input {...props} inputMode="numeric" defaultValue={v.duracao} autoComplete="off" />}
       </Campo>
-      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Cadastrar serviço"} />
+      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Salvar serviço"} />
     </form>
   );
 }

@@ -20,7 +20,7 @@ import { Aviso } from "@/app/componentes/aviso";
 import { Icone } from "@/app/componentes/icone";
 import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 import { ACOES_DOS_STATUS, NOMES_DOS_STATUS, proximosStatus, statusAnterior, type StatusAtendimento } from "@/modules/agenda/status";
-import { centavosParaTexto, formatarReais } from "@/modules/compartilhado/dinheiro";
+import { centavosParaTexto, formatarReais, reaisParaCentavos } from "@/modules/compartilhado/dinheiro";
 
 export type OpcaoServico = { id: string; nome: string; precoCentavos: number; duracaoMin: number };
 
@@ -30,12 +30,40 @@ const inicial = (valores: Record<string, string> = {}, servicos: string[] = []):
   servicos,
 });
 
-function BotaoEnviar({ enviando, rotulo }: { enviando: boolean; rotulo: string }) {
+function BotaoEnviar({ enviando, rotulo, resumo }: { enviando: boolean; rotulo: string; resumo?: string }) {
   return (
-    <button type="submit" className="botao-primario" disabled={enviando}>
-      {enviando ? "Salvando…" : rotulo}
-    </button>
+    <div className="barra-salvar">
+      {resumo && (
+        <span id="resumo-do-envio" className="resumo-do-envio">
+          {resumo}
+        </span>
+      )}
+      <button
+        type="submit"
+        className="botao-primario botao-grande"
+        disabled={enviando}
+        aria-describedby={resumo ? "resumo-do-envio" : undefined}
+      >
+        {enviando ? "Salvando…" : rotulo}
+      </button>
+    </div>
   );
+}
+
+/** "R$ 80,00 · 90 min" dos serviços marcados, com o preço e a duração como estão digitados. */
+function resumoDosServicos(formulario: HTMLFormElement): string {
+  const dados = new FormData(formulario);
+  const marcados = dados.getAll("servico").map(String);
+  if (marcados.length === 0) return "Nenhum serviço escolhido";
+  let centavos = 0;
+  let minutos = 0;
+  for (const id of marcados) {
+    const preco = reaisParaCentavos(String(dados.get(`preco_${id}`) ?? ""));
+    const duracao = Number(dados.get(`duracao_${id}`));
+    if (preco.ok) centavos += preco.centavos;
+    if (Number.isInteger(duracao) && duracao > 0) minutos += duracao;
+  }
+  return `${formatarReais(centavos)} · ${minutos} min`;
 }
 
 /** Horário ocupado: aviso, não bloqueio. A chave do horário avisado volta no formulário para confirmar. */
@@ -166,10 +194,17 @@ export function FormularioAgendamento({
   servicos: OpcaoServico[];
 }) {
   const [estado, acao, enviando] = useActionState(agendarAcao, inicial({ dia, hora: hora ?? "" }));
+  const [resumo, setResumo] = useState("Nenhum serviço escolhido");
   const v = estado.valores;
 
   return (
-    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
+    <form
+      action={acao}
+      onSubmit={enviarSemLimpar(acao)}
+      onChange={(evento) => setResumo(resumoDosServicos(evento.currentTarget))}
+      className="formulario"
+      noValidate
+    >
       <input type="hidden" name="petId" value={petId} />
       <ErroGeral erro={estado.erros.geral ?? estado.erros.pet} />
       <div className="campos-lado-a-lado">
@@ -180,6 +215,8 @@ export function FormularioAgendamento({
           {(props) => <input {...props} type="time" step={300} defaultValue={v.hora} />}
         </Campo>
       </div>
+      {/* Perto de Dia e Hora, onde a dona está olhando quando o aviso aparece. */}
+      <AvisoDeHorario estado={estado} />
       <EscolhaDeServicos servicos={servicos} estado={estado} />
       <Campo
         nome="observacoes"
@@ -189,8 +226,11 @@ export function FormularioAgendamento({
       >
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
-      <AvisoDeHorario estado={estado} />
-      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Agendar mesmo assim" : "Agendar"} />
+      <BotaoEnviar
+        enviando={enviando}
+        rotulo={estado.conflitos?.length ? "Agendar mesmo assim" : "Agendar"}
+        resumo={resumo}
+      />
     </form>
   );
 }

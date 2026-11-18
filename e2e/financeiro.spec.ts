@@ -22,7 +22,6 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   await page.goto(`/agenda?dia=${DIA}`);
   await tocar(page.getByRole("link", { name: "Novo agendamento" }));
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("mel");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   await page.getByLabel("Hora").fill("10:00");
   await page.getByRole("checkbox", { name: /Banho M/ }).check();

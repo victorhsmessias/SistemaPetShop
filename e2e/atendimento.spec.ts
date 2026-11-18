@@ -110,7 +110,7 @@ test("com total zero, a dona conclui sem cobrança e o concluído só edita obse
   await page.getByLabel("Nome do serviço").fill("Banho cortesia");
   await page.getByLabel("Preço (R$)").fill("0,00");
   await page.getByLabel("Duração (minutos)").fill("30");
-  await tocar(page.getByRole("button", { name: "Cadastrar serviço" }));
+  await tocar(page.getByRole("button", { name: "Salvar serviço" }));
   await expect(page).toHaveURL(/\/servicos$/);
 
   const dia = diaDaqui(22);

@@ -23,8 +23,8 @@ async function cadastrarPet(
 ) {
   await tocar(page.getByRole("link", { name: "Novo pet" }));
   await page.getByLabel("Nome do pet").fill(pet.nome);
-  await page.getByLabel("Espécie").selectOption({ label: pet.especie });
-  await page.getByLabel("Porte").selectOption({ label: pet.porte });
+  await page.getByRole("radio", { name: pet.especie, exact: true }).check();
+  await page.getByRole("radio", { name: pet.porte, exact: true }).check();
   if (pet.raca) await page.getByLabel("Raça (opcional)").fill(pet.raca);
   if (pet.cuidados) await page.getByLabel("Cuidados: comportamento e alergias").fill(pet.cuidados);
   await tocar(page.getByRole("button", { name: "Salvar pet" }));
@@ -96,9 +96,9 @@ test("a dona edita o tutor e o pet, desativa o pet e o reativa pela lista de ina
   // Editar o pet: raça e porte.
   await tocar(cartaoDoPet(page, "Fumaça").getByRole("link", { name: "Editar" }));
   await expect(page.getByRole("heading", { level: 1, name: "Editar Fumaça" })).toBeVisible();
-  await expect(page.getByLabel("Espécie")).toHaveValue("gato");
+  await expect(page.getByRole("radio", { name: "Gato", exact: true })).toBeChecked();
   await page.getByLabel("Raça (opcional)").fill("Persa");
-  await page.getByLabel("Porte").selectOption({ label: "Médio (M)" });
+  await page.getByRole("radio", { name: "Médio (M)" }).check();
   await tocar(page.getByRole("button", { name: "Salvar alterações" }));
   await expect(cartaoDoPet(page, "Fumaça")).toContainText("Gato · Persa · Médio (M)");
 

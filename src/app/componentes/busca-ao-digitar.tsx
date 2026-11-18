@@ -57,6 +57,8 @@ export function BuscaAoDigitar({
             clearTimeout(espera.current);
             espera.current = setTimeout(() => buscar(texto), PAUSA_MS);
           }}
+          // Tocou num resultado antes da pausa: cancela a busca pendente, senão ela levaria de volta à lista.
+          onBlur={() => clearTimeout(espera.current)}
           placeholder={placeholder}
           autoComplete="off"
           enterKeyHint="search"

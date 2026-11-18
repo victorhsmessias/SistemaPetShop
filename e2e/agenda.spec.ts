@@ -42,7 +42,7 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   await page.getByLabel("Telefone (WhatsApp)").fill("(21) 97766-5544");
   await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await page.getByLabel("Nome do pet").fill("Thor");
-  await page.getByLabel("Porte").selectOption({ label: "Grande (G)" });
+  await page.getByRole("radio", { name: "Grande (G)" }).check();
   await page.getByLabel("Cuidados: comportamento e alergias").fill("Alérgico a xampu de aveia.");
   await tocar(page.getByRole("button", { name: "Salvar pet" }));
 
@@ -79,7 +79,6 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   // então ela usa o botão de novo agendamento e digita a hora.
   await tocar(page.getByRole("link", { name: "Novo agendamento" }));
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("rita");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   await page.getByLabel("Hora").fill("09:30");
   await page.getByRole("checkbox", { name: /Hidratação/ }).check();
