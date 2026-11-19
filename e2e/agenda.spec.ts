@@ -2,7 +2,7 @@ import type { Locator } from "@playwright/test";
 
 import { rotuloDoDia } from "@/modules/agenda/fuso";
 
-import { diaDaqui, expect, statusAtual, test } from "./tela";
+import { agendar, diaDaqui, expect, statusAtual, test } from "./tela";
 
 // A dona, no iPhone e no desktop, na agenda (critério de "pronto" da sessão 04): agenda um pet com dois serviços,
 // vê o bloco no horário certo no dia e na semana, recebe o aviso de horário ocupado e acompanha o
@@ -106,4 +106,18 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
 
   await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(thor).toContainText("Pronto · 09:00–10:30");
+});
+
+// U8 da revisão: no dia de hoje (o relógio do servidor marca 12:00, e2e/relogio.mjs), a grade abre já na linha
+// "agora", sem a dona rolar até ela, e o resumo "Próximo" mostra o atendimento que vem depois. O dia vai por ?dia=,
+// calculado sobre o mesmo relógio, como nos outros testes.
+test("no dia de hoje, a grade abre na linha agora, e o resumo mostra o próximo atendimento", async ({ page, tocar }) => {
+  const hoje = diaDaqui(0);
+  await agendar(page, tocar, { dia: hoje, hora: "14:00", servicos: ["Banho M"] });
+  await page.goto(`/agenda?dia=${hoje}`);
+  const agora = page.locator(".grade .agora");
+  // O relógio do teste começa às 12:00 e segue andando.
+  await expect(agora).toHaveText(/^12:\d{2}$/);
+  await expect(agora).toBeInViewport();
+  await expect(page.getByRole("link", { name: /^Próximo \d/ })).toContainText("14:00 · Mel");
 });

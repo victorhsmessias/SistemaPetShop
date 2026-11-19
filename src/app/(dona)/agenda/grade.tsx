@@ -166,9 +166,12 @@ export function GradeDoDia({
           );
         })}
         {[...excedentes.entries()].map(([grupo, ocultos]) => {
-          const doGrupo = blocos.filter((b) => posicoes.get(b.atendimento.id)!.grupo === grupo);
-          const inicio = Math.min(...doGrupo.map((b) => b.inicioMin));
-          const fim = Math.max(...doGrupo.map((b) => Math.max(b.fimMin, b.inicioMin + DURACAO_VISUAL_MINIMA_MIN)));
+          // Do início do primeiro oculto ao fim do último (U9 da revisão): o "+N" não cobre os horários livres da
+          // metade da direita antes nem depois deles, e o rótulo diz o intervalo de verdade.
+          const inicio = Math.min(...ocultos.map((b) => b.inicioMin));
+          const fim = Math.max(...ocultos.map((b) => b.fimMin));
+          const fimVisual = Math.max(...ocultos.map((b) => Math.max(b.fimMin, b.inicioMin + DURACAO_VISUAL_MINIMA_MIN)));
+          const intervalo = `entre ${horaDoMinuto(inicio)} e ${horaDoMinuto(fim)}`;
           const lista = `mais-no-horario-${grupo}`;
           return (
             <span key={grupo} className="mais-n-grupo">
@@ -176,13 +179,13 @@ export function GradeDoDia({
                 type="button"
                 className="mais-n"
                 popoverTarget={lista}
-                style={{ top: (inicio - faixa.inicio) * PX_POR_MIN_DIA, height: (fim - inicio) * PX_POR_MIN_DIA }}
-                aria-label={`Mais ${ocultos.length} atendimentos às ${horaDoMinuto(inicio)}`}
+                style={{ top: (inicio - faixa.inicio) * PX_POR_MIN_DIA, height: (fimVisual - inicio) * PX_POR_MIN_DIA }}
+                aria-label={`Mais ${ocultos.length} ${ocultos.length === 1 ? "atendimento" : "atendimentos"} ${intervalo}`}
               >
                 +{ocultos.length}
               </button>
               <span id={lista} popover="auto" className="menu-flutuante lista-mais-n">
-                <span className="rotulo">A partir das {horaDoMinuto(inicio)}</span>
+                <span className="rotulo">{intervalo[0]!.toUpperCase() + intervalo.slice(1)}</span>
                 {ocultos.map(({ atendimento: a }) => (
                   <Link key={a.id} href={`/agenda/${a.id}`} className={`bloco bloco-na-lista status-${a.status}`}>
                     <ConteudoDoBloco a={a} fuso={fuso} />

@@ -48,7 +48,7 @@ test("nome de 120 caracteres, 12 pets, serviço longo e 4 atendimentos no mesmo 
   };
   if (isMobile) {
     await expect(blocos).toHaveCount(1);
-    const mais = page.getByRole("button", { name: "Mais 3 atendimentos às 09:00" });
+    const mais = page.getByRole("button", { name: "Mais 3 atendimentos entre 09:00 e 10:30" });
     await ladoALado([blocos.first(), mais]);
     await semRolagemHorizontal(page, "agenda do dia");
     await tocar(mais);

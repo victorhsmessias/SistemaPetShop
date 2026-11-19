@@ -10,8 +10,10 @@
     (blocos do tamanho da duração, como pede o H6) e melhorar a leitura.
 - Decisão:
   - **Abaixo de 1024 px, no máximo 2 colunas.** Num grupo de atendimentos que se tocam e que precisaria de 3 ou mais
-    colunas, a 1ª coluna fica na grade, com meia largura, e na outra metade aparece um botão "+N", da altura do
-    grupo, com o nome acessível "Mais N atendimentos às HH:MM".
+    colunas, a 1ª coluna fica na grade, com meia largura, e na outra metade aparece um botão "+N", do início do
+    primeiro atendimento oculto ao fim do último, com o nome acessível "Mais N atendimentos entre HH:MM e HH:MM".
+    (Ajustado na revisão da sessão 07, antes do merge: a primeira versão ia da altura do grupo inteiro e dizia
+    "às HH:MM", o início do grupo, o que cobria horários livres e indicava a hora errada.)
   - **O "+N" abre a lista do horário** (popover do HTML, sem JavaScript) com os outros blocos, com o mesmo conteúdo
     e o mesmo nome acessível dos blocos da grade. Nenhum atendimento fica inacessível.
   - **A partir de 1024 px, todas as colunas,** lado a lado, como antes.
