@@ -25,7 +25,12 @@ export function AvisoDeSucesso({ mensagem, parametros }: { mensagem: string; par
     const url = new URL(window.location.href);
     for (const nome of nomes.split(",")) url.searchParams.delete(nome);
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-    const anuncio = setTimeout(() => setTexto(mensagem), ANUNCIO_MS);
+    // Um aviso novo sempre começa com o tempo correndo: o componente continua montado quando só os parâmetros da
+    // rota mudam (N2 da conferência).
+    const anuncio = setTimeout(() => {
+      setPausado(false);
+      setTexto(mensagem);
+    }, ANUNCIO_MS);
     return () => clearTimeout(anuncio);
   }, [nomes, mensagem]);
 
@@ -45,7 +50,11 @@ export function AvisoDeSucesso({ mensagem, parametros }: { mensagem: string; par
             type="button"
             className="botao-texto"
             aria-label="Fechar o aviso"
-            onClick={() => setTexto(null)}
+            onClick={() => {
+              // Fechar tira o botão antes do blur e do mouseleave: sem isto, a pausa ficaria ligada (N2 da conferência).
+              setPausado(false);
+              setTexto(null);
+            }}
             onFocus={() => setPausado(true)}
             onBlur={() => setPausado(false)}
             onMouseEnter={() => setPausado(true)}
