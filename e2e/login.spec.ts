@@ -54,6 +54,28 @@ test.describe("sem sessão", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
+  test("sem rede na conferência, o login avisa e o botão volta; a senha não vai para a conferência (T3, T4)", {
+    tag: "@um-perfil",
+  }, async ({ page, tocar }) => {
+    // A conferência é uma Server Action: um POST para a própria /login. Ela é derrubada (como sem rede) depois de
+    // guardar o corpo; o Better Auth nem é chamado, então o limite de logins não é gasto.
+    const corpos: string[] = [];
+    await page.route("**/login", async (rota) => {
+      if (rota.request().method() !== "POST") return rota.continue();
+      corpos.push(rota.request().postData() ?? "");
+      await rota.abort("failed");
+    });
+    await page.goto("/login");
+    await page.getByLabel("E-mail").fill("dona@teste.banho-e-tosa.local");
+    await page.getByLabel("Senha").fill("senha-que-nao-pode-sair");
+    const entrar = page.getByRole("button", { name: "Entrar" });
+    await tocar(entrar);
+    await expect(erroGeral(page, "Não foi possível entrar agora. Tente de novo.")).toBeVisible();
+    await expect(entrar).toBeEnabled();
+    expect(corpos).toHaveLength(1);
+    expect(corpos[0]).not.toContain("senha-que-nao-pode-sair");
+  });
+
   test("a senha errada mostra a mensagem e não entra", { tag: "@um-perfil" }, async ({ page, tocar, dona }) => {
     await page.goto("/login");
     await page.getByLabel("E-mail").fill(dona.email);

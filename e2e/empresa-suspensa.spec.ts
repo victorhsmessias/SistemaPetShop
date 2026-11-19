@@ -11,7 +11,8 @@ test("com a sessão aberta, a dona vai para o aviso de empresa suspensa, sem nav
   for (const url of ["/agenda", "/clientes", "/financeiro"]) {
     await page.goto(url);
     await expect(page).toHaveURL(/\/empresa$/);
-    await expect(erroGeral(page, MENSAGEM)).toBeVisible();
+    // A mensagem já está na página quando ela abre: sem role="alert" (T17 da revisão).
+    await expect(page.getByText(MENSAGEM)).toBeVisible();
   }
   // Sem a navegação (que só voltaria para cá) e com o WhatsApp do suporte (número fictício do teste).
   await expect(page.getByRole("navigation", { name: "Navegação principal" })).toHaveCount(0);

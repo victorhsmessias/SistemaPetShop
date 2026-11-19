@@ -42,7 +42,8 @@ export default async function PaginaEmpresa() {
         <Icone nome="pata" />
       </span>
       <h1>Acesso suspenso</h1>
-      <Aviso tipo="aviso" role="alert">
+      {/* Conteúdo que já está na página quando ela abre (o h1 diz o que é): sem role="alert" (T17 da revisão). */}
+      <Aviso tipo="aviso">
         {MENSAGEM_EMPRESA_SUSPENSA}
       </Aviso>
       <p className="suave">Seus dados continuam guardados.</p>

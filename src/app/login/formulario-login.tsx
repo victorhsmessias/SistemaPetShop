@@ -36,20 +36,30 @@ export function FormularioLogin() {
     setEnviando(true);
     setFalha(null);
 
-    const conferidos = await conferirLogin(email, senha);
-    setErros(conferidos);
-    if (conferidos.email || conferidos.senha) {
-      setEnviando(false);
-      return;
-    }
+    // Rede ou servidor fora (a ação ou o Better Auth rejeitam): mensagem e botão de volta, nunca preso em
+    // "Entrando…" (T4 da revisão).
+    try {
+      // Só se a senha foi preenchida: ela vai apenas para o Better Auth (T3).
+      const conferidos = await conferirLogin(email, senha.length > 0);
+      setErros(conferidos);
+      if (conferidos.email || conferidos.senha) {
+        setEnviando(false);
+        return;
+      }
 
-    const { error } = await authClient.signIn.email({ email, password: senha });
-    if (error) {
-      setFalha(falhaDoLogin(error));
+      const { error } = await authClient.signIn.email({ email, password: senha });
+      if (error) {
+        setFalha(falhaDoLogin(error));
+        setEnviando(false);
+        return;
+      }
+    } catch {
+      setFalha({ tipo: "erro", mensagem: "Não foi possível entrar agora. Tente de novo." });
       setEnviando(false);
       return;
     }
-    // A página inicial manda o administrador para /admin e a dona para a empresa dela.
+    // A página inicial manda o administrador para /admin e a dona para a empresa dela. O botão continua em
+    // "Entrando…" até a navegação terminar.
     router.replace("/");
     router.refresh();
   }

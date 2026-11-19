@@ -48,11 +48,15 @@ describe("problemasDoAmbiente", () => {
     expect(texto({ ...DESENVOLVIMENTO, SUPORTE_WHATSAPP: "(11) 90000-0000" })).toContain("SUPORTE_WHATSAPP precisa ter só dígitos");
     expect(texto({ ...DESENVOLVIMENTO, SUPORTE_WHATSAPP: "+5511900000000" })).toContain("SUPORTE_WHATSAPP precisa ter só dígitos");
     expect(texto({ ...PRODUCAO, SUPORTE_WHATSAPP: undefined })).toContain("SUPORTE_WHATSAPP não definida");
+    // Vazia, como no .env.example (T14): sobe em desenvolvimento, sem o botão; em produção, não sobe.
+    expect(problemasDoAmbiente({ ...DESENVOLVIMENTO, SUPORTE_WHATSAPP: "" })).toEqual([]);
+    expect(texto({ ...PRODUCAO, SUPORTE_WHATSAPP: "" })).toContain("SUPORTE_WHATSAPP não definida");
   });
 
   it("whatsappDoSuporte devolve o número válido e null sem ele ou com valor inválido", () => {
     expect(whatsappDoSuporte({ SUPORTE_WHATSAPP: " 5511900000000 " })).toBe("5511900000000");
     expect(whatsappDoSuporte({})).toBeNull();
+    expect(whatsappDoSuporte({ SUPORTE_WHATSAPP: "" })).toBeNull();
     expect(whatsappDoSuporte({ SUPORTE_WHATSAPP: "11 90000-0000" })).toBeNull();
   });
 
