@@ -272,6 +272,24 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
     expect(cache.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("salvar horário, serviços ou observações volta ao atendimento com o aviso da parte salva (U7)", async () => {
+    // 14:00 em São Paulo, num dia sem outros atendimentos de A nesse horário.
+    const id = await novoAtendimentoDeA({ inicio: "2026-12-11T17:00:00Z" });
+    const horario = formulario({ id, dia: "2026-12-11", hora: "15:00", termino: "16:00" });
+    expect(await destinoDoRedirect(editarHorarioAcao(vazio, horario))).toBe(`/agenda/${id}?salvo=horario`);
+    const servicos = formulario({
+      id,
+      servico: [a.servicoId],
+      [`preco_${a.servicoId}`]: "50,00",
+      [`duracao_${a.servicoId}`]: "60",
+    });
+    expect(await destinoDoRedirect(editarServicosAcao(vazio, servicos))).toBe(`/agenda/${id}?salvo=servicos`);
+    const observacoes = formulario({ id, observacoes: "Toalha extra." });
+    expect(await destinoDoRedirect(editarObservacoesAcao(vazio, observacoes))).toBe(`/agenda/${id}?salvo=observacoes`);
+    const salvo = (await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!;
+    expect([salvo.inicio.toISOString(), salvo.observacoes]).toEqual(["2026-12-11T18:00:00.000Z", "Toalha extra."]);
+  });
+
   it("horário ocupado volta como aviso, com os dados digitados; confirmado, agenda", async () => {
     // 09:00–10:30 em São Paulo (fuso padrão da empresa).
     await novoAtendimentoDeA({ inicio: `${DIA_OCUPADO}T12:00:00Z`, minutos: 90 });
@@ -445,7 +463,7 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("concluido");
     expect(await receitasDoAtendimento(a, id)).toEqual([]);
 
-    const pagina = await PaginaAtendimento({ params: Promise.resolve({ id }) });
+    const pagina = await PaginaAtendimento({ params: Promise.resolve({ id }), searchParams: Promise.resolve({}) });
     expect(textoDe(pagina).replace(/\s/g, " ")).toContain("Concluído sem receita: o total era R$ 0,00.");
   });
 

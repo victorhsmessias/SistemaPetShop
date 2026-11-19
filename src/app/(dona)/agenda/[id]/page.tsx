@@ -10,8 +10,10 @@ import {
   FormularioDesfazerConclusao,
 } from "@/app/(dona)/agenda/formularios";
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
+import { textoDoAviso } from "@/app/(dona)/avisos";
 import { iniciais } from "@/app/(dona)/conta";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { Icone } from "@/app/componentes/icone";
 import { SeloDeStatus } from "@/app/componentes/selo-status";
 import { Voltar } from "@/app/componentes/voltar";
@@ -26,13 +28,15 @@ import { listarFormasAtivas, receitaDoAtendimento } from "@/modules/financeiro/l
 
 export const metadata: Metadata = { title: "Atendimento · banho-e-tosa" };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ salvo?: string }> };
 
 // Acompanhar o atendimento (H7): status, desfazer um toque errado, cancelar, concluir com a forma de pagamento,
 // a receita do atendimento concluído e desfazer a conclusão, e o acesso à edição. A ação principal (Concluir) fica
 // na barra do rodapé, ao alcance do polegar. A partir de 1024 px, a lista do dia fica ao lado (mestre-detalhe).
-export default async function PaginaAtendimento({ params }: Props) {
+export default async function PaginaAtendimento({ params, searchParams }: Props) {
   const { id } = await params;
+  // Depois de salvar uma parte na edição (?salvo=horario|servicos|observacoes, lista fechada de avisos.ts).
+  const salvo = textoDoAviso((await searchParams).salvo);
   const dados = await naEmpresaDaDona(async (tx) => {
     const atendimento = await obterAtendimento(tx, id);
     if (!atendimento) return null;
@@ -82,6 +86,7 @@ export default async function PaginaAtendimento({ params }: Props) {
               <SeloDeStatus status={a.status} anunciar />
             </header>
             <AvisoDaPagina />
+            {salvo && <AvisoDeSucesso mensagem={salvo} parametros={["salvo"]} />}
             <p className="quando">
               {rotuloDoDia(inicio.dia)} · {inicio.hora}–{fim.hora}
               {fim.dia !== inicio.dia ? ` (termina em ${rotuloDoDia(fim.dia)})` : ""}

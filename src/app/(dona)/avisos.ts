@@ -7,6 +7,10 @@ const AVISOS = {
   pet: "Pet salvo.",
   servico: "Serviço salvo.",
   "cliente-e-pet": "Cliente e pet cadastrados. Agora escolha os serviços.",
+  // Edição do atendimento: cada parte salva separadamente, e o aviso diz qual (U7 da revisão).
+  horario: "Horário salvo.",
+  servicos: "Serviços salvos.",
+  observacoes: "Observações salvas.",
 } as const;
 
 export type CodigoDoAviso = keyof typeof AVISOS;

@@ -39,6 +39,8 @@ export default async function PaginaEditarAtendimento({ params }: Props) {
       <ComAvisoDaPagina>
         <Voltar href={`/agenda/${a.id}`} destino={a.pet.nome} />
         <h1>Editar atendimento</h1>
+        {/* Três formulários, cada um com o seu botão (U7 da revisão): a dica evita perder o que mudou noutro cartão. */}
+        <p className="suave">Cada parte salva separadamente: salve uma antes de mudar a outra.</p>
         <AvisoDaPagina />
 
         {ativo ? (

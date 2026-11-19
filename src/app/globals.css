@@ -1823,7 +1823,7 @@ textarea[aria-invalid="true"] {
   z-index: 9;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
   background: var(--superficie);
   border-top: 1px solid var(--borda);
@@ -1832,14 +1832,15 @@ textarea[aria-invalid="true"] {
 
 .botoes-status {
   display: flex;
-  gap: 10px;
-  flex: 1 1 auto;
+  gap: 8px;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
-.botoes-status > button:first-child:not(.botao-icone) {
+.botoes-status > button:first-of-type:not(.botao-icone) {
   flex: 1 1 auto;
-  padding: 0 12px;
+  padding: 0 10px;
+  white-space: nowrap;
 }
 
 .botao-icone {
@@ -1848,9 +1849,34 @@ textarea[aria-invalid="true"] {
   padding: 0;
 }
 
+/* Concluir cresce mais que o próximo status e não quebra o texto; só vai para a linha de baixo se não couber
+   (U2 da revisão). */
 .barra-acao-principal {
-  flex: 1 1 180px;
-  min-width: 0;
+  flex: 2 1 0;
+  min-width: min-content;
+}
+
+.botao-concluir {
+  white-space: nowrap;
+  padding: 0 12px;
+}
+
+/* No celular, com o "⋯" (agendado e confirmado), os ícones do próximo status e do Concluir saem para os três caberem
+   numa linha em 375 px (medido: 338 de 351 px com "R$ 90,00"). Um valor maior ainda cabe até uns R$ 150,00; acima
+   disso, o Concluir desce para a linha de baixo sem quebrar o texto. */
+@media (max-width: 1023px) {
+  .barra-acao .botao-grande {
+    font-size: 16px;
+  }
+
+  .barra-acao .botao-icone {
+    width: var(--toque);
+  }
+
+  .barra-acao:has(.botao-icone) .botoes-status > button:first-of-type:not(.botao-icone) .ic,
+  .barra-acao:has(.botao-icone) .botao-concluir .ic {
+    display: none;
+  }
 }
 
 .barra-acao-principal .formulario {

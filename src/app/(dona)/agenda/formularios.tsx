@@ -30,7 +30,25 @@ const inicial = (valores: Record<string, string> = {}, servicos: string[] = []):
   servicos,
 });
 
-function BotaoEnviar({ enviando, rotulo, resumo }: { enviando: boolean; rotulo: string; resumo?: string }) {
+function BotaoEnviar({
+  enviando,
+  rotulo,
+  resumo,
+  noCartao,
+}: {
+  enviando: boolean;
+  rotulo: string;
+  resumo?: string;
+  /** Na edição do atendimento, cada cartão salva só a sua parte: botão secundário dentro dele, sem barra (U7). */
+  noCartao?: boolean;
+}) {
+  if (noCartao) {
+    return (
+      <button type="submit" className="botao-secundario botao-largo" disabled={enviando}>
+        {enviando ? "Salvando…" : rotulo}
+      </button>
+    );
+  }
   return (
     <div className="barra-salvar">
       {resumo && (
@@ -277,7 +295,11 @@ export function FormularioServicosDoAtendimento({
       />
       <p className="dica">O término é recalculado pela soma das durações.</p>
       <AvisoDeHorario estado={estado} />
-      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar serviços"} />
+      <BotaoEnviar
+        enviando={enviando}
+        rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar serviços"}
+        noCartao
+      />
     </form>
   );
 }
@@ -331,7 +353,7 @@ export function FormularioHorario({
         </Campo>
       </div>
       <AvisoDeHorario estado={estado} />
-      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar horário"} />
+      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar horário"} noCartao />
     </form>
   );
 }
@@ -350,10 +372,20 @@ export function FormularioObservacoes({ id, observacoes }: { id: string; observa
       >
         {(props) => <textarea {...props} defaultValue={estado.valores.observacoes} />}
       </Campo>
-      <BotaoEnviar enviando={enviando} rotulo="Salvar observações" />
+      <BotaoEnviar enviando={enviando} rotulo="Salvar observações" noCartao />
     </form>
   );
 }
+
+/**
+ * Na barra de ação, rótulo curto e ícone, para caber numa linha com Concluir em 375 px (U2 da revisão). O nome
+ * acessível continua o completo de ACOES_DOS_STATUS e contém o texto visível.
+ */
+const NA_BARRA: Partial<Record<StatusAtendimento, { rotulo: string; icone: "calcheck" | "gota" | "sino" }>> = {
+  confirmado: { rotulo: "Confirmar", icone: "calcheck" },
+  em_atendimento: { rotulo: "Começar", icone: "gota" },
+  pronto: { rotulo: "Pronto", icone: "sino" },
+};
 
 /**
  * Próximo status, na barra de ação: o primeiro como botão secundário (a ação principal da barra é Concluir); os
@@ -374,8 +406,16 @@ export function BotoesDeStatus({ id, status }: { id: string; status: StatusAtend
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="de" value={status} />
       {principal && (
-        <button type="submit" name="para" value={principal} className="botao-secundario botao-grande" disabled={enviando}>
-          {ACOES_DOS_STATUS[principal]}
+        <button
+          type="submit"
+          name="para"
+          value={principal}
+          className="botao-secundario botao-grande"
+          aria-label={ACOES_DOS_STATUS[principal]}
+          disabled={enviando}
+        >
+          {NA_BARRA[principal] && <Icone nome={NA_BARRA[principal].icone} />}
+          {NA_BARRA[principal]?.rotulo ?? ACOES_DOS_STATUS[principal]}
         </button>
       )}
       {(outros.length > 0 || encerrar.length > 0) && (
@@ -490,7 +530,8 @@ export function FormularioConcluir({
           </button>
         </>
       ) : !escolhendo ? (
-        <button type="button" className="botao-primario botao-grande" onClick={() => setEscolhendo(true)}>
+        <button type="button" className="botao-primario botao-grande botao-concluir" onClick={() => setEscolhendo(true)}>
+          <Icone nome="check" />
           Concluir · {total}
         </button>
       ) : (
@@ -526,7 +567,8 @@ export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; te
 
   if (!aberto) {
     return (
-      <button type="button" className="botao-secundario botao-largo" onClick={() => setAberto(true)}>
+      <button type="button" className="botao-perigo botao-largo" onClick={() => setAberto(true)}>
+        <Icone nome="desfazer" />
         Desfazer conclusão
       </button>
     );
@@ -544,7 +586,9 @@ export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; te
           {(props) => <textarea {...props} defaultValue={estado.motivo} maxLength={500} />}
         </Campo>
       )}
-      <button type="submit" className="botao-primario" disabled={enviando}>
+      {/* Cancela a receita: ação de perigo, com ícone e só contorno (regra 13; U3 da revisão). */}
+      <button type="submit" className="botao-perigo" disabled={enviando}>
+        <Icone nome="desfazer" />
         {enviando ? "Desfazendo…" : temReceita ? "Desfazer e cancelar a receita" : "Desfazer conclusão"}
       </button>
       <button type="button" className="botao-secundario" onClick={() => setAberto(false)} disabled={enviando}>
