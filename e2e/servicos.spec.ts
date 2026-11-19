@@ -91,6 +91,7 @@ test("a dona edita um serviço com erros que mantêm os dados, desativa (some do
   await tocar(itemDoServico(page, "Tosa na tesoura completa").getByRole("link"));
   await tocar(page.getByRole("button", { name: "Desativar serviço" }));
   await expect(page).toHaveURL(/\/servicos\?inativos=1$/);
+  await expect(page.getByRole("status").filter({ hasText: "Serviço desativado." })).toBeVisible();
   await expect(itemDoServico(page, "Tosa na tesoura completa")).toContainText("inativo");
   const semOServico = await servicosNoAgendamento(page, tocar);
   await expect(semOServico).toContainText("Banho M");

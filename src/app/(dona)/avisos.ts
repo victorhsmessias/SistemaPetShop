@@ -11,6 +11,11 @@ const AVISOS = {
   horario: "Horário salvo.",
   servicos: "Serviços salvos.",
   observacoes: "Observações salvas.",
+  // Desativar e reativar (U5 da revisão): sem aviso, o pet ou o serviço mudava de lugar sem nenhuma frase.
+  "pet-desativado": "Pet desativado. Ele não aparece mais no agendamento.",
+  "pet-reativado": "Pet reativado.",
+  "servico-desativado": "Serviço desativado. Ele não aparece mais no agendamento.",
+  "servico-reativado": "Serviço reativado.",
 } as const;
 
 export type CodigoDoAviso = keyof typeof AVISOS;

@@ -109,6 +109,7 @@ test("a dona edita o tutor e o pet, desativa o pet e o reativa pela lista de ina
   await tocar(cartaoDoPet(page, "Fumaça").getByRole("link", { name: "Editar" }));
   await tocar(page.getByRole("button", { name: "Desativar pet" }));
   await expect(page).toHaveURL(/inativos=1/);
+  await expect(page.getByRole("status").filter({ hasText: "Pet desativado." })).toBeVisible();
   await expect(cartaoDoPet(page, "Fumaça")).toContainText("inativo");
   await tocar(page.getByRole("link", { name: "Mostrar só os ativos" }));
   await expect(page.getByText("Nenhum pet ativo.")).toBeVisible();

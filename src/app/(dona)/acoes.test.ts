@@ -144,6 +144,26 @@ describe("a dona da empresa A, pelas ações das telas", () => {
     });
   });
 
+  it("desativar e reativar pet e serviço voltam com o aviso de sucesso (U5)", async () => {
+    expect(await destinoDoRedirect(alternarPetAtivoAcao(formulario({ petId: a.petId, ativo: "false" })))).toBe(
+      `/clientes/${a.tutorId}?inativos=1&salvo=pet-desativado`,
+    );
+    expect(await daEmpresa(a, (tx) => obterPet(tx, a.petId))).toMatchObject({ ativo: false });
+    expect(await destinoDoRedirect(alternarPetAtivoAcao(formulario({ petId: a.petId, ativo: "true" })))).toBe(
+      `/clientes/${a.tutorId}?salvo=pet-reativado`,
+    );
+    expect(await daEmpresa(a, (tx) => obterPet(tx, a.petId))).toMatchObject({ ativo: true });
+
+    expect(await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: a.servicoId, ativo: "false" })))).toBe(
+      "/servicos?inativos=1&salvo=servico-desativado",
+    );
+    expect(await daEmpresa(a, (tx) => obterServico(tx, a.servicoId))).toMatchObject({ ativo: false });
+    expect(await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: a.servicoId, ativo: "true" })))).toBe(
+      "/servicos?salvo=servico-reativado",
+    );
+    expect(await daEmpresa(a, (tx) => obterServico(tx, a.servicoId))).toMatchObject({ ativo: true });
+  });
+
   it("volta com as mensagens e os dados digitados quando o formulário tem erro", async () => {
     const estado = await salvarServicoAcao(vazio, formulario({ nome: "Tosa", preco: "45.50", duracao: "abc" }));
     expect(estado.erros).toMatchObject({ preco: expect.stringContaining("vírgula"), duracao: expect.any(String) });
@@ -169,7 +189,10 @@ describe("a dona da empresa A, pelas ações das telas", () => {
     expect(await destinoDoRedirect(alternarPetAtivoAcao(formulario({ petId: b.petId, ativo: "false" })))).toBe(
       "/clientes",
     );
-    await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: b.servicoId, ativo: "false" })));
+    // Sem aviso de sucesso: nada foi alterado.
+    expect(await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: b.servicoId, ativo: "false" })))).toBe(
+      "/servicos",
+    );
 
     expect(await daEmpresa(b, (tx) => obterTutor(tx, b.tutorId))).toMatchObject({ nome: "Tutor Ações B" });
     expect(await daEmpresa(b, (tx) => obterPet(tx, b.petId))).toMatchObject({ nome: "Pet Ações B", ativo: true });

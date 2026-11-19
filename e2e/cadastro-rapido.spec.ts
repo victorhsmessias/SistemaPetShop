@@ -53,6 +53,8 @@ test("do horário vazio, Novo cliente e pet: o telefone repetido mantém os dado
   const aviso = page.getByRole("status").filter({ hasText: /^Atendimento agendado para .+ às 10:00\.$/ });
   await expect(aviso).toBeVisible();
   await expect(blocoNaGrade(page, "Pingo")).toContainText("Agendado · 10:00–11:00");
+  // O parâmetro saiu da URL (decisão D2; T5 da revisão).
+  await expect(page).not.toHaveURL(/[?&](novo|salvo)=/);
   await page.reload();
   await expect(blocoNaGrade(page, "Pingo")).toBeVisible();
   await expect(aviso).toHaveCount(0);
@@ -67,7 +69,41 @@ test("salvar um cliente mostra o aviso, que não volta ao recarregar", { tag: "@
   const aviso = page.getByRole("status").filter({ hasText: "Cliente salvo." });
   await expect(aviso).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Davi Aviso" })).toBeVisible();
+  await expect(page).not.toHaveURL(/[?&](novo|salvo)=/);
   await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Davi Aviso" })).toBeVisible();
   await expect(aviso).toHaveCount(0);
+
+  // Voltar leva à tela anterior sem aviso, e avançar de novo também não o traz de volta (T5 da revisão).
+  await page.goBack();
+  await expect(page.getByRole("heading", { level: 1, name: "Novo cliente" })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("heading", { level: 1, name: "Davi Aviso" })).toBeVisible();
+  await expect(aviso).toHaveCount(0);
+});
+
+test("telefone repetido: Cadastrar o pet neste cliente volta ao agendamento com o pet novo e o aviso", async ({
+  page,
+  tocar,
+}) => {
+  const dia = diaDaqui(61);
+  await page.goto(`/agenda?dia=${dia}`);
+  await tocar(page.getByRole("link", { name: "Agendar às 10:00" }));
+  await tocar(page.getByRole("link", { name: "Novo cliente e pet" }));
+  await page.getByLabel("Nome do tutor").fill("Rita");
+  await page.getByLabel("Telefone (WhatsApp)").fill("(31) 98888-7777");
+  await page.getByLabel("Nome do pet").fill("Nino");
+  await page.getByRole("radio", { name: "Pequeno (P)" }).check();
+  await tocar(page.getByRole("button", { name: "Salvar cliente e pet" }));
+
+  // O telefone é da Rita Moreira: o pet entra na ficha dela, e a volta é para o mesmo horário (T6 da revisão).
+  await tocar(page.getByRole("link", { name: "Cadastrar o pet neste cliente" }));
+  await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}/pets/novo\\?agendar=`));
+  await page.getByLabel("Nome do pet").fill("Nino");
+  await page.getByRole("radio", { name: "Pequeno (P)" }).check();
+  await tocar(page.getByRole("button", { name: "Salvar pet" }));
+  await expect(page).toHaveURL(new RegExp(`/agenda/novo\\?dia=${dia}&hora=10%3A00&pet=${UUID}$`));
+  await expect(page.getByRole("status").filter({ hasText: "Pet salvo." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Nino" })).toBeVisible();
+  await expect(page.getByLabel("Hora")).toHaveValue("10:00");
 });

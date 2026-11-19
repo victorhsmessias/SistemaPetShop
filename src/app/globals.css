@@ -1418,17 +1418,22 @@ textarea[aria-invalid="true"] {
   font-size: 17px;
 }
 
-/* Aviso de sucesso depois de salvar (componentes/aviso-de-sucesso.tsx): flutua no alto, some sozinho. */
-.aviso-de-sucesso {
+/* Aviso de sucesso depois de salvar (componentes/aviso-de-sucesso.tsx): flutua no alto, some sozinho. A região viva
+   (role="status") fica sempre na página e recebe o texto depois; vazia, não ocupa nada. */
+.regiao-do-aviso {
   position: fixed;
   top: max(12px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
+  width: min(440px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.aviso-de-sucesso {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: min(440px, calc(100vw - 32px));
   min-height: 52px;
   padding: 4px 4px 4px 14px;
   border-radius: var(--raio-cartao);

@@ -132,7 +132,11 @@ export async function alternarPetAtivoAcao(dados: FormData): Promise<void> {
   const resultado = await naEmpresaDaDona((tx) => definirPetAtivo(tx, texto(dados, "petId"), ativo));
   if (!resultado.ok) redirect("/clientes");
   revalidatePath("/clientes");
-  redirect(`/clientes/${resultado.valor.tutorId}${ativo ? "" : "?inativos=1"}`);
+  redirect(
+    ativo
+      ? comAviso(`/clientes/${resultado.valor.tutorId}`, "pet-reativado")
+      : comAviso(`/clientes/${resultado.valor.tutorId}?inativos=1`, "pet-desativado"),
+  );
 }
 
 export async function salvarServicoAcao(_anterior: EstadoCadastro, dados: FormData): Promise<EstadoCadastro> {
@@ -147,7 +151,9 @@ export async function salvarServicoAcao(_anterior: EstadoCadastro, dados: FormDa
 /** Desativa ou reativa um serviço (campo "ativo" = "true" ou "false"). */
 export async function alternarServicoAtivoAcao(dados: FormData): Promise<void> {
   const ativo = texto(dados, "ativo") === "true";
-  await naEmpresaDaDona((tx) => definirServicoAtivo(tx, texto(dados, "id"), ativo));
+  const resultado = await naEmpresaDaDona((tx) => definirServicoAtivo(tx, texto(dados, "id"), ativo));
+  // Serviço que não é da empresa (ou id inválido): volta à lista, sem aviso de sucesso.
+  if (!resultado.ok) redirect("/servicos");
   revalidatePath("/servicos");
-  redirect(ativo ? "/servicos" : "/servicos?inativos=1");
+  redirect(ativo ? comAviso("/servicos", "servico-reativado") : comAviso("/servicos?inativos=1", "servico-desativado"));
 }
