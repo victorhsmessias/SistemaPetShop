@@ -74,6 +74,9 @@ test("a dona cadastra um tutor com dois pets e encontra um pela busca", async ({
   await expect(resultados).toHaveCount(1);
   await expect(resultados.first()).toContainText("Joana Silvério");
   await expect(resultados.first()).toContainText("Paçoca");
+  // A linha fica numa faixa só (iniciais, pets e tutor, seta), não empilhada (U1 da revisão de UX).
+  const linha = await resultados.first().getByRole("link").boundingBox();
+  expect(linha!.height).toBeLessThan(80);
   await tocar(resultados.first().getByRole("link"));
   await expect(page.getByRole("heading", { level: 3, name: "Paçoca" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "Bóris" })).toBeVisible();

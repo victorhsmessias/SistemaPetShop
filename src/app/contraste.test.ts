@@ -41,6 +41,16 @@ const PARES: Par[] = [
   { uso: "Anel de foco", frente: "foco", fundo: "superficie", minimo: INTERFACE },
   { uso: "Faixa de cuidados", frente: "cuidado-faixa", fundo: "cuidado-fundo", minimo: INTERFACE },
   { uso: "Ícone de perigo", frente: "perigo", fundo: "superficie", minimo: INTERFACE },
+  // Pares que o CSS usa fora dos cartões (U10 e T7 da revisão).
+  { uso: "\"+N\" na grade", frente: "primaria", fundo: "superficie2", minimo: TEXTO },
+  { uso: "Borda tracejada do \"+N\"", frente: "borda-controle", fundo: "superficie2", minimo: INTERFACE },
+  { uso: "Faixa do bloco concluído", frente: "st-concluido-faixa", fundo: "superficie2", minimo: INTERFACE },
+  { uso: "Hora da linha \"agora\"", frente: "superficie", fundo: "perigo", minimo: TEXTO },
+  { uso: "Aviso de sucesso (invertido)", frente: "fundo", fundo: "texto", minimo: TEXTO },
+  { uso: "Erro de campo e perigo fora do cartão", frente: "perigo", fundo: "fundo", minimo: TEXTO },
+  { uso: "Hora na linha ativa da lista do dia", frente: "suave", fundo: "primaria-suave", minimo: TEXTO },
+  { uso: "Anel de foco no segmentado marcado", frente: "primaria-texto", fundo: "primaria", minimo: INTERFACE },
+  { uso: "Anel de foco no aviso de sucesso", frente: "fundo", fundo: "texto", minimo: INTERFACE },
   ...STATUS.flatMap((s) => [
     { uso: `Selo ${s}`, frente: `st-${s}-texto`, fundo: `st-${s}-fundo`, minimo: TEXTO },
     { uso: `Faixa ${s} na grade`, frente: `st-${s}-faixa`, fundo: "superficie", minimo: INTERFACE },
