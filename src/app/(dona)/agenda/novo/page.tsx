@@ -3,7 +3,13 @@ import Link from "next/link";
 
 import { FormularioAgendamento } from "@/app/(dona)/agenda/formularios";
 import { parametroDeRetorno, urlDoAgendamento, urlDoDia } from "@/app/(dona)/agenda/retorno";
+import { textoDoAviso } from "@/app/(dona)/avisos";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
+import { BuscaAoDigitar } from "@/app/componentes/busca-ao-digitar";
+import { EstadoVazio } from "@/app/componentes/estado-vazio";
+import { Icone } from "@/app/componentes/icone";
+import { Voltar } from "@/app/componentes/voltar";
 import { buscarPetsParaAgendar, obterPetParaAgendar } from "@/modules/agenda/atendimentos";
 import { ehDia, ehHora, hojeNoFuso, rotuloDoDia } from "@/modules/agenda/fuso";
 import { NOMES_DAS_ESPECIES, NOMES_DOS_PORTES } from "@/modules/cadastros/pets";
@@ -12,7 +18,7 @@ import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
 export const metadata: Metadata = { title: "Novo agendamento · banho-e-tosa" };
 
-type Props = { searchParams: Promise<{ dia?: string; hora?: string; pet?: string; busca?: string }> };
+type Props = { searchParams: Promise<{ dia?: string; hora?: string; pet?: string; busca?: string; salvo?: string }> };
 
 // Agendar em poucos toques (H5): busca o pet pelo nome dele ou do tutor, escolhe os serviços e confirma.
 // Só pets e serviços ativos. Se o pet não existe, o atalho cadastra tutor e pet e volta para cá.
@@ -27,14 +33,14 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
     return { dia, hora, pet: null, servicos: [], pets: await buscarPetsParaAgendar(tx, busca) };
   });
   const { dia, hora, pet } = dados;
+  const aviso = pet ? textoDoAviso(pedido.salvo) : null;
   const quando = `${rotuloDoDia(dia)}${hora ? `, ${hora}` : ""}`;
 
   return (
     <main className="pagina">
-      <Link href={urlDoDia(dia)} className="voltar">
-        ‹ Agenda
-      </Link>
+      <Voltar href={urlDoDia(dia)} destino="Agenda" />
       <h1>Novo agendamento</h1>
+      {aviso && <AvisoDeSucesso mensagem={aviso} parametros={["salvo"]} />}
       <p className="suave">{quando}</p>
 
       {pet ? (
@@ -49,12 +55,16 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
               ].join(" · ")}
             </p>
             {pet.observacoes && (
-              <p className="cuidado">
-                <strong>Cuidados</strong>
+              <div className="cuidado">
+                <strong>
+                  <Icone nome="alerta" />
+                  Cuidados
+                </strong>
                 {pet.observacoes}
-              </p>
+              </div>
             )}
-            <Link href={urlDoAgendamento({ dia, hora })} className="link-de-toque">
+            <Link href={urlDoAgendamento({ dia, hora })} className="botao-link botao-texto">
+              <Icone nome="desfazer" />
               Trocar o pet
             </Link>
           </section>
@@ -74,27 +84,20 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
         </>
       ) : (
         <>
-          <form className="busca" role="search" action="/agenda/novo">
-            <input type="hidden" name="dia" value={dia} />
-            {hora && <input type="hidden" name="hora" value={hora} />}
-            <label htmlFor="busca" className="visualmente-oculto">
-              Buscar pelo nome do pet ou do tutor
-            </label>
-            <input
-              id="busca"
-              name="busca"
-              type="search"
-              defaultValue={busca}
-              placeholder="Nome do pet ou do tutor"
-              autoComplete="off"
-            />
-            <button type="submit" className="botao-secundario">
-              Buscar
-            </button>
-          </form>
+          <BuscaAoDigitar
+            rotulo="Buscar pelo nome do pet ou do tutor"
+            valorInicial={busca}
+            placeholder="Digite para filtrar"
+            ocultos={hora ? { dia, hora } : { dia }}
+          />
 
           {dados.pets.length === 0 ? (
-            <p className="suave">{busca ? `Nenhum pet ativo encontrado para "${busca}".` : "Nenhum pet ativo cadastrado."}</p>
+            <EstadoVazio
+              icone="pata"
+              titulo={busca ? `Nenhum pet ativo encontrado para "${busca}".` : "Nenhum pet ativo cadastrado."}
+            >
+              Cadastre o cliente e o pet aqui embaixo e volte direto para este agendamento.
+            </EstadoVazio>
           ) : (
             <ul className="lista-toque" aria-label="Pets">
               {dados.pets.map((p) => (
@@ -113,9 +116,10 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
 
           <Link
             href={`/clientes/novo?agendar=${parametroDeRetorno({ dia, hora })}`}
-            className="botao-link botao-secundario botao-largo"
+            className={`botao-link ${dados.pets.length === 0 ? "botao-primario" : "botao-secundario"} botao-largo`}
           >
-            Cadastrar tutor e pet
+            <Icone nome="mais" />
+            Novo cliente e pet
           </Link>
         </>
       )}

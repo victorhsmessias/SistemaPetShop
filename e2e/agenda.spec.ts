@@ -2,7 +2,7 @@ import type { Locator } from "@playwright/test";
 
 import { rotuloDoDia } from "@/modules/agenda/fuso";
 
-import { diaDaqui, expect, statusAtual, test } from "./tela";
+import { agendar, diaDaqui, expect, statusAtual, test } from "./tela";
 
 // A dona, no iPhone e no desktop, na agenda (critério de "pronto" da sessão 04): agenda um pet com dois serviços,
 // vê o bloco no horário certo no dia e na semana, recebe o aviso de horário ocupado e acompanha o
@@ -34,17 +34,16 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   await page.goto(`/agenda?dia=${DIA}`);
   await expect(page.getByText(rotuloDoDia(DIA))).toBeVisible();
 
-  // Toca no horário vazio das 9h. O pet ainda não existe: o atalho cadastra tutor e pet e volta.
+  // Toca no horário vazio das 9h. O pet ainda não existe: "Novo cliente e pet" cadastra os dois numa tela e volta.
   await tocar(page.getByRole("link", { name: "Agendar às 09:00" }));
   await expect(page.getByText(`${rotuloDoDia(DIA)}, 09:00`)).toBeVisible();
-  await tocar(page.getByRole("link", { name: "Cadastrar tutor e pet" }));
+  await tocar(page.getByRole("link", { name: "Novo cliente e pet" }));
   await page.getByLabel("Nome do tutor").fill("Joana Prado");
   await page.getByLabel("Telefone (WhatsApp)").fill("(21) 97766-5544");
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
   await page.getByLabel("Nome do pet").fill("Thor");
-  await page.getByLabel("Porte").selectOption({ label: "Grande (G)" });
+  await page.getByRole("radio", { name: "Grande (G)" }).check();
   await page.getByLabel("Cuidados: comportamento e alergias").fill("Alérgico a xampu de aveia.");
-  await tocar(page.getByRole("button", { name: "Cadastrar pet" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente e pet" }));
 
   // De volta ao agendamento, com o Thor escolhido, o dia e a hora preenchidos.
   await expect(page).toHaveURL(new RegExp(`/agenda/novo\\?dia=${DIA}&hora=09%3A00&pet=`));
@@ -79,7 +78,6 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   // então ela usa o botão de novo agendamento e digita a hora.
   await tocar(page.getByRole("link", { name: "Novo agendamento" }));
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("rita");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   await page.getByLabel("Hora").fill("09:30");
   await page.getByRole("checkbox", { name: /Hidratação/ }).check();
@@ -106,6 +104,20 @@ test("a dona agenda com dois serviços, vê o bloco no dia e na semana, é avisa
   await tocarStatus("Marcar como pronto", "Pronto");
   await expect(page.getByRole("button", { name: "Desfazer: voltar para Em atendimento" })).toBeVisible();
 
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(thor).toContainText("Pronto · 09:00–10:30");
+});
+
+// U8 da revisão: no dia de hoje (o relógio do servidor marca 12:00, e2e/relogio.mjs), a grade abre já na linha
+// "agora", sem a dona rolar até ela, e o resumo "Próximo" mostra o atendimento que vem depois. O dia vai por ?dia=,
+// calculado sobre o mesmo relógio, como nos outros testes.
+test("no dia de hoje, a grade abre na linha agora, e o resumo mostra o próximo atendimento", async ({ page, tocar }) => {
+  const hoje = diaDaqui(0);
+  await agendar(page, tocar, { dia: hoje, hora: "14:00", servicos: ["Banho M"] });
+  await page.goto(`/agenda?dia=${hoje}`);
+  const agora = page.locator(".grade .agora");
+  // O relógio do teste começa às 12:00 e segue andando.
+  await expect(agora).toHaveText(/^12:\d{2}$/);
+  await expect(agora).toBeInViewport();
+  await expect(page.getByRole("link", { name: /^Próximo \d/ })).toContainText("14:00 · Mel");
 });

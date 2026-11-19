@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
-import { salvarPetAcao, salvarServicoAcao, salvarTutorAcao, type EstadoCadastro } from "@/app/(dona)/acoes";
+import {
+  cadastrarClienteEPetAcao,
+  salvarPetAcao,
+  salvarServicoAcao,
+  salvarTutorAcao,
+  type EstadoCadastro,
+} from "@/app/(dona)/acoes";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
+import { Icone } from "@/app/componentes/icone";
+import { Segmentado } from "@/app/componentes/segmentado";
 import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 
 type Valores = Record<string, string>;
@@ -12,23 +20,24 @@ type Valores = Record<string, string>;
 /** Estado inicial com os valores atuais do registro (edição) ou vazio (cadastro). */
 const inicial = (valores: Valores = {}): EstadoCadastro => ({ erros: {}, valores });
 
+/** Salvar no rodapé: a barra acompanha a rolagem enquanto o formulário está na tela, ao alcance do polegar. */
 function BotaoSalvar({ enviando, rotulo }: { enviando: boolean; rotulo: string }) {
   return (
-    <button type="submit" className="botao-primario" disabled={enviando}>
-      {enviando ? "Salvando…" : rotulo}
-    </button>
+    <div className="barra-salvar">
+      <button type="submit" className="botao-primario botao-grande" disabled={enviando}>
+        {enviando ? "Salvando…" : rotulo}
+      </button>
+    </div>
   );
 }
 
-/** `agendar`: dia e hora do agendamento para onde a dona volta depois do cadastro (agenda/retorno.ts). */
-export function FormularioTutor({ id, valores, agendar }: { id?: string; valores?: Valores; agendar?: string }) {
+export function FormularioTutor({ id, valores }: { id?: string; valores?: Valores }) {
   const [estado, acao, enviando] = useActionState(salvarTutorAcao, inicial(valores));
   const v = estado.valores;
 
   return (
     <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       {id && <input type="hidden" name="id" value={id} />}
-      {agendar && <input type="hidden" name="agendar" value={agendar} />}
       <ErroGeral erro={estado.erros.geral} />
       <Campo nome="nome" rotulo="Nome do tutor" erro={estado.erros.nome}>
         {(props) => <input {...props} defaultValue={v.nome} autoComplete="off" autoCapitalize="words" />}
@@ -37,19 +46,82 @@ export function FormularioTutor({ id, valores, agendar }: { id?: string; valores
         {(props) => <input {...props} type="tel" inputMode="tel" defaultValue={v.telefone} autoComplete="off" />}
       </Campo>
       {estado.tutorExistenteId && (
-        <p className="mensagem mensagem-aviso">
-          <Link href={`/clientes/${estado.tutorExistenteId}`}>Abrir o tutor já cadastrado</Link>
-        </p>
+        <Link href={`/clientes/${estado.tutorExistenteId}`} className="botao-link botao-secundario">
+          <Icone nome="clientes" />
+          Abrir o cliente já cadastrado
+        </Link>
       )}
       <Campo nome="observacoes" rotulo="Observações" erro={estado.erros.observacoes} dica={DICA_OBSERVACOES}>
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
-      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Cadastrar tutor"} />
+      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Salvar cliente"} />
     </form>
   );
 }
 
 type OpcaoPet = { valor: string; nome: string };
+
+/**
+ * "Novo cliente e pet", vindo do agendamento: o essencial do tutor (nome e WhatsApp) e do pet numa tela só, e a
+ * volta direta para o agendamento. Telefone repetido: o erro diz de quem é, e o botão leva a cadastrar só o pet
+ * naquele cliente, sem sair do atalho.
+ */
+export function FormularioClienteEPet({
+  agendar,
+  especies,
+  portes,
+}: {
+  agendar: string;
+  especies: OpcaoPet[];
+  portes: OpcaoPet[];
+}) {
+  const [estado, acao, enviando] = useActionState(cadastrarClienteEPetAcao, inicial({ especie: "cao" }));
+  const v = estado.valores;
+
+  return (
+    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
+      <input type="hidden" name="agendar" value={agendar} />
+      <ErroGeral erro={estado.erros.geral} />
+      <h2 className="rotulo">Cliente</h2>
+      <Campo nome="nome" rotulo="Nome do tutor" erro={estado.erros.nome}>
+        {(props) => <input {...props} defaultValue={v.nome} autoComplete="off" autoCapitalize="words" />}
+      </Campo>
+      <Campo nome="telefone" rotulo="Telefone (WhatsApp)" erro={estado.erros.telefone} dica="Com DDD, por exemplo (11) 98765-4321.">
+        {(props) => <input {...props} type="tel" inputMode="tel" defaultValue={v.telefone} autoComplete="off" />}
+      </Campo>
+      {estado.tutorExistenteId && (
+        <Link
+          href={`/clientes/${estado.tutorExistenteId}/pets/novo?agendar=${agendar}`}
+          className="botao-link botao-secundario"
+        >
+          <Icone nome="pata" />
+          Cadastrar o pet neste cliente
+        </Link>
+      )}
+      <h2 className="rotulo">Pet</h2>
+      <Campo nome="pet_nome" rotulo="Nome do pet" erro={estado.erros.pet_nome}>
+        {(props) => <input {...props} defaultValue={v.pet_nome} autoComplete="off" autoCapitalize="words" />}
+      </Campo>
+      <Segmentado nome="especie" rotulo="Espécie" opcoes={especies} valor={v.especie} erro={estado.erros.especie} />
+      <Segmentado
+        nome="porte"
+        rotulo="Porte"
+        opcoes={portes.map((opcao) => ({ ...opcao, curto: opcao.valor }))}
+        valor={v.porte}
+        erro={estado.erros.porte}
+      />
+      <Campo
+        nome="pet_observacoes"
+        rotulo="Cuidados: comportamento e alergias"
+        erro={estado.erros.pet_observacoes}
+        dica={`Opcional. Aparece em destaque no agendamento. ${DICA_OBSERVACOES}`}
+      >
+        {(props) => <textarea {...props} defaultValue={v.pet_observacoes} />}
+      </Campo>
+      <BotaoSalvar enviando={enviando} rotulo="Salvar cliente e pet" />
+    </form>
+  );
+}
 
 export function FormularioPet({
   tutorId,
@@ -78,31 +150,14 @@ export function FormularioPet({
       <Campo nome="nome" rotulo="Nome do pet" erro={estado.erros.nome}>
         {(props) => <input {...props} defaultValue={v.nome} autoComplete="off" autoCapitalize="words" />}
       </Campo>
-      <Campo nome="especie" rotulo="Espécie" erro={estado.erros.especie}>
-        {(props) => (
-          <select {...props} defaultValue={v.especie}>
-            {especies.map((opcao) => (
-              <option key={opcao.valor} value={opcao.valor}>
-                {opcao.nome}
-              </option>
-            ))}
-          </select>
-        )}
-      </Campo>
-      <Campo nome="porte" rotulo="Porte" erro={estado.erros.porte}>
-        {(props) => (
-          <select {...props} defaultValue={v.porte ?? ""}>
-            <option value="" disabled>
-              Escolha…
-            </option>
-            {portes.map((opcao) => (
-              <option key={opcao.valor} value={opcao.valor}>
-                {opcao.nome}
-              </option>
-            ))}
-          </select>
-        )}
-      </Campo>
+      <Segmentado nome="especie" rotulo="Espécie" opcoes={especies} valor={v.especie} erro={estado.erros.especie} />
+      <Segmentado
+        nome="porte"
+        rotulo="Porte"
+        opcoes={portes.map((opcao) => ({ ...opcao, curto: opcao.valor }))}
+        valor={v.porte}
+        erro={estado.erros.porte}
+      />
       <Campo nome="raca" rotulo="Raça (opcional)" erro={estado.erros.raca}>
         {(props) => <input {...props} defaultValue={v.raca} autoComplete="off" autoCapitalize="words" />}
       </Campo>
@@ -114,7 +169,7 @@ export function FormularioPet({
       >
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
-      <BotaoSalvar enviando={enviando} rotulo={petId ? "Salvar alterações" : "Cadastrar pet"} />
+      <BotaoSalvar enviando={enviando} rotulo={petId ? "Salvar alterações" : "Salvar pet"} />
     </form>
   );
 }
@@ -136,7 +191,7 @@ export function FormularioServico({ id, valores }: { id?: string; valores?: Valo
       <Campo nome="duracao" rotulo="Duração (minutos)" erro={estado.erros.duracao}>
         {(props) => <input {...props} inputMode="numeric" defaultValue={v.duracao} autoComplete="off" />}
       </Campo>
-      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Cadastrar serviço"} />
+      <BotaoSalvar enviando={enviando} rotulo={id ? "Salvar alterações" : "Salvar serviço"} />
     </form>
   );
 }

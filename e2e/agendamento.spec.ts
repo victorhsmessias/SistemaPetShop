@@ -15,20 +15,18 @@ test("o atalho ?agendar= inválido não leva a outro endereço: o cadastro segue
   await page.goto(`/clientes/novo?agendar=${encodeURIComponent("https://exemplo.invalido/agenda")}`);
   await page.getByLabel("Nome do tutor").fill("Paula Atalho");
   await page.getByLabel("Telefone (WhatsApp)").fill("(61) 99111-2233");
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}$`));
   await expect(page.getByRole("heading", { level: 1, name: "Paula Atalho" })).toBeVisible();
 
-  // Hora inválida (T25:00): o dia vale, a hora é ignorada; o pet volta para o agendamento sem hora.
+  // Hora inválida (T25:00): o dia vale, a hora é ignorada; "Novo cliente e pet" volta para o agendamento sem hora.
   const dia = diaDaqui(30);
   await page.goto(`/clientes/novo?agendar=${dia}T25:00`);
   await page.getByLabel("Nome do tutor").fill("Pedro Atalho");
   await page.getByLabel("Telefone (WhatsApp)").fill("(61) 99111-4455");
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
-  await expect(page).toHaveURL(new RegExp(`/clientes/${UUID}/pets/novo\\?agendar=${dia}$`));
   await page.getByLabel("Nome do pet").fill("Bolinha");
-  await page.getByLabel("Porte").selectOption({ label: "Pequeno (P)" });
-  await tocar(page.getByRole("button", { name: "Cadastrar pet" }));
+  await page.getByRole("radio", { name: "Pequeno (P)" }).check();
+  await tocar(page.getByRole("button", { name: "Salvar cliente e pet" }));
   await expect(page).toHaveURL(new RegExp(`/agenda/novo\\?dia=${dia}&pet=${UUID}$`));
   await expect(page.getByRole("heading", { level: 2, name: "Bolinha" })).toBeVisible();
   await expect(page.getByLabel("Hora")).toHaveValue("");
@@ -40,7 +38,6 @@ test("cada erro do agendamento aparece no campo e mantém serviços, hora e obse
   const dia = diaDaqui(31);
   await page.goto(`/agenda/novo?dia=${dia}`);
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("mel");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   const agendarBotao = page.getByRole("button", { name: "Agendar", exact: true });
   const hora = page.getByLabel("Hora");
@@ -89,7 +86,6 @@ test("mudar a hora depois do aviso de horário ocupado avisa de novo", { tag: "@
   await page.goto(`/agenda/novo?dia=${dia}`);
   await expect(page.getByText(rotuloDoDia(dia))).toBeVisible();
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("mel");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   await page.getByLabel("Hora").fill("09:30");
   await page.getByRole("checkbox", { name: /Hidratação/ }).check();

@@ -22,7 +22,6 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   await page.goto(`/agenda?dia=${DIA}`);
   await tocar(page.getByRole("link", { name: "Novo agendamento" }));
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("mel");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   await page.getByLabel("Hora").fill("10:00");
   await page.getByRole("checkbox", { name: /Banho M/ }).check();
@@ -47,8 +46,8 @@ test("a dona agenda, conclui com Pix e vê a receita no atendimento, no Financei
   await expect(page.getByRole("button", { name: /^Concluir/ })).toHaveCount(0);
 
   // Na agenda, o concluído continua na grade, com a marca de concluído.
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
-  await expect(mel).toContainText("✓ Concluído · 10:00–11:30");
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
+  await expect(mel).toContainText("Concluído · 10:00–11:30");
 
   // No Financeiro: hoje e o mês com R$ 80,00 e um atendimento concluído; a receita na lista.
   await tocar(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Financeiro" }));

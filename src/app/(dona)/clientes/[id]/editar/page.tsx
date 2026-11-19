@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FormularioTutor } from "@/app/(dona)/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 import { formatarTelefone } from "@/modules/cadastros/telefone";
 import { obterTutor } from "@/modules/cadastros/tutores";
 
@@ -18,9 +18,7 @@ export default async function PaginaEditarCliente({ params }: Props) {
 
   return (
     <main className="pagina">
-      <Link href={`/clientes/${tutor.id}`} className="voltar">
-        ‹ {tutor.nome}
-      </Link>
+      <Voltar href={`/clientes/${tutor.id}`} destino={tutor.nome} />
       <h1>Editar cliente</h1>
       <div className="cartao">
         <FormularioTutor

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { alternarServicoAtivoAcao } from "@/app/(dona)/acoes";
 import { FormularioServico } from "@/app/(dona)/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Icone } from "@/app/componentes/icone";
+import { Voltar } from "@/app/componentes/voltar";
 import { obterServico } from "@/modules/catalogo/servicos";
 import { centavosParaTexto } from "@/modules/compartilhado/dinheiro";
 
@@ -19,9 +20,7 @@ export default async function PaginaEditarServico({ params }: Props) {
 
   return (
     <main className="pagina">
-      <Link href="/servicos" className="voltar">
-        ‹ Serviços
-      </Link>
+      <Voltar href="/servicos" destino="Serviços" />
       <h1>
         Editar serviço {!servico.ativo && <span className="etiqueta">inativo</span>}
       </h1>
@@ -44,9 +43,17 @@ export default async function PaginaEditarServico({ params }: Props) {
         <form action={alternarServicoAtivoAcao}>
           <input type="hidden" name="id" value={servico.id} />
           <input type="hidden" name="ativo" value={servico.ativo ? "false" : "true"} />
-          <button type="submit" className="botao-secundario" style={{ width: "100%" }}>
-            {servico.ativo ? "Desativar serviço" : "Reativar serviço"}
-          </button>
+          {servico.ativo ? (
+            <button type="submit" className="botao-perigo botao-largo">
+              <Icone nome="proibido" />
+              Desativar serviço
+            </button>
+          ) : (
+            <button type="submit" className="botao-secundario botao-largo">
+              <Icone nome="desfazer" />
+              Reativar serviço
+            </button>
+          )}
         </form>
       </section>
     </main>

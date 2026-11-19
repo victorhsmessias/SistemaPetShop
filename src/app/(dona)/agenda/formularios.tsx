@@ -16,9 +16,11 @@ import {
 } from "@/app/(dona)/agenda/acoes";
 import { useAcaoComAviso } from "@/app/(dona)/agenda/aviso-da-pagina";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
+import { Aviso } from "@/app/componentes/aviso";
+import { Icone } from "@/app/componentes/icone";
 import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 import { ACOES_DOS_STATUS, NOMES_DOS_STATUS, proximosStatus, statusAnterior, type StatusAtendimento } from "@/modules/agenda/status";
-import { centavosParaTexto, formatarReais } from "@/modules/compartilhado/dinheiro";
+import { centavosParaTexto, formatarReais, reaisParaCentavos } from "@/modules/compartilhado/dinheiro";
 
 export type OpcaoServico = { id: string; nome: string; precoCentavos: number; duracaoMin: number };
 
@@ -28,19 +30,72 @@ const inicial = (valores: Record<string, string> = {}, servicos: string[] = []):
   servicos,
 });
 
-function BotaoEnviar({ enviando, rotulo }: { enviando: boolean; rotulo: string }) {
+function BotaoEnviar({
+  enviando,
+  rotulo,
+  resumo,
+  noCartao,
+}: {
+  enviando: boolean;
+  rotulo: string;
+  resumo?: string;
+  /** Na edição do atendimento, cada cartão salva só a sua parte: botão secundário dentro dele, sem barra (U7). */
+  noCartao?: boolean;
+}) {
+  if (noCartao) {
+    return (
+      <button type="submit" className="botao-secundario botao-largo" disabled={enviando}>
+        {enviando ? "Salvando…" : rotulo}
+      </button>
+    );
+  }
   return (
-    <button type="submit" className="botao-primario" disabled={enviando}>
-      {enviando ? "Salvando…" : rotulo}
-    </button>
+    <div className="barra-salvar">
+      {resumo && (
+        <span id="resumo-do-envio" className="resumo-do-envio">
+          {resumo}
+        </span>
+      )}
+      <button
+        type="submit"
+        className="botao-primario botao-grande"
+        disabled={enviando}
+        aria-describedby={resumo ? "resumo-do-envio" : undefined}
+      >
+        {enviando ? "Salvando…" : rotulo}
+      </button>
+    </div>
   );
+}
+
+/**
+ * "R$ 80,00 · 90 min" dos serviços marcados, com o preço e a duração como estão digitados. No toque que marca o
+ * serviço, os campos dele ainda não apareceram: aí valem o preço e a duração do catálogo.
+ */
+function resumoDosServicos(formulario: HTMLFormElement, servicos: OpcaoServico[]): string {
+  const dados = new FormData(formulario);
+  const marcados = dados.getAll("servico").map(String);
+  if (marcados.length === 0) return "Nenhum serviço escolhido";
+  let centavos = 0;
+  let minutos = 0;
+  for (const id of marcados) {
+    const catalogo = servicos.find((s) => s.id === id);
+    const precoDigitado = dados.get(`preco_${id}`);
+    const duracaoDigitada = dados.get(`duracao_${id}`);
+    const preco =
+      precoDigitado === null ? { ok: true as const, centavos: catalogo?.precoCentavos ?? 0 } : reaisParaCentavos(String(precoDigitado));
+    const duracao = duracaoDigitada === null ? (catalogo?.duracaoMin ?? 0) : Number(duracaoDigitada);
+    if (preco.ok) centavos += preco.centavos;
+    if (Number.isInteger(duracao) && duracao > 0) minutos += duracao;
+  }
+  return `${formatarReais(centavos)} · ${minutos} min`;
 }
 
 /** Horário ocupado: aviso, não bloqueio. A chave do horário avisado volta no formulário para confirmar. */
 function AvisoDeHorario({ estado }: { estado: EstadoAgenda }) {
   if (!estado.conflitos?.length) return null;
   return (
-    <div className="mensagem mensagem-aviso" role="alert">
+    <Aviso tipo="aviso" role="alert">
       <strong>Horário ocupado</strong>
       <ul className="lista-aviso">
         {estado.conflitos.map((c) => (
@@ -51,7 +106,7 @@ function AvisoDeHorario({ estado }: { estado: EstadoAgenda }) {
       </ul>
       Você pode agendar mesmo assim.
       <input type="hidden" name="horarioAvisado" value={estado.horarioAvisado} />
-    </div>
+    </Aviso>
   );
 }
 
@@ -144,7 +199,8 @@ function EscolhaDeServicos({
       </ul>
       {estado.erros.servicos && (
         <p id="erro-servicos" className="erro-campo">
-          {estado.erros.servicos}
+          <Icone nome="alerta" />
+          <span>{estado.erros.servicos}</span>
         </p>
       )}
     </fieldset>
@@ -163,10 +219,17 @@ export function FormularioAgendamento({
   servicos: OpcaoServico[];
 }) {
   const [estado, acao, enviando] = useActionState(agendarAcao, inicial({ dia, hora: hora ?? "" }));
+  const [resumo, setResumo] = useState("Nenhum serviço escolhido");
   const v = estado.valores;
 
   return (
-    <form action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
+    <form
+      action={acao}
+      onSubmit={enviarSemLimpar(acao)}
+      onChange={(evento) => setResumo(resumoDosServicos(evento.currentTarget, servicos))}
+      className="formulario"
+      noValidate
+    >
       <input type="hidden" name="petId" value={petId} />
       <ErroGeral erro={estado.erros.geral ?? estado.erros.pet} />
       <div className="campos-lado-a-lado">
@@ -177,6 +240,8 @@ export function FormularioAgendamento({
           {(props) => <input {...props} type="time" step={300} defaultValue={v.hora} />}
         </Campo>
       </div>
+      {/* Perto de Dia e Hora, onde a dona está olhando quando o aviso aparece. */}
+      <AvisoDeHorario estado={estado} />
       <EscolhaDeServicos servicos={servicos} estado={estado} />
       <Campo
         nome="observacoes"
@@ -186,8 +251,11 @@ export function FormularioAgendamento({
       >
         {(props) => <textarea {...props} defaultValue={v.observacoes} />}
       </Campo>
-      <AvisoDeHorario estado={estado} />
-      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Agendar mesmo assim" : "Agendar"} />
+      <BotaoEnviar
+        enviando={enviando}
+        rotulo={estado.conflitos?.length ? "Agendar mesmo assim" : "Agendar"}
+        resumo={resumo}
+      />
     </form>
   );
 }
@@ -227,7 +295,11 @@ export function FormularioServicosDoAtendimento({
       />
       <p className="dica">O término é recalculado pela soma das durações.</p>
       <AvisoDeHorario estado={estado} />
-      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar serviços"} />
+      <BotaoEnviar
+        enviando={enviando}
+        rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar serviços"}
+        noCartao
+      />
     </form>
   );
 }
@@ -281,7 +353,7 @@ export function FormularioHorario({
         </Campo>
       </div>
       <AvisoDeHorario estado={estado} />
-      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar horário"} />
+      <BotaoEnviar enviando={enviando} rotulo={estado.conflitos?.length ? "Salvar mesmo assim" : "Salvar horário"} noCartao />
     </form>
   );
 }
@@ -300,16 +372,88 @@ export function FormularioObservacoes({ id, observacoes }: { id: string; observa
       >
         {(props) => <textarea {...props} defaultValue={estado.valores.observacoes} />}
       </Campo>
-      <BotaoEnviar enviando={enviando} rotulo="Salvar observações" />
+      <BotaoEnviar enviando={enviando} rotulo="Salvar observações" noCartao />
     </form>
   );
 }
 
 /**
- * Botões de status: um formulário só, e cada botão envia o `para` dele. `de` é o status que a tela mostra,
- * para um toque duplo ou uma página desatualizada não aplicar a mudança errada.
+ * Na barra de ação, rótulo curto e ícone, para caber numa linha com Concluir em 375 px (U2 da revisão). O nome
+ * acessível continua o completo de ACOES_DOS_STATUS e contém o texto visível.
  */
-export function BotoesDeStatus({
+const NA_BARRA: Partial<Record<StatusAtendimento, { rotulo: string; icone: "calcheck" | "gota" | "sino" }>> = {
+  confirmado: { rotulo: "Confirmar", icone: "calcheck" },
+  em_atendimento: { rotulo: "Começar", icone: "gota" },
+  pronto: { rotulo: "Pronto", icone: "sino" },
+};
+
+/**
+ * Próximo status, na barra de ação: o primeiro como botão secundário (a ação principal da barra é Concluir); os
+ * outros e as ações de encerramento (Cancelar, Marcar falta) no menu "Mais ações", estas como perigo, com ícone e só
+ * contorno. `de` é o status que a tela mostra, para um toque duplo ou uma página desatualizada não aplicar a
+ * mudança errada.
+ */
+export function BotoesDeStatus({ id, status }: { id: string; status: StatusAtendimento }) {
+  const [, acao, enviando] = useAcaoComAviso(mudarStatusAcao, {} as EstadoStatus);
+  const proximos = proximosStatus(status);
+  const [principal, ...outros] = proximos.filter((p) => p !== "cancelado" && p !== "faltou");
+  const encerrar = proximos.filter((p) => p === "cancelado" || p === "faltou");
+  const menu = `mais-acoes-${id}`;
+  if (!principal && outros.length === 0 && encerrar.length === 0) return null;
+
+  return (
+    <form action={acao} className="botoes-status">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="de" value={status} />
+      {principal && (
+        <button
+          type="submit"
+          name="para"
+          value={principal}
+          className="botao-secundario botao-grande"
+          aria-label={ACOES_DOS_STATUS[principal]}
+          disabled={enviando}
+        >
+          {NA_BARRA[principal] && <Icone nome={NA_BARRA[principal].icone} />}
+          {NA_BARRA[principal]?.rotulo ?? ACOES_DOS_STATUS[principal]}
+        </button>
+      )}
+      {(outros.length > 0 || encerrar.length > 0) && (
+        <>
+          <button
+            type="button"
+            className="botao-secundario botao-grande botao-icone"
+            popoverTarget={menu}
+            aria-label="Mais ações"
+            disabled={enviando}
+          >
+            <Icone nome="pontos" />
+          </button>
+          <div id={menu} popover="auto" className="menu-flutuante">
+            {outros.map((para) => (
+              <button key={para} type="submit" name="para" value={para} className="menu-item" disabled={enviando}>
+                <Icone nome={para === "confirmado" ? "calcheck" : para === "pronto" ? "sino" : "gota"} />
+                {ACOES_DOS_STATUS[para]}
+              </button>
+            ))}
+            {encerrar.map((para) => (
+              <button key={para} type="submit" name="para" value={para} className="menu-item perigo" disabled={enviando}>
+                <Icone nome={para === "cancelado" ? "xcirc" : "proibido"} />
+                {ACOES_DOS_STATUS[para]}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </form>
+  );
+}
+
+/**
+ * Desfazer um toque errado (volta ao status anterior, deduzido de confirmado_em) ou reabrir um cancelado ou uma
+ * falta. Discreto (botão de texto) quando desfaz; secundário quando reabre, que é a única ação da tela.
+ */
+export function DesfazerStatus({
   id,
   status,
   confirmado,
@@ -320,47 +464,36 @@ export function BotoesDeStatus({
   confirmado: boolean;
 }) {
   const [, acao, enviando] = useAcaoComAviso(mudarStatusAcao, {} as EstadoStatus);
-  const proximos = proximosStatus(status);
-  const principais = proximos.filter((p) => p !== "cancelado" && p !== "faltou");
-  const encerrar = proximos.filter((p) => p === "cancelado" || p === "faltou");
   const anterior = statusAnterior(status, confirmado ? new Date() : null);
+  if (!anterior) return null;
   const reabrir = status === "cancelado" || status === "faltou";
-
   return (
-    <form action={acao} className="formulario">
+    <form action={acao} className="desfazer-status">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="de" value={status} />
-      {principais.map((para, i) => (
-        <button
-          key={para}
-          type="submit"
-          name="para"
-          value={para}
-          className={i === 0 ? "botao-primario" : "botao-secundario"}
-          disabled={enviando}
-        >
-          {ACOES_DOS_STATUS[para]}
-        </button>
-      ))}
-      {encerrar.length > 0 && (
-        <div className="acoes">
-          {encerrar.map((para) => (
-            <button key={para} type="submit" name="para" value={para} className="botao-secundario" disabled={enviando}>
-              {ACOES_DOS_STATUS[para]}
-            </button>
-          ))}
-        </div>
-      )}
-      {anterior && (
-        <button type="submit" name="para" value={anterior} className="botao-secundario botao-desfazer" disabled={enviando}>
-          {reabrir ? `Reabrir como ${NOMES_DOS_STATUS[anterior]}` : `Desfazer: voltar para ${NOMES_DOS_STATUS[anterior]}`}
-        </button>
-      )}
+      <button
+        type="submit"
+        name="para"
+        value={anterior}
+        className={reabrir ? "botao-secundario botao-largo" : "botao-texto botao-desfazer"}
+        disabled={enviando}
+      >
+        <Icone nome="desfazer" />
+        {reabrir ? `Reabrir como ${NOMES_DOS_STATUS[anterior]}` : `Desfazer: voltar para ${NOMES_DOS_STATUS[anterior]}`}
+      </button>
     </form>
   );
 }
 
 export type OpcaoFormaPagamento = { id: string; nome: string };
+
+/** Ícone da forma de pagamento pelo nome (as padrão nascem com a empresa: Pix, Dinheiro, cartões). */
+function iconeDaForma(nome: string) {
+  const n = nome.toLocaleLowerCase("pt-BR");
+  if (n.includes("pix")) return "pix" as const;
+  if (n.includes("dinheiro")) return "dinheiro" as const;
+  return "cartao" as const;
+}
 
 /**
  * Concluir (H7): o botão mostra o total; ao tocar, aparecem as formas de pagamento, e um toque numa delas
@@ -392,12 +525,13 @@ export function FormularioConcluir({
       {totalCentavos === 0 ? (
         <>
           <p className="suave">O total é {total}: o atendimento é concluído sem receita.</p>
-          <button type="submit" className="botao-primario" disabled={enviando}>
+          <button type="submit" className="botao-primario botao-grande" disabled={enviando}>
             {enviando ? "Concluindo…" : "Concluir sem cobrança"}
           </button>
         </>
       ) : !escolhendo ? (
-        <button type="button" className="botao-primario" onClick={() => setEscolhendo(true)}>
+        <button type="button" className="botao-primario botao-grande botao-concluir" onClick={() => setEscolhendo(true)}>
+          <Icone nome="check" />
           Concluir · {total}
         </button>
       ) : (
@@ -408,7 +542,8 @@ export function FormularioConcluir({
           {formas.length === 0 && <p className="suave">Nenhuma forma de pagamento ativa.</p>}
           <div className="formas-pagamento-opcoes">
             {formas.map((f) => (
-              <button key={f.id} type="submit" name="formaPagamentoId" value={f.id} className="botao-primario">
+              <button key={f.id} type="submit" name="formaPagamentoId" value={f.id} className="botao-secundario botao-grande">
+                <Icone nome={iconeDaForma(f.nome)} />
                 {f.nome}
               </button>
             ))}
@@ -432,7 +567,8 @@ export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; te
 
   if (!aberto) {
     return (
-      <button type="button" className="botao-secundario botao-largo" onClick={() => setAberto(true)}>
+      <button type="button" className="botao-perigo botao-largo" onClick={() => setAberto(true)}>
+        <Icone nome="desfazer" />
         Desfazer conclusão
       </button>
     );
@@ -450,7 +586,9 @@ export function FormularioDesfazerConclusao({ id, temReceita }: { id: string; te
           {(props) => <textarea {...props} defaultValue={estado.motivo} maxLength={500} />}
         </Campo>
       )}
-      <button type="submit" className="botao-primario" disabled={enviando}>
+      {/* Cancela a receita: ação de perigo, com ícone e só contorno (regra 13; U3 da revisão). */}
+      <button type="submit" className="botao-perigo" disabled={enviando}>
+        <Icone nome="desfazer" />
         {enviando ? "Desfazendo…" : temReceita ? "Desfazer e cancelar a receita" : "Desfazer conclusão"}
       </button>
       <button type="button" className="botao-secundario" onClick={() => setAberto(false)} disabled={enviando}>

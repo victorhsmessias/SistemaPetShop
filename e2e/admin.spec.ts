@@ -6,7 +6,7 @@ import { Pool } from "pg";
 import { adminPreparado, PREFIXO_DO_PAINEL } from "./donas";
 import { donaDoArquivo, expect, test } from "./tela";
 
-// Painel do administrador (desktop basta: é o computador do suporte). O navegador começa com a sessão do
+// Painel do administrador (desktop basta: é o computador do suporte; no iPhone, só os alvos de toque). O navegador começa com a sessão do
 // administrador; as donas-alvo são as 2 do arquivo (e2e/preparar.ts), cada uma num contexto próprio, como outro
 // aparelho. As empresas criadas aqui começam com PREFIXO_DO_PAINEL e são apagadas no fim pelo globalSetup.
 
@@ -202,4 +202,30 @@ test("redefinir a senha também desconecta a dona do outro aparelho", { tag: "@d
   await aparelho.goto("/agenda");
   await expect(aparelho).toHaveURL(/\/login$/);
   await aparelho.context().close();
+});
+
+test("a senha provisória curta mostra a mensagem do servidor no campo, sem a validação do navegador (B6)", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await page.goto("/admin");
+  await abrir(page, "Nova empresa");
+  const formulario = page.locator("details", { has: page.locator("summary", { hasText: "Nova empresa" }) });
+  await formulario.getByLabel("Nome da empresa").fill(`${PREFIXO_DO_PAINEL} ${randomUUID().slice(0, 8)}`);
+  await formulario.getByLabel("Nome da dona").fill("Dona da senha curta");
+  await formulario.getByLabel("E-mail da dona").fill(`dona-curta-${randomUUID().slice(0, 8)}@teste.banho-e-tosa.local`);
+  await formulario.getByLabel("Senha provisória").fill("1234567");
+  await formulario.getByRole("button", { name: "Criar empresa e dona" }).click();
+  await expect(formulario.getByLabel("Senha provisória")).toHaveAccessibleDescription(/pelo menos 8 caracteres/);
+  await expect(formulario.getByLabel("Nome da dona")).toHaveValue("Dona da senha curta");
+});
+
+test("no iPhone, os resumos do painel têm alvo de toque de 44 px ou mais (B5)", { tag: "@um-perfil" }, async ({ page }) => {
+  await page.goto("/admin");
+  const resumos = page.locator("summary");
+  await expect(resumos.first()).toBeVisible();
+  for (const resumo of await resumos.all()) {
+    if (!(await resumo.isVisible())) continue;
+    const caixa = await resumo.boundingBox();
+    expect(caixa!.height, await resumo.innerText()).toBeGreaterThanOrEqual(44);
+  }
 });

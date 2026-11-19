@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import type { Transacao } from "@/db/clientes";
 import { pet, tutor } from "@/modules/cadastros/schema";
-import { Campos, ehUuid, falhou, type Resultado } from "@/modules/compartilhado/validacao";
+import { Campos, ehUuid, falhou, type Erros, type Resultado } from "@/modules/compartilhado/validacao";
 
 // Pets (H1). Desativar e reativar, nunca apagar. Mesmas regras de transação de tutores.ts.
 
@@ -56,6 +56,12 @@ function validar(entrada: EntradaPet) {
     observacoes: campos.opcional("observacoes", entrada.observacoes, 2000),
   };
   return campos.resultado(valor);
+}
+
+/** Confere os campos do pet sem gravar (o cadastro "cliente e pet" valida tudo antes de criar o tutor). */
+export function validarPet(entrada: EntradaPet): { ok: true } | { ok: false; erros: Erros } {
+  const validado = validar(entrada);
+  return validado.ok ? { ok: true } : validado;
 }
 
 export async function criarPet(tx: Transacao, tutorId: string, entrada: EntradaPet): Promise<Resultado<{ id: string }>> {

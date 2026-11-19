@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { NOME_LONGO, SERVICO_LONGO } from "./apoio-dados";
 import { donaDoArquivo, expect, test } from "./tela";
@@ -18,6 +18,7 @@ test("nome de 120 caracteres, 12 pets, serviço longo e 4 atendimentos no mesmo 
   page,
   tocar,
   dona,
+  isMobile,
 }) => {
   const dia = dona.dados!.dia!;
 
@@ -34,16 +35,31 @@ test("nome de 120 caracteres, 12 pets, serviço longo e 4 atendimentos no mesmo 
   await expect(page.getByRole("list", { name: "Serviços" })).toContainText(SERVICO_LONGO);
   await semRolagemHorizontal(page, "Serviços");
 
-  // Os 4 atendimentos das 9h ficam lado a lado, sem se cobrir.
+  // Os 4 atendimentos das 9h ficam lado a lado, sem se cobrir. No iPhone (até 2 colunas, ADR 0016): 1 bloco e o
+  // "+3" lado a lado, e os outros 3 abrem no "+3".
   await page.goto(`/agenda?dia=${dia}`);
   const blocos = page.getByRole("link", { name: /^Pet número \d+ com nome comprido · / });
-  await expect(blocos).toHaveCount(4);
-  const caixas = await Promise.all((await blocos.all()).map((bloco) => bloco.boundingBox()));
-  const ordenadas = caixas.map((c) => c!).sort((a, b) => a.x - b.x);
-  for (let i = 1; i < ordenadas.length; i++) {
-    expect(ordenadas[i]!.x).toBeGreaterThanOrEqual(ordenadas[i - 1]!.x + ordenadas[i - 1]!.width - 1);
+  const ladoALado = async (alvos: Locator[]) => {
+    const caixas = await Promise.all(alvos.map((alvo) => alvo.boundingBox()));
+    const ordenadas = caixas.map((c) => c!).sort((a, b) => a.x - b.x);
+    for (let i = 1; i < ordenadas.length; i++) {
+      expect(ordenadas[i]!.x).toBeGreaterThanOrEqual(ordenadas[i - 1]!.x + ordenadas[i - 1]!.width - 1);
+    }
+  };
+  if (isMobile) {
+    await expect(blocos).toHaveCount(1);
+    const mais = page.getByRole("button", { name: "Mais 3 atendimentos entre 09:00 e 10:30" });
+    await ladoALado([blocos.first(), mais]);
+    await semRolagemHorizontal(page, "agenda do dia");
+    await tocar(mais);
+    await expect(blocos).toHaveCount(4);
+    await page.keyboard.press("Escape");
+    await expect(blocos).toHaveCount(1);
+  } else {
+    await expect(blocos).toHaveCount(4);
+    await ladoALado(await blocos.all());
+    await semRolagemHorizontal(page, "agenda do dia");
   }
-  await semRolagemHorizontal(page, "agenda do dia");
 
   await page.goto(`/agenda/semana?dia=${dia}`);
   await semRolagemHorizontal(page, "semana");
@@ -54,9 +70,8 @@ test("nome de 120 caracteres, 12 pets, serviço longo e 4 atendimentos no mesmo 
   await semRolagemHorizontal(page, "atendimento");
 });
 
-// B4 do QA (visual, fora desta fase): uma palavra longa sem espaço no nome do tutor faz a tela rolar para o lado.
-// Fica marcado como falha esperada: quando o visual novo corrigir, o Playwright acusa "passou inesperadamente" e o
-// `test.fail` deve ser retirado. O tutor fica na 2ª empresa do arquivo, para não afetar o teste acima.
+// B4 do QA: uma palavra longa sem espaço no nome do tutor fazia a tela rolar para o lado. Corrigido com
+// `overflow-wrap: anywhere` no globals.css. O tutor fica na 2ª empresa do arquivo, para não afetar o teste acima.
 test.describe("palavra longa", () => {
   test.use({
     dona: async ({}, usar, testInfo) => {
@@ -65,9 +80,8 @@ test.describe("palavra longa", () => {
   });
 
   test("palavra longa sem espaço no nome do tutor não cria rolagem horizontal (B4)", async ({ page, tocar }) => {
-    test.fail(true, "B4: palavra longa sem espaço ainda cria rolagem horizontal (correção visual pendente).");
-    // Na lista, o cartão corta o nome (overflow: hidden); a página do tutor rola para o lado.
     await page.goto("/clientes");
+    await semRolagemHorizontal(page, "Clientes");
     await tocar(page.getByRole("list", { name: "Tutores" }).getByRole("link"));
     await expect(page.getByRole("heading", { level: 1, name: /^iPW+$/ })).toBeVisible();
     await semRolagemHorizontal(page, "página do tutor");

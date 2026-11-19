@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AvisoDaPagina, ComAvisoDaPagina } from "@/app/(dona)/agenda/aviso-da-pagina";
 import { FormularioHorario, FormularioObservacoes, FormularioServicosDoAtendimento } from "@/app/(dona)/agenda/formularios";
+import { Aviso } from "@/app/componentes/aviso";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { Voltar } from "@/app/componentes/voltar";
 import { obterAtendimento } from "@/modules/agenda/atendimentos";
 import { noFuso } from "@/modules/agenda/fuso";
 import { atendimentoAtivo, NOMES_DOS_STATUS } from "@/modules/agenda/status";
@@ -36,10 +37,10 @@ export default async function PaginaEditarAtendimento({ params }: Props) {
   return (
     <main className="pagina">
       <ComAvisoDaPagina>
-        <Link href={`/agenda/${a.id}`} className="voltar">
-          ‹ {a.pet.nome}
-        </Link>
+        <Voltar href={`/agenda/${a.id}`} destino={a.pet.nome} />
         <h1>Editar atendimento</h1>
+        {/* Três formulários, cada um com o seu botão (U7 da revisão): a dica evita perder o que mudou noutro cartão. */}
+        <p className="suave">Cada parte salva separadamente: salve uma antes de mudar a outra.</p>
         <AvisoDaPagina />
 
         {ativo ? (
@@ -54,9 +55,9 @@ export default async function PaginaEditarAtendimento({ params }: Props) {
             </section>
           </>
         ) : (
-          <p className="mensagem mensagem-aviso">
+          <Aviso tipo="info">
             Atendimento &quot;{NOMES_DOS_STATUS[a.status]}&quot;: serviços e horário não mudam. Reabra-o se foi engano.
-          </p>
+          </Aviso>
         )}
 
         <section className="cartao">

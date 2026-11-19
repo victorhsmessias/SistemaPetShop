@@ -61,6 +61,8 @@ export default defineConfig({
     timeout: 240_000,
     env: {
       BETTER_AUTH_URL: baseURL,
+      // WhatsApp do suporte fictício (nenhum número real no repositório): o teste da empresa suspensa confere o link.
+      SUPORTE_WHATSAPP: "5511900000000",
       TZ: "UTC",
       E2E_RELOGIO_SERVIDOR: process.env.E2E_RELOGIO,
       NODE_OPTIONS: [process.env.NODE_OPTIONS, "--import ./e2e/relogio.mjs"].filter(Boolean).join(" "),

@@ -29,6 +29,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const {
   alternarPetAtivoAcao,
   alternarServicoAtivoAcao,
+  cadastrarClienteEPetAcao,
   salvarPetAcao,
   salvarServicoAcao,
   salvarTutorAcao,
@@ -91,12 +92,26 @@ describe("sem sessão, toda ação é recusada e manda para o login", () => {
     ["alternarPetAtivoAcao", () => alternarPetAtivoAcao(formulario({ petId: "", ativo: "false" }))],
     ["salvarServicoAcao", () => salvarServicoAcao(vazio, formulario({ nome: "X", preco: "1", duracao: "1" }))],
     ["alternarServicoAtivoAcao", () => alternarServicoAtivoAcao(formulario({ id: "", ativo: "false" }))],
+    [
+      "cadastrarClienteEPetAcao",
+      () =>
+        cadastrarClienteEPetAcao(
+          vazio,
+          formulario({ nome: "X", telefone: "(11) 98765-4321", pet_nome: "Y", especie: "cao", porte: "P" }),
+        ),
+    ],
   ])("%s", async (_nome, chamar) => {
     expect(await destinoDoRedirect(chamar())).toBe("/login");
   });
 
   it("e nada é gravado", async () => {
     await destinoDoRedirect(salvarTutorAcao(vazio, formulario({ nome: "Fantasma", telefone: "(11) 91111-0000" })));
+    await destinoDoRedirect(
+      cadastrarClienteEPetAcao(
+        vazio,
+        formulario({ nome: "Fantasma", telefone: "(11) 91111-0001", pet_nome: "Assombro", especie: "cao", porte: "P" }),
+      ),
+    );
     const { buscarTutores } = await import("@/modules/cadastros/tutores");
     expect(await daEmpresa(a, (tx) => buscarTutores(tx, "Fantasma"))).toEqual([]);
   });
@@ -116,16 +131,37 @@ describe("a dona da empresa A, pelas ações das telas", () => {
     requisicao.cookie = cookieDonaA;
   });
 
-  it("cria um tutor na própria empresa e vai para a página dele", async () => {
+  it("cria um tutor na própria empresa e vai para a página dele, com o aviso de sucesso", async () => {
     const destino = await destinoDoRedirect(
       salvarTutorAcao(vazio, formulario({ nome: "Marta", telefone: "(11) 97654-3210", observacoes: "" })),
     );
-    const id = destino.replace("/clientes/", "");
+    expect(destino).toMatch(/^\/clientes\/[0-9a-f-]{36}\?salvo=cliente$/);
+    const id = destino.replace("/clientes/", "").replace("?salvo=cliente", "");
     expect(await daEmpresa(a, (tx) => obterTutor(tx, id))).toMatchObject({
       nome: "Marta",
       telefone: "+5511976543210",
       empresaId: a.empresaId,
     });
+  });
+
+  it("desativar e reativar pet e serviço voltam com o aviso de sucesso (U5)", async () => {
+    expect(await destinoDoRedirect(alternarPetAtivoAcao(formulario({ petId: a.petId, ativo: "false" })))).toBe(
+      `/clientes/${a.tutorId}?inativos=1&salvo=pet-desativado`,
+    );
+    expect(await daEmpresa(a, (tx) => obterPet(tx, a.petId))).toMatchObject({ ativo: false });
+    expect(await destinoDoRedirect(alternarPetAtivoAcao(formulario({ petId: a.petId, ativo: "true" })))).toBe(
+      `/clientes/${a.tutorId}?salvo=pet-reativado`,
+    );
+    expect(await daEmpresa(a, (tx) => obterPet(tx, a.petId))).toMatchObject({ ativo: true });
+
+    expect(await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: a.servicoId, ativo: "false" })))).toBe(
+      "/servicos?inativos=1&salvo=servico-desativado",
+    );
+    expect(await daEmpresa(a, (tx) => obterServico(tx, a.servicoId))).toMatchObject({ ativo: false });
+    expect(await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: a.servicoId, ativo: "true" })))).toBe(
+      "/servicos?salvo=servico-reativado",
+    );
+    expect(await daEmpresa(a, (tx) => obterServico(tx, a.servicoId))).toMatchObject({ ativo: true });
   });
 
   it("volta com as mensagens e os dados digitados quando o formulário tem erro", async () => {
@@ -153,7 +189,10 @@ describe("a dona da empresa A, pelas ações das telas", () => {
     expect(await destinoDoRedirect(alternarPetAtivoAcao(formulario({ petId: b.petId, ativo: "false" })))).toBe(
       "/clientes",
     );
-    await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: b.servicoId, ativo: "false" })));
+    // Sem aviso de sucesso: nada foi alterado.
+    expect(await destinoDoRedirect(alternarServicoAtivoAcao(formulario({ id: b.servicoId, ativo: "false" })))).toBe(
+      "/servicos",
+    );
 
     expect(await daEmpresa(b, (tx) => obterTutor(tx, b.tutorId))).toMatchObject({ nome: "Tutor Ações B" });
     expect(await daEmpresa(b, (tx) => obterPet(tx, b.petId))).toMatchObject({ nome: "Pet Ações B", ativo: true });
@@ -172,7 +211,7 @@ describe("a dona da empresa A, pelas ações das telas", () => {
     const destino = await destinoDoRedirect(
       salvarTutorAcao(vazio, formulario({ nome: "Esperto", telefone: "(11) 95555-4444", empresaId: b.empresaId })),
     );
-    const id = destino.replace("/clientes/", "");
+    const id = destino.replace("/clientes/", "").replace("?salvo=cliente", "");
     expect(await daEmpresa(a, (tx) => obterTutor(tx, id))).toMatchObject({ empresaId: a.empresaId });
   });
 });

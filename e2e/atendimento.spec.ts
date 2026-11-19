@@ -1,4 +1,4 @@
-import { agendar, blocoNaGrade, diaDaqui, expect, statusAtual, test } from "./tela";
+import { acaoDoMenu, agendar, blocoNaGrade, diaDaqui, expect, statusAtual, test } from "./tela";
 
 // O atendimento depois de agendado: editar horário, serviços e observações (no iPhone e no desktop); cancelar,
 // marcar falta e reabrir; concluir com total zero (só no iPhone). A empresa tem "Banho M" (R$ 50,00, 60 min),
@@ -14,6 +14,7 @@ test("a dona edita o horário (o término acompanha o início), os serviços (fi
   await expect(page.getByText("10:00–11:00")).toBeVisible();
   await tocar(page.getByRole("link", { name: "Editar serviços, horário e observações" }));
   await expect(page.getByRole("heading", { level: 1, name: "Editar atendimento" })).toBeVisible();
+  await expect(page.getByText(/^Cada parte salva separadamente/)).toBeVisible();
 
   // Mudar o início leva o término junto (mantém a duração).
   const inicio = page.getByLabel("Início");
@@ -33,6 +34,8 @@ test("a dona edita o horário (o término acompanha o início), os serviços (fi
   await tocar(salvarHorario);
   await expect(page.getByRole("heading", { level: 1, name: "Mel" })).toBeVisible();
   await expect(page.getByText("11:00–12:15")).toBeVisible();
+  // Cada parte salva separadamente, e o aviso diz qual (U7 da revisão).
+  await expect(page.getByRole("status").filter({ hasText: "Horário salvo." })).toBeVisible();
 
   // Serviços: tirar todos é recusado; com a hidratação, o fim é recalculado pela soma (90 min) e o total sobe.
   await tocar(page.getByRole("link", { name: "Editar serviços, horário e observações" }));
@@ -55,10 +58,11 @@ test("a dona edita o horário (o término acompanha o início), os serviços (fi
   await page.getByLabel("Observações do atendimento").fill("Usar toalha extra.");
   await tocar(page.getByRole("button", { name: "Salvar observações" }));
   await expect(page.getByRole("heading", { level: 1, name: "Mel" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Observações salvas." })).toBeVisible();
   await expect(page.getByText("Usar toalha extra.")).toBeVisible();
 
   // Na grade, o bloco no novo horário.
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(blocoNaGrade(page, "Mel")).toContainText("Agendado · 11:00–12:30");
 });
 
@@ -69,8 +73,8 @@ test("a dona cancela, reabre, marca falta e reabre; cancelado e falta saem da gr
   await agendar(page, tocar, { dia, hora: "14:00", servicos: ["Banho M"] });
   await tocar(blocoNaGrade(page, "Mel"));
 
-  // Cancelar: sem motivo; o desfazer vira "Reabrir".
-  await tocar(page.getByRole("button", { name: "Cancelar", exact: true }));
+  // Cancelar (no menu "Mais ações"): sem motivo; o desfazer vira "Reabrir".
+  await acaoDoMenu(page, tocar, "Cancelar");
   await expect(statusAtual(page)).toHaveText("Cancelado");
   await expect(page.getByRole("button", { name: /^Concluir/ })).toHaveCount(0);
   await tocar(page.getByRole("link", { name: "Editar observações" }));
@@ -92,13 +96,13 @@ test("a dona cancela, reabre, marca falta e reabre; cancelado e falta saem da gr
   await expect(statusAtual(page)).toHaveText("Agendado");
   await tocar(page.getByRole("button", { name: "Confirmar" }));
   await expect(statusAtual(page)).toHaveText("Confirmado");
-  await tocar(page.getByRole("button", { name: "Marcar falta" }));
+  await acaoDoMenu(page, tocar, "Marcar falta");
   await expect(statusAtual(page)).toHaveText("Faltou");
 
   // Reabrir a falta volta para Confirmado (deduzido de confirmado_em), e o atendimento volta à grade.
   await tocar(page.getByRole("button", { name: "Reabrir como Confirmado" }));
   await expect(statusAtual(page)).toHaveText("Confirmado");
-  await tocar(page.getByRole("link", { name: "‹ Agenda" }));
+  await tocar(page.getByRole("link", { name: "Voltar para Agenda" }));
   await expect(blocoNaGrade(page, "Mel")).toContainText("Confirmado · 14:00–15:00");
   await expect(page.getByText(/cancelado ou falta/)).toHaveCount(0);
 });
@@ -110,7 +114,7 @@ test("com total zero, a dona conclui sem cobrança e o concluído só edita obse
   await page.getByLabel("Nome do serviço").fill("Banho cortesia");
   await page.getByLabel("Preço (R$)").fill("0,00");
   await page.getByLabel("Duração (minutos)").fill("30");
-  await tocar(page.getByRole("button", { name: "Cadastrar serviço" }));
+  await tocar(page.getByRole("button", { name: "Salvar serviço" }));
   await expect(page).toHaveURL(/\/servicos$/);
 
   const dia = diaDaqui(22);

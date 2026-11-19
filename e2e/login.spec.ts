@@ -1,5 +1,5 @@
 import { adminPreparado } from "./donas";
-import { erroGeral, expect, test } from "./tela";
+import { erroGeral, expect, sair, test } from "./tela";
 
 // Entrar e sair. O login pela tela conta no limite de 5 por minuto (auth.ts): este arquivo faz 4 (dona no iPhone e
 // no desktop, senha errada e administrador, só no iPhone) e o da empresa suspensa faz 1. Os outros arquivos já
@@ -24,7 +24,7 @@ test.describe("sem sessão", () => {
     await expect(page).toHaveURL(/\/agenda$/);
     await expect(page.getByRole("heading", { level: 1, name: "Agenda" })).toBeVisible();
 
-    await tocar(page.getByRole("button", { name: "Sair" }));
+    await sair(page, tocar);
     await expect(page).toHaveURL(/\/login$/);
     // O voltar termina no login (sem sessão, a agenda redireciona). Espera a URL antes de conferir a tela e de abrir
     // outra: no WebKit, a conferência rodava com o voltar ainda em andamento (falhou no CI).
@@ -34,6 +34,46 @@ test.describe("sem sessão", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Agenda" })).toHaveCount(0);
     await page.goto("/clientes");
     await expect(page).toHaveURL(/\/login$/);
+  });
+
+  // Não conta no limite de logins: os campos são conferidos no servidor antes de o Better Auth receber a tentativa.
+  test("campos vazios ou e-mail sem formato mostram a mensagem em português no campo (B6)", { tag: "@um-perfil" }, async ({
+    page,
+    tocar,
+  }) => {
+    await page.goto("/login");
+    const entrar = page.getByRole("button", { name: "Entrar" });
+    await tocar(entrar);
+    await expect(page.getByLabel("E-mail")).toHaveAccessibleDescription(/Informe o e-mail\./);
+    await expect(page.getByLabel("Senha")).toHaveAccessibleDescription(/Informe a senha\./);
+    await page.getByLabel("E-mail").fill("dona");
+    await expect(entrar).toBeEnabled();
+    await tocar(entrar);
+    await expect(page.getByLabel("E-mail")).toHaveAccessibleDescription(/nome@exemplo\.com/);
+    await expect(page.getByLabel("E-mail")).toHaveValue("dona");
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test("sem rede na conferência, o login avisa e o botão volta; a senha não vai para a conferência (T3, T4)", {
+    tag: "@um-perfil",
+  }, async ({ page, tocar }) => {
+    // A conferência é uma Server Action: um POST para a própria /login. Ela é derrubada (como sem rede) depois de
+    // guardar o corpo; o Better Auth nem é chamado, então o limite de logins não é gasto.
+    const corpos: string[] = [];
+    await page.route("**/login", async (rota) => {
+      if (rota.request().method() !== "POST") return rota.continue();
+      corpos.push(rota.request().postData() ?? "");
+      await rota.abort("failed");
+    });
+    await page.goto("/login");
+    await page.getByLabel("E-mail").fill("dona@teste.banho-e-tosa.local");
+    await page.getByLabel("Senha").fill("senha-que-nao-pode-sair");
+    const entrar = page.getByRole("button", { name: "Entrar" });
+    await tocar(entrar);
+    await expect(erroGeral(page, "Não foi possível entrar agora. Tente de novo.")).toBeVisible();
+    await expect(entrar).toBeEnabled();
+    expect(corpos).toHaveLength(1);
+    expect(corpos[0]).not.toContain("senha-que-nao-pode-sair");
   });
 
   test("a senha errada mostra a mensagem e não entra", { tag: "@um-perfil" }, async ({ page, tocar, dona }) => {

@@ -1,38 +1,122 @@
-/* Celular primeiro: a piloto usa iPhone. Cores em variáveis, com tema escuro automático. */
+/*
+ * Visual "Aconchego" (sessão 07): terracota e creme, fonte arredondada do sistema, cantos macios. Celular primeiro:
+ * a piloto usa iPhone. Cores só por estes tokens, com o tema escuro seguindo o aparelho.
+ * O contraste dos pares exigidos (texto >= 4,5:1, interface >= 3:1) é conferido por src/app/contraste.test.ts:
+ * mudou uma cor, rode o teste. A --borda é decorativa (divisores e cartões); campos e botões usam --borda-controle.
+ */
 :root {
-  --fundo: #f6f4ef;
-  --superficie: #ffffff;
-  --texto: #1f2328;
-  --texto-suave: #5b6168;
-  --borda: #d9d6cf;
-  --primaria: #1f6f5c;
+  --fundo: #f8f1e9;
+  --superficie: #fffdf9;
+  --superficie2: #f3e9dd;
+  --texto: #2b211b;
+  --suave: #68584c;
+  --borda: #eadccd;
+  --borda-controle: #8f7b6a;
+  --primaria: #a8481f;
   --primaria-texto: #ffffff;
-  --primaria-hover: #185a4b;
-  --erro: #b42318;
-  --erro-fundo: #fdecea;
-  --sucesso: #146c43;
-  --sucesso-fundo: #e6f4ea;
-  --aviso-fundo: #fff4d6;
-  --raio: 12px;
+  --primaria-hover: #8f3c19;
+  --primaria-suave: #f6e3d8;
+  --perigo: #9e1b32;
+  --perigo-fundo: #f9e1e4;
+  --sucesso: #2d6631;
+  --sucesso-fundo: #e2f0dd;
+  --aviso: #734900;
+  --aviso-fundo: #fcefc9;
+  --info: #264d80;
+  --info-fundo: #e4ecf6;
+  --cuidado-fundo: #fcefc9;
+  --cuidado-texto: #3b2900;
+  --cuidado-faixa: #a56500;
+  --foco: #a8481f;
+  --st-agendado-fundo: #efe7de;
+  --st-agendado-texto: #54473c;
+  --st-agendado-faixa: #8f7b6a;
+  --st-confirmado-fundo: #e2eaf5;
+  --st-confirmado-texto: #284f86;
+  --st-confirmado-faixa: #3d6db0;
+  --st-em-atendimento-fundo: #fbe5c6;
+  --st-em-atendimento-texto: #7f4200;
+  --st-em-atendimento-faixa: #c27a00;
+  --st-pronto-fundo: #e0efda;
+  --st-pronto-texto: #2d6631;
+  --st-pronto-faixa: #4a8a3f;
+  --st-concluido-fundo: #f4e1d6;
+  --st-concluido-texto: #86391a;
+  --st-concluido-faixa: #a8481f;
+  --st-cancelado-fundo: #ebe6e1;
+  --st-cancelado-texto: #59514a;
+  --st-cancelado-faixa: #958b81;
+  --st-faltou-fundo: #f6dde0;
+  --st-faltou-texto: #8a1c2e;
+  --st-faltou-faixa: #9e1b32;
+  --sombra-cartao: 0 2px 10px rgb(92 58 34 / 8%);
+  --sombra-flutuante: 0 10px 28px rgb(92 58 34 / 18%);
+
+  --fonte: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --fs-p: 14px;
+  --fs-mini: 13px;
+  --fs-h2: 19px;
+  --fs-h1: 26px;
+  --fs-valor: 32px;
+  --raio-cartao: 20px;
+  --raio-controle: 14px;
+  --raio-selo: 999px;
   --toque: 48px;
+  --acao: 52px;
+  --borda-larg: 1.5px;
+  --faixa-larg: 5px;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fundo: #14171a;
-    --superficie: #1d2125;
-    --texto: #eceff1;
-    --texto-suave: #a3abb3;
-    --borda: #343a40;
-    --primaria: #3fae92;
-    --primaria-texto: #0d1f1a;
-    --primaria-hover: #56c1a5;
-    --erro: #ff8a80;
-    --erro-fundo: #3a1d1b;
-    --sucesso: #7bd88f;
-    --sucesso-fundo: #17301f;
-    --aviso-fundo: #3a3218;
+    --fundo: #1a1512;
+    --superficie: #251e19;
+    --superficie2: #2f2721;
+    --texto: #f5ede5;
+    --suave: #c5b5a7;
+    --borda: #3b3129;
+    --borda-controle: #978471;
+    --primaria: #f19a70;
+    --primaria-texto: #2b1206;
+    --primaria-hover: #f5b08f;
+    --primaria-suave: #43281b;
+    --perigo: #ff9aa6;
+    --perigo-fundo: #40171e;
+    --sucesso: #a3d99d;
+    --sucesso-fundo: #1d3219;
+    --aviso: #f7c96a;
+    --aviso-fundo: #3d2f12;
+    --info: #9fbfeb;
+    --info-fundo: #1b2a3f;
+    --cuidado-fundo: #3d2f12;
+    --cuidado-texto: #ffe6ad;
+    --cuidado-faixa: #e5a43a;
+    --foco: #f19a70;
+    --st-agendado-fundo: #352c25;
+    --st-agendado-texto: #d8c9bb;
+    --st-agendado-faixa: #9f8b78;
+    --st-confirmado-fundo: #1e2c42;
+    --st-confirmado-texto: #adc8f0;
+    --st-confirmado-faixa: #6f9bdb;
+    --st-em-atendimento-fundo: #433014;
+    --st-em-atendimento-texto: #ffcf8a;
+    --st-em-atendimento-faixa: #e5a43a;
+    --st-pronto-fundo: #1f3a1d;
+    --st-pronto-texto: #ade3a5;
+    --st-pronto-faixa: #79c06d;
+    --st-concluido-fundo: #46291c;
+    --st-concluido-texto: #ffc0a1;
+    --st-concluido-faixa: #f19a70;
+    --st-cancelado-fundo: #302a26;
+    --st-cancelado-texto: #cfc5bc;
+    --st-cancelado-faixa: #8e847b;
+    --st-faltou-fundo: #44191f;
+    --st-faltou-texto: #ffb3bd;
+    --st-faltou-faixa: #f07d8d;
+    --sombra-cartao: 0 1px 0 rgb(255 255 255 / 4%), 0 2px 10px rgb(0 0 0 / 35%);
+    --sombra-flutuante: 0 10px 28px rgb(0 0 0 / 50%);
     color-scheme: dark;
   }
 }
@@ -52,9 +136,11 @@ body {
   min-height: 100dvh;
   background: var(--fundo);
   color: var(--texto);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--fonte);
   font-size: 16px;
   line-height: 1.5;
+  /* Palavra longa sem espaço (um nome digitado errado) quebra em vez de empurrar a tela para o lado (QA B4). */
+  overflow-wrap: anywhere;
 }
 
 h1,
@@ -65,11 +151,12 @@ h3 {
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: var(--fs-h1);
+  font-weight: 700;
 }
 
 h2 {
-  font-size: 1.15rem;
+  font-size: var(--fs-h2);
 }
 
 p {
@@ -106,13 +193,14 @@ p {
 .cartao {
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-cartao);
   padding: 16px;
   margin-bottom: 16px;
 }
 
 .suave {
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 .formulario {
@@ -140,8 +228,8 @@ textarea {
   font-size: 16px;
   min-height: var(--toque);
   padding: 10px 12px;
-  border: 1px solid var(--borda);
-  border-radius: 10px;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
   background: var(--superficie);
   color: var(--texto);
   width: 100%;
@@ -155,7 +243,7 @@ textarea {
 input[aria-invalid="true"],
 select[aria-invalid="true"],
 textarea[aria-invalid="true"] {
-  border-color: var(--erro);
+  border-color: var(--perigo);
 }
 
 input:focus-visible,
@@ -164,22 +252,25 @@ textarea:focus-visible,
 a:focus-visible,
 button:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--primaria);
+  outline: 3px solid var(--foco);
   outline-offset: 2px;
 }
 
 .dica {
   font-size: 0.85rem;
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font: inherit;
   font-weight: 600;
   min-height: var(--toque);
   padding: 10px 18px;
-  border-radius: 10px;
-  border: 1px solid transparent;
+  border-radius: var(--raio-controle);
+  border: var(--borda-larg) solid transparent;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -195,9 +286,37 @@ button {
 }
 
 .botao-secundario {
-  background: transparent;
+  background: var(--superficie);
   color: var(--texto);
-  border-color: var(--borda);
+  border-color: var(--borda-controle);
+}
+
+/* Botão de texto: link de toque com 48 px, para ações discretas (Desfazer, Trocar o pet). */
+.botao-texto {
+  background: transparent;
+  color: var(--primaria);
+  padding: 10px 10px;
+}
+
+/*
+ * Perigo (Cancelar, Marcar falta, Desativar): sempre com ícone e só contorno, nunca cheio. A primária (terracota) e o
+ * perigo (bordô) são da mesma família de cor; o contorno e o ícone impedem que o perigo pareça a ação principal.
+ */
+.botao-perigo {
+  background: var(--superficie);
+  color: var(--perigo);
+  border-color: var(--perigo);
+}
+
+/* Ação do polegar, na barra do rodapé. */
+.botao-grande {
+  min-height: var(--acao);
+  font-size: 17px;
+}
+
+button,
+.botao-link {
+  gap: 8px;
 }
 
 button:disabled {
@@ -205,15 +324,119 @@ button:disabled {
   cursor: progress;
 }
 
+/* Ícones SVG (componentes/icone.tsx): traço na cor do texto. */
+.ic {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+
+/* Selo de status (componentes/selo-status.tsx): fundo suave e ícone; as cores vêm de .status-*. */
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 7px;
+  border-radius: var(--raio-selo);
+  background: var(--st-fundo);
+  color: var(--st-texto);
+  font-size: var(--fs-p);
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.selo .ic {
+  width: 16px;
+  height: 16px;
+}
+
+.selo-mini {
+  font-size: 12px;
+  padding: 1px 7px 1px 5px;
+  gap: 3px;
+}
+
+.selo-mini .ic {
+  width: 13px;
+  height: 13px;
+}
+
+/* Grupo recolhível (componentes/grupo-recolhivel.tsx): seta explícita, que gira ao abrir. */
+details.grupo {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-cartao);
+  margin: 0 0 16px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.grupo > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 56px;
+  margin: 0;
+  padding: 0 16px;
+}
+
+.grupo > summary::-webkit-details-marker {
+  display: none;
+}
+
+.grupo .seta {
+  color: var(--suave);
+  transition: transform 0.15s;
+}
+
+.grupo[open] .seta {
+  transform: rotate(180deg);
+}
+
+.grupo > .lista-toque {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--borda);
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .mensagem {
-  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border-radius: var(--raio-controle);
   padding: 12px 14px;
   margin: 0;
 }
 
+.mensagem > .ic {
+  margin-top: 2px;
+}
+
+.mensagem-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.mensagem a {
+  color: inherit;
+  font-weight: 700;
+}
+
 .mensagem-erro {
-  background: var(--erro-fundo);
-  color: var(--erro);
+  background: var(--perigo-fundo);
+  color: var(--perigo);
 }
 
 .mensagem-sucesso {
@@ -223,23 +446,70 @@ button:disabled {
 
 .mensagem-aviso {
   background: var(--aviso-fundo);
+  color: var(--aviso);
+}
+
+.mensagem-aviso .mensagem-corpo {
   color: var(--texto);
 }
 
+.mensagem-info {
+  background: var(--info-fundo);
+  color: var(--info);
+}
+
 .marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--primaria);
 }
 
+/* Telas de exceção (404, empresa suspensa): centradas, com um ícone e uma saída clara. */
+.pagina-excecao {
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.pagina-excecao > * {
+  width: 100%;
+  margin: 0;
+}
+
+.pagina-excecao .mensagem {
+  text-align: left;
+}
+
+.excecao-icone {
+  display: grid;
+  place-items: center;
+  width: 72px !important;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--primaria-suave);
+  color: var(--primaria);
+}
+
+.excecao-icone .ic {
+  width: 36px;
+  height: 36px;
+}
+
+.pagina-excecao .botao-largo {
+  margin: 0;
+}
+
 .etiqueta {
   display: inline-block;
-  font-size: 0.8rem;
+  font-size: var(--fs-mini);
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--borda);
-  color: var(--texto-suave);
+  border-radius: var(--raio-selo);
+  background: var(--superficie2);
+  color: var(--suave);
 }
 
 .lista-simples {
@@ -257,10 +527,14 @@ details {
   margin-top: 12px;
 }
 
+/* 48 px de toque (QA B5: os do painel tinham 32 px), mantendo a seta do navegador. */
 summary {
   cursor: pointer;
   font-weight: 600;
-  min-height: 32px;
+  min-height: var(--toque);
+  padding: 12px 0;
+  line-height: 24px;
+  touch-action: manipulation;
 }
 
 .cartao > details:first-child {
@@ -273,42 +547,242 @@ details[open] summary {
   margin-bottom: 12px;
 }
 
-/* Telas da dona: navegação inferior, listas e cadastros. Toque mínimo de 48px (acima dos 44px pedidos). */
+/*
+ * Telas da dona: moldura com barra do topo e abas no rodapé (celular) ou barra lateral (a partir de 1024 px).
+ * Toque mínimo de 48 px (acima dos 44 px pedidos).
+ */
 
 .com-navegacao {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 
-.navegacao-inferior {
-  position: fixed;
-  inset: auto 0 0 0;
-  display: flex;
-  justify-content: center;
-  background: var(--superficie);
-  border-top: 1px solid var(--borda);
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 10;
+/* A barra do topo já respeita a área segura do iPhone. */
+.com-navegacao .pagina {
+  padding-top: 8px;
 }
 
-/* Quatro abas numa tela de 375 px: cerca de 94 px cada, com o texto um pouco menor. */
-.navegacao-inferior a {
-  flex: 1;
-  min-width: 0;
-  max-width: 240px;
-  min-height: 56px;
-  padding: 0 4px;
-  font-size: 0.9rem;
+.barra-topo {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--texto-suave);
-  text-decoration: none;
-  font-weight: 600;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
 }
 
-.navegacao-inferior a[aria-current="page"] {
+.marca-app {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.marca-icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--primaria);
+  color: var(--primaria-texto);
+}
+
+.marca-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.marca-texto strong {
+  font-size: var(--fs-p);
+}
+
+.marca-texto small {
+  font-size: var(--fs-mini);
+  color: var(--suave);
+}
+
+.avatar,
+.avatar-botao {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primaria-suave);
   color: var(--primaria);
-  box-shadow: inset 0 3px 0 var(--primaria);
+  font-weight: 700;
+  font-size: var(--fs-p);
+}
+
+.avatar-botao {
+  width: var(--toque);
+  height: var(--toque);
+  min-height: var(--toque);
+  padding: 0;
+  border: 0;
+}
+
+/* Menu da conta: popover do HTML (abre e fecha sem JavaScript, fecha ao tocar fora). */
+.menu-conta {
+  position: fixed;
+  inset: calc(max(8px, env(safe-area-inset-top)) + 56px) max(16px, env(safe-area-inset-right)) auto auto;
+  margin: 0;
+  width: min(280px, calc(100vw - 32px));
+  padding: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-flutuante);
+}
+
+.menu-conta .botao-largo {
+  margin: 0;
+}
+
+.lateral > .marca-app,
+.lateral-conta {
+  display: none;
+}
+
+.navegacao-principal {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px 6px max(6px, env(safe-area-inset-bottom));
+  background: var(--superficie);
+  border-top: 1px solid var(--borda);
+}
+
+.navegacao-principal a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 56px;
+  border-radius: var(--raio-controle);
+  color: var(--suave);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: normal;
+}
+
+.navegacao-principal .ic {
+  width: 24px;
+  height: 24px;
+}
+
+.navegacao-principal a[aria-current="page"] {
+  background: var(--primaria-suave);
+  color: var(--primaria);
+  font-weight: 800;
+}
+
+@media (min-width: 1024px) {
+  .moldura-dona {
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+    min-height: 100dvh;
+    /* O fundo da coluna da barra lateral continua até o fim da página (a barra é fixa na tela). */
+    background: linear-gradient(to right, var(--superficie) 255px, var(--borda) 255px 256px, var(--fundo) 256px);
+  }
+
+  .barra-topo {
+    display: none;
+  }
+
+  .lateral {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 14px;
+    background: var(--superficie);
+    border-right: 1px solid var(--borda);
+  }
+
+  .lateral > .marca-app {
+    display: flex;
+    padding: 4px 8px 18px;
+  }
+
+  .navegacao-principal {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .navegacao-principal a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: var(--toque);
+    padding: 0 12px;
+    color: var(--texto);
+    font-size: 16px;
+  }
+
+  .navegacao-principal a[aria-current="page"] {
+    font-weight: 700;
+  }
+
+  .lateral-conta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: auto;
+    padding: 12px 4px 0;
+    border-top: 1px solid var(--borda);
+  }
+
+  .lateral-nome {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    font-weight: 600;
+    font-size: var(--fs-p);
+    line-height: 1.2;
+  }
+
+  .lateral-nome small {
+    color: var(--suave);
+    font-weight: 400;
+  }
+
+  .lateral-conta .botao-texto {
+    padding: 0 8px;
+  }
+
+  .com-navegacao {
+    padding-bottom: 0;
+  }
+
+  .com-navegacao .pagina {
+    max-width: 760px;
+    padding: 28px 32px 40px;
+  }
+
+  .com-navegacao .pagina-larga {
+    max-width: 1180px;
+  }
 }
 
 a {
@@ -321,7 +795,7 @@ a {
   justify-content: center;
   min-height: var(--toque);
   padding: 10px 18px;
-  border-radius: 10px;
+  border-radius: var(--raio-controle);
   font-weight: 600;
   text-decoration: none;
   touch-action: manipulation;
@@ -333,7 +807,7 @@ a {
 }
 
 .botao-link.botao-secundario {
-  border: 1px solid var(--borda);
+  border: var(--borda-larg) solid var(--borda-controle);
   color: var(--texto);
 }
 
@@ -351,24 +825,156 @@ a {
 .voltar {
   display: inline-flex;
   align-items: center;
+  gap: 2px;
   min-height: var(--toque);
-  margin-bottom: 4px;
+  min-width: var(--toque);
+  margin: 0 0 4px -6px;
+  padding: 0 12px 0 6px;
+  border-radius: var(--raio-controle);
   text-decoration: none;
   font-weight: 600;
 }
 
-.busca {
+/* Busca que filtra ao digitar (componentes/busca-ao-digitar.tsx): rótulo visível e lupa dentro do campo. */
+.busca-ao-digitar {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 16px;
 }
 
-.busca input {
-  flex: 1;
+.busca-ao-digitar label {
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
-.busca button {
-  flex: 0 0 auto;
+.busca-campo {
+  position: relative;
+  display: block;
+}
+
+.busca-campo .ic {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--suave);
+  pointer-events: none;
+}
+
+.busca-campo input {
+  padding-left: 44px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--suave);
+  opacity: 1;
+}
+
+/* Linha de cliente: iniciais, pets em destaque, tutor e telefone menores, seta. O seletor composto ganha do
+   `.lista-toque a` (display: block), que vem depois no arquivo (U1 da revisão). */
+.lista-toque.lista-clientes a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.linha-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.seta-linha {
+  color: var(--suave);
+}
+
+/* Ficha do cliente. */
+.ficha-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ficha-cliente p {
+  margin: 0;
+}
+
+.ficha-cliente .botao-texto {
+  align-self: flex-start;
+  margin-left: -10px;
+}
+
+.telefone-grande {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.secao-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.secao-cab h2 {
+  margin: 0;
+}
+
+.contagem {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: var(--raio-selo);
+  background: var(--superficie2);
+  color: var(--texto);
+  font-size: var(--fs-mini);
+  font-weight: 600;
+  vertical-align: 2px;
+}
+
+.cartao-pet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cartao-pet h3,
+.cartao-pet p,
+.cartao-pet .cuidado {
+  margin: 0;
+}
+
+.historico {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-size: var(--fs-p);
+}
+
+.historico p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.historico .ic {
+  width: 18px;
+  height: 18px;
+  color: var(--suave);
+}
+
+.historico a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
 }
 
 .lista-toque {
@@ -377,7 +983,8 @@ a {
   margin: 0 0 16px;
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-cartao);
   overflow: hidden;
 }
 
@@ -400,7 +1007,7 @@ a {
 
 .lista-toque .detalhe {
   display: block;
-  color: var(--texto-suave);
+  color: var(--suave);
   font-size: 0.9rem;
 }
 
@@ -409,16 +1016,33 @@ a {
 }
 
 .erro-campo {
-  color: var(--erro);
-  font-size: 0.9rem;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  color: var(--perigo);
+  font-size: var(--fs-p);
+  font-weight: 600;
   margin: 0;
+}
+
+.erro-campo .ic {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-width: 2px;
 }
 
 /* Observações de cuidado do pet (comportamento, alergias): precisam saltar aos olhos na hora do banho. */
 .cuidado {
-  border-left: 4px solid #d97706;
-  background: var(--aviso-fundo);
-  border-radius: 8px;
+  border-left: var(--faixa-larg) solid var(--cuidado-faixa);
+  background: var(--cuidado-fundo);
+  color: var(--cuidado-texto);
+  border-radius: 10px;
   padding: 10px 12px;
   margin: 8px 0 0;
 }
@@ -451,57 +1075,52 @@ a {
 
 /* Agenda (H5 a H7). A grade usa 2 px por minuto no dia e 1 px na semana (agenda/grade.tsx). */
 
-:root {
-  --status-agendado: #64748b;
-  --status-confirmado: #2563eb;
-  --status-em-atendimento: #d97706;
-  --status-pronto: #16a34a;
-  --status-concluido: #1f6f5c;
-  --status-encerrado: #9ca3af;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --status-agendado: #94a3b8;
-    --status-confirmado: #60a5fa;
-    --status-em-atendimento: #fbbf24;
-    --status-pronto: #4ade80;
-    --status-concluido: #3fae92;
-    --status-encerrado: #6b7280;
-  }
-}
-
+/* Status: o selo usa fundo suave e texto escuro da mesma família (>= 4,5:1); a cor cheia fica só na faixa do bloco. */
 .status-agendado {
-  --cor-status: var(--status-agendado);
+  --st-fundo: var(--st-agendado-fundo);
+  --st-texto: var(--st-agendado-texto);
+  --cor-status: var(--st-agendado-faixa);
 }
 
 .status-confirmado {
-  --cor-status: var(--status-confirmado);
+  --st-fundo: var(--st-confirmado-fundo);
+  --st-texto: var(--st-confirmado-texto);
+  --cor-status: var(--st-confirmado-faixa);
 }
 
 .status-em_atendimento {
-  --cor-status: var(--status-em-atendimento);
+  --st-fundo: var(--st-em-atendimento-fundo);
+  --st-texto: var(--st-em-atendimento-texto);
+  --cor-status: var(--st-em-atendimento-faixa);
 }
 
 .status-pronto {
-  --cor-status: var(--status-pronto);
+  --st-fundo: var(--st-pronto-fundo);
+  --st-texto: var(--st-pronto-texto);
+  --cor-status: var(--st-pronto-faixa);
 }
 
 /* Concluído continua na grade, esmaecido: já foi pago e não pede mais nada. */
 .status-concluido {
-  --cor-status: var(--status-concluido);
+  --st-fundo: var(--st-concluido-fundo);
+  --st-texto: var(--st-concluido-texto);
+  --cor-status: var(--st-concluido-faixa);
 }
 
 .bloco.status-concluido {
-  background: var(--fundo);
-  border-style: dashed;
-  border-left-style: solid;
-  box-shadow: none;
+  background: var(--superficie2);
 }
 
-.status-cancelado,
+.status-cancelado {
+  --st-fundo: var(--st-cancelado-fundo);
+  --st-texto: var(--st-cancelado-texto);
+  --cor-status: var(--st-cancelado-faixa);
+}
+
 .status-faltou {
-  --cor-status: var(--status-encerrado);
+  --st-fundo: var(--st-faltou-fundo);
+  --st-texto: var(--st-faltou-texto);
+  --cor-status: var(--st-faltou-faixa);
 }
 
 .botao-largo,
@@ -527,9 +1146,8 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--borda);
-  border-radius: 10px;
-  font-size: 1.6rem;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
   line-height: 1;
   text-decoration: none;
   color: var(--texto);
@@ -552,27 +1170,19 @@ a {
 .navegacao-dias-atual a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-}
-
-.fora-da-grade summary {
-  display: flex;
-  align-items: center;
   min-height: var(--toque);
-  margin: 0;
-}
-
-.fora-da-grade .lista-toque {
-  margin: 12px 0 0;
+  font-weight: 600;
 }
 
 /* Grade do dia: horários vazios tocáveis por baixo, blocos por cima. */
 .grade {
   display: flex;
+  margin-bottom: 16px;
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: var(--raio);
-  padding: 12px 8px 12px 0;
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-cartao);
+  padding: 14px 6px 14px 0;
 }
 
 .grade-horas {
@@ -582,10 +1192,11 @@ a {
 
 .grade-horas span {
   position: absolute;
-  right: 6px;
+  right: 8px;
   transform: translateY(-50%);
-  font-size: 0.75rem;
-  color: var(--texto-suave);
+  font-size: var(--fs-mini);
+  font-variant-numeric: tabular-nums;
+  color: var(--suave);
 }
 
 .grade-corpo {
@@ -594,12 +1205,23 @@ a {
   min-width: 0;
 }
 
+/* Horário livre: faixa de 30 min tocável, com um "+" discreto que mostra que dá para agendar ali. */
 .horario-vazio {
   position: absolute;
   left: 0;
   right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
   border-top: 1px dashed var(--borda);
+  color: var(--borda-controle);
   touch-action: manipulation;
+}
+
+.horario-vazio .ic {
+  width: 18px;
+  height: 18px;
 }
 
 .horario-vazio.hora-cheia {
@@ -607,46 +1229,272 @@ a {
 }
 
 .horario-vazio:active,
-.horario-vazio:hover {
-  background: var(--fundo);
+.horario-vazio:hover,
+.horario-vazio:focus-visible {
+  background: var(--primaria-suave);
+  color: var(--primaria);
 }
 
+/*
+ * Bloco do atendimento: texto em várias linhas (sem reticências), cortado só pela altura da duração. A coluna vem
+ * do grade.tsx: --col/--cols na tela larga e --col-e/--cols-e na estreita (no máximo 2 colunas, ADR 0016).
+ */
 .bloco {
   position: absolute;
   z-index: 1;
+  left: calc(var(--col-e, 0) / var(--cols-e, 1) * 100% + 2px);
+  width: calc(100% / var(--cols-e, 1) - 4px);
   display: flex;
   flex-direction: column;
+  gap: 2px;
   overflow: hidden;
-  padding: 4px 6px;
-  border-radius: 8px;
+  padding: 5px 7px;
+  border-radius: calc(var(--raio-controle) - 2px);
   border: 1px solid var(--borda);
-  border-left: 4px solid var(--cor-status, var(--borda));
+  border-left: var(--faixa-larg) solid var(--cor-status, var(--borda-controle));
   background: var(--superficie);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  box-shadow: var(--sombra-cartao);
   color: var(--texto);
   text-decoration: none;
-  font-size: 0.85rem;
-  line-height: 1.3;
+  font-size: var(--fs-mini);
+  line-height: 1.25;
   touch-action: manipulation;
+}
+
+.bloco.oculto-na-tela-estreita {
+  display: none;
+}
+
+.bloco.status-concluido {
+  color: var(--suave);
+}
+
+/* Recém-agendado: anel verde por alguns segundos. */
+.bloco-novo {
+  box-shadow: 0 0 0 3px var(--sucesso-fundo), 0 0 0 5px var(--sucesso);
 }
 
 .bloco-linha {
   display: block;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
-.bloco-status {
-  font-weight: 600;
-  color: var(--cor-status);
+.bloco-linha strong {
+  font-size: var(--fs-p);
+}
+
+.bloco .selo-mini {
+  vertical-align: 1px;
 }
 
 .bloco-cuidado {
-  background: var(--aviso-fundo);
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  align-self: flex-start;
+  max-width: 100%;
+  background: var(--cuidado-fundo);
+  color: var(--cuidado-texto);
   border-radius: 4px;
-  padding: 0 4px;
+  padding: 1px 5px;
   font-weight: 600;
+}
+
+.bloco-cuidado .ic {
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+}
+
+/* "+N": o que não cabe em 2 colunas na tela estreita, numa lista que abre por cima (popover). */
+.mais-n {
+  position: absolute;
+  z-index: 1;
+  left: calc(50% + 2px);
+  width: calc(50% - 4px);
+  min-height: var(--toque);
+  padding: 0;
+  border: var(--borda-larg) dashed var(--borda-controle);
+  border-radius: calc(var(--raio-controle) - 2px);
+  background: var(--superficie2);
+  color: var(--primaria);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.lista-mais-n {
+  display: none;
+}
+
+.lista-mais-n:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bloco.bloco-na-lista {
+  position: static;
+  width: auto;
+  min-height: 56px;
+}
+
+/* Linha "agora", no dia de hoje. */
+.agora {
+  position: absolute;
+  left: -4px;
+  right: 0;
+  z-index: 2;
+  border-top: 2px solid var(--perigo);
+  pointer-events: none;
+}
+
+.agora::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--perigo);
+}
+
+.agora span {
+  position: absolute;
+  left: -48px;
+  top: -11px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--perigo);
+  color: var(--superficie);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .bloco {
+    left: calc(var(--col, 0) / var(--cols, 1) * 100% + 2px);
+    width: calc(100% / var(--cols, 1) - 4px);
+    font-size: var(--fs-p);
+  }
+
+  .bloco.oculto-na-tela-estreita {
+    display: flex;
+  }
+
+  .mais-n {
+    display: none;
+  }
+}
+
+/* Resumos acima da grade: "Recebido hoje" e o próximo atendimento. */
+.resumos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.resumos .cartao {
+  margin: 0;
+}
+
+.resumo-mini {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 64px;
+  padding: 10px 14px;
+  color: var(--texto);
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.resumo-mini .suave {
+  font-size: var(--fs-mini);
+}
+
+.resumo-mini strong {
+  font-size: 17px;
+}
+
+/* Aviso de sucesso depois de salvar (componentes/aviso-de-sucesso.tsx): flutua no alto, some sozinho. A região viva
+   (role="status") fica sempre na página e recebe o texto depois; vazia, não ocupa nada. */
+.regiao-do-aviso {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(440px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.aviso-de-sucesso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 4px 4px 4px 14px;
+  border-radius: var(--raio-cartao);
+  background: var(--texto);
+  color: var(--fundo);
+  box-shadow: var(--sombra-flutuante);
+  font-weight: 600;
+  font-size: var(--fs-p);
+  /* Não bloqueia o toque no que está por baixo; só o × recebe o toque. */
+  pointer-events: none;
+}
+
+.aviso-de-sucesso button {
+  pointer-events: auto;
+}
+
+.aviso-de-sucesso span {
+  flex: 1;
+}
+
+.aviso-de-sucesso .botao-texto {
+  color: inherit;
+  min-width: var(--toque);
+}
+
+/* O fundo do aviso é o --texto: o anel de foco padrão (--foco) ficaria abaixo de 3:1 (T2 da revisão). */
+.aviso-de-sucesso :focus-visible {
+  outline-color: var(--fundo);
+}
+
+/* Estado vazio: diz o que fazer. */
+.estado-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 24px 16px;
+  text-align: center;
+  background: var(--superficie);
+  border: var(--borda-larg) dashed var(--borda-controle);
+  border-radius: var(--raio-cartao);
+}
+
+.estado-vazio p {
+  margin: 0;
+}
+
+.estado-vazio-icone {
+  width: 40px;
+  height: 40px;
+  color: var(--suave);
+}
+
+.estado-vazio-titulo {
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.estado-vazio .botao-link {
+  margin-top: 8px;
 }
 
 /* Semana: um link por dia, com blocos compactos só para mostrar a ocupação. */
@@ -709,6 +1557,106 @@ a {
   box-shadow: none;
 }
 
+/* Salvar no rodapé: acompanha a rolagem enquanto o formulário está na tela, acima das abas. */
+.barra-salvar {
+  position: sticky;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px -8px 0;
+  padding: 8px;
+  background: var(--superficie);
+  border-radius: var(--raio-cartao);
+}
+
+.resumo-do-envio {
+  text-align: center;
+  font-size: var(--fs-p);
+  font-weight: 600;
+  color: var(--suave);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .barra-salvar {
+    bottom: 16px;
+  }
+}
+
+/* Segmentado (componentes/segmentado.tsx): rádios com cara de botão. */
+.segmentado-campo {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.segmentado-campo legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.segmentado {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
+  overflow: hidden;
+  background: var(--superficie);
+}
+
+.segmentado label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: var(--toque);
+  padding: 0 8px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.segmentado label + label {
+  border-left: var(--borda-larg) solid var(--borda-controle);
+}
+
+/* O rádio cobre o botão inteiro (o toque cai nele), invisível; o visual vem do rótulo. */
+.segmentado input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segmentado label:has(input:checked) {
+  background: var(--primaria);
+  color: var(--primaria-texto);
+}
+
+.segmentado label:has(input:focus-visible) {
+  outline: 3px solid var(--foco);
+  outline-offset: -3px;
+}
+
+/* No marcado, o fundo já é a primária (= --foco): o anel interno usa a cor do texto dele (T1 da revisão). */
+.segmentado label:has(input:checked:focus-visible) {
+  outline-color: var(--primaria-texto);
+}
+
+.segmentado-campo[aria-describedby] .segmentado {
+  border-color: var(--perigo);
+  border-width: 2px;
+}
+
 /* Formulário de agendamento. */
 .campos-lado-a-lado {
   display: grid;
@@ -740,8 +1688,8 @@ a {
 }
 
 .lista-servicos li {
-  border: 1px solid var(--borda);
-  border-radius: 10px;
+  border: var(--borda-larg) solid var(--borda-controle);
+  border-radius: var(--raio-controle);
 }
 
 .lista-servicos li.marcado {
@@ -773,7 +1721,7 @@ a {
 
 .opcao-servico .detalhe {
   display: block;
-  color: var(--texto-suave);
+  color: var(--suave);
   font-size: 0.9rem;
 }
 
@@ -794,12 +1742,6 @@ a {
 }
 
 /* Página do atendimento. */
-.etiqueta-status {
-  border-color: var(--cor-status);
-  color: var(--cor-status);
-  white-space: nowrap;
-}
-
 .lista-itens {
   list-style: none;
   padding: 0;
@@ -820,7 +1762,271 @@ a {
 }
 
 .botao-desfazer {
-  margin-top: 8px;
+  margin: -4px 0 8px -10px;
+  color: var(--suave);
+}
+
+.quando {
+  margin-bottom: 4px;
+}
+
+.rotulo {
+  font-size: var(--fs-p);
+  font-weight: 600;
+  color: var(--suave);
+  margin: 12px 0 2px;
+}
+
+.cartao-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cliente-linha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cliente-nome {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.cliente-nome a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+  font-weight: 600;
+}
+
+.cartao-cliente .cuidado {
+  margin: 0;
+}
+
+.cuidado strong .ic {
+  width: 16px;
+  height: 16px;
+  margin: -2px 6px 0 0;
+}
+
+/*
+ * Barra de ação do atendimento: no celular, fixa acima das abas, com o próximo status (secundário), o menu "Mais
+ * ações" e a ação principal (Concluir). No desktop, no fim do detalhe.
+ */
+.com-barra-de-acao {
+  padding-bottom: 112px;
+}
+
+.barra-acao {
+  position: fixed;
+  inset: auto 0 calc(68px + max(0px, env(safe-area-inset-bottom) - 6px)) 0;
+  z-index: 9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+  background: var(--superficie);
+  border-top: 1px solid var(--borda);
+  box-shadow: var(--sombra-flutuante);
+}
+
+.botoes-status {
+  display: flex;
+  gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.botoes-status > button:first-of-type:not(.botao-icone) {
+  flex: 1 1 auto;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.botao-icone {
+  flex: none;
+  width: var(--acao);
+  padding: 0;
+}
+
+/* Concluir cresce mais que o próximo status e não quebra o texto; só vai para a linha de baixo se não couber
+   (U2 da revisão). */
+.barra-acao-principal {
+  flex: 2 1 0;
+  min-width: min-content;
+}
+
+.botao-concluir {
+  white-space: nowrap;
+  padding: 0 12px;
+}
+
+/* No celular, com o "⋯" (agendado e confirmado), os ícones do próximo status e do Concluir saem para os três caberem
+   numa linha em 375 px (medido: 338 de 351 px com "R$ 90,00"). Um valor maior ainda cabe até uns R$ 150,00; acima
+   disso, o Concluir desce para a linha de baixo sem quebrar o texto. */
+@media (max-width: 1023px) {
+  .barra-acao .botao-grande {
+    font-size: 16px;
+  }
+
+  .barra-acao .botao-icone {
+    width: var(--toque);
+  }
+
+  .barra-acao:has(.botao-icone) .botoes-status > button:first-of-type:not(.botao-icone) .ic,
+  .barra-acao:has(.botao-icone) .botao-concluir .ic {
+    display: none;
+  }
+}
+
+.barra-acao-principal .formulario {
+  gap: 10px;
+}
+
+.barra-acao-principal p {
+  margin: 0;
+  font-size: var(--fs-p);
+}
+
+/* Escolhendo a forma de pagamento, a barra vira só a escolha. */
+.barra-acao:has(.formas-pagamento) .botoes-status {
+  display: none;
+}
+
+/* Menu "Mais ações": popover do HTML; no celular, uma folha que sobe do rodapé. */
+.menu-flutuante {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 12px 12px max(16px, env(safe-area-inset-bottom));
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-cartao) var(--raio-cartao) 0 0;
+  box-shadow: var(--sombra-flutuante);
+}
+
+.menu-flutuante::backdrop {
+  background: rgb(0 0 0 / 25%);
+}
+
+.menu-item {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--toque);
+  padding: 0 12px;
+  background: transparent;
+  color: var(--texto);
+  border: var(--borda-larg) solid transparent;
+  border-radius: var(--raio-controle);
+  text-align: left;
+}
+
+.menu-item + .menu-item {
+  margin-top: 6px;
+}
+
+/* Perigo no menu: contorno e ícone, nunca cheio. */
+.menu-item.perigo {
+  color: var(--perigo);
+  border-color: var(--perigo);
+}
+
+/* Mestre-detalhe: a lista do dia só aparece a partir de 1024 px. */
+.lista-do-dia {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .mestre-detalhe {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .detalhe {
+    max-width: 720px;
+  }
+
+  .lista-do-dia {
+    display: block;
+    position: sticky;
+    top: 24px;
+    background: var(--superficie);
+    border: 1px solid var(--borda);
+    border-radius: var(--raio-cartao);
+    box-shadow: var(--sombra-cartao);
+    padding: 8px;
+  }
+
+  .lista-do-dia .rotulo {
+    margin: 4px 8px 8px;
+  }
+
+  .lista-do-dia ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .lista-do-dia a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--toque);
+    padding: 6px 8px;
+    border-radius: var(--raio-controle);
+    color: var(--texto);
+    text-decoration: none;
+  }
+
+  .lista-do-dia a[aria-current="page"] {
+    background: var(--primaria-suave);
+  }
+
+  .lista-do-dia-hora {
+    font-variant-numeric: tabular-nums;
+    color: var(--suave);
+    font-size: var(--fs-p);
+  }
+
+  .lista-do-dia-pet {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+  }
+
+  .com-barra-de-acao {
+    padding-bottom: 40px;
+  }
+
+  .barra-acao {
+    position: static;
+    margin-top: 8px;
+    padding: 12px;
+    border: 1px solid var(--borda);
+    border-radius: var(--raio-cartao);
+    box-shadow: var(--sombra-cartao);
+  }
+
+  .menu-flutuante {
+    inset: 0;
+    width: 340px;
+    height: fit-content;
+    margin: auto;
+    border-radius: var(--raio-cartao);
+    padding: 12px;
+  }
 }
 
 /* Concluir o atendimento e a receita (sessão 05). */
@@ -846,7 +2052,7 @@ a {
   gap: 10px;
 }
 
-.formas-pagamento-opcoes .botao-primario {
+.formas-pagamento-opcoes .botao-secundario {
   min-height: 56px;
 }
 
@@ -865,7 +2071,7 @@ a {
 }
 
 .dados-receita dt {
-  color: var(--texto-suave);
+  color: var(--suave);
 }
 
 .dados-receita dd {
@@ -874,36 +2080,73 @@ a {
   text-align: right;
 }
 
-/* Financeiro e "Recebido hoje". */
-.resumo h2 {
+/* Financeiro (H10): "Hoje" em destaque e o mês num cartão só (navegação, total e quantidade). */
+.destaque h2,
+.resumo-mes h2 {
   margin: 0;
-  font-size: 1rem;
-  color: var(--texto-suave);
+  font-size: var(--fs-p);
+  color: var(--suave);
 }
 
-.resumo p {
-  margin: 4px 0 0;
+.destaque p,
+.resumo-mes p {
+  margin: 0;
+}
+
+.valor-destaque {
+  font-size: var(--fs-valor);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 4px 0 2px;
+  color: var(--sucesso);
+  font-variant-numeric: tabular-nums;
 }
 
 .valor-grande {
-  font-size: 1.75rem;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
-.recebido-hoje {
+.resumo-mes {
+  text-align: center;
+}
+
+.resumo-mes .navegacao-dias {
+  text-align: left;
+}
+
+/* Receita: pet, dia e forma; o valor à direita. */
+.lista-receitas a,
+.lista-receitas li > div {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  min-height: var(--toque);
-  color: var(--texto);
-  text-decoration: none;
+}
+
+.linha-receita-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.linha-receita-valor {
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .financeiro-colunas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 24px;
+    align-items: start;
+  }
 }
 
 .recebido-hoje strong {
-  font-size: 1.15rem;
-  color: var(--primaria);
+  color: var(--sucesso);
 }
 
 /* Linha sem link (receita manual): o mesmo espaço das linhas tocáveis. */

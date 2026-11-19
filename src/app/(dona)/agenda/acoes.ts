@@ -4,6 +4,7 @@ import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
+import { comAviso } from "@/app/(dona)/avisos";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import {
   agendar,
@@ -105,7 +106,8 @@ export async function agendarAcao(_anterior: EstadoAgenda, dados: FormData): Pro
   const resultado = await naEmpresaDaDona((tx) => agendar(tx, { ...entrada, itens }, horarioAvisado));
   if (!resultado.ok) return estadoDe(resultado, { ...entrada, ...valoresItens }, servicos);
   revalidarAgenda();
-  redirect(urlDoDia(resultado.valor.dia));
+  // ?novo=<id>: a agenda mostra o aviso "Atendimento agendado para…" e destaca o bloco (avisos.ts, decisão D2).
+  redirect(`${urlDoDia(resultado.valor.dia)}&novo=${resultado.valor.id}`);
 }
 
 /** Avança ou desfaz o status. O botão envia `para`; `de` é o status que a tela mostrava. */
@@ -126,7 +128,7 @@ export async function editarServicosAcao(_anterior: EstadoAgenda, dados: FormDat
   const resultado = await naEmpresaDaDona((tx) => editarItens(tx, id, itens, horarioAvisado));
   if (!resultado.ok) return { ...estadoDe(resultado, valores, servicos), ...avisoDaRecusa(resultado.erros) };
   revalidarAgenda();
-  redirect(`/agenda/${resultado.valor.id}`);
+  redirect(comAviso(`/agenda/${resultado.valor.id}`, "servicos"));
 }
 
 export async function editarHorarioAcao(_anterior: EstadoAgenda, dados: FormData): Promise<EstadoAgenda> {
@@ -136,7 +138,7 @@ export async function editarHorarioAcao(_anterior: EstadoAgenda, dados: FormData
   const resultado = await naEmpresaDaDona((tx) => editarHorario(tx, id, entrada, horarioAvisado));
   if (!resultado.ok) return { ...estadoDe(resultado, entrada, []), ...avisoDaRecusa(resultado.erros) };
   revalidarAgenda();
-  redirect(`/agenda/${resultado.valor.id}`);
+  redirect(comAviso(`/agenda/${resultado.valor.id}`, "horario"));
 }
 
 export async function editarObservacoesAcao(_anterior: EstadoAgenda, dados: FormData): Promise<EstadoAgenda> {
@@ -145,7 +147,7 @@ export async function editarObservacoesAcao(_anterior: EstadoAgenda, dados: Form
   const resultado = await naEmpresaDaDona((tx) => editarObservacoes(tx, id, observacoes));
   if (!resultado.ok) return { erros: resultado.erros, valores: { observacoes }, servicos: [] };
   revalidarAgenda();
-  redirect(`/agenda/${resultado.valor.id}`);
+  redirect(comAviso(`/agenda/${resultado.valor.id}`, "observacoes"));
 }
 
 /**

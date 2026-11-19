@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 
+import { Aviso } from "@/app/componentes/aviso";
+import { Icone } from "@/app/componentes/icone";
+
 // Peças dos formulários da dona. Validação no servidor: os formulários usam noValidate, e as
 // mensagens em português vêm das Server Actions.
 
@@ -29,15 +32,17 @@ export function Campo({ nome, rotulo, erro, dica, children }: PropsCampo) {
         ...(erro ? { "aria-invalid": true as const } : {}),
         ...(descricoes ? { "aria-describedby": descricoes } : {}),
       })}
+      {/* O erro logo abaixo do campo, e a dica depois: quem corrige lê primeiro o que falta. */}
+      {erro && (
+        <p id={`${id}-erro`} className="erro-campo">
+          <Icone nome="alerta" />
+          <span>{erro}</span>
+        </p>
+      )}
       {dica && (
         <span id={`${id}-dica`} className="dica">
           {dica}
         </span>
-      )}
-      {erro && (
-        <p id={`${id}-erro`} className="erro-campo">
-          {erro}
-        </p>
       )}
     </div>
   );
@@ -46,8 +51,8 @@ export function Campo({ nome, rotulo, erro, dica, children }: PropsCampo) {
 export function ErroGeral({ erro }: { erro?: string }) {
   if (!erro) return null;
   return (
-    <p className="mensagem mensagem-erro" role="alert">
+    <Aviso tipo="erro" role="alert">
       {erro}
-    </p>
+    </Aviso>
   );
 }

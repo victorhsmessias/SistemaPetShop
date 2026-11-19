@@ -18,6 +18,8 @@ import { listarAgenda, obterAtendimento } from "@/modules/agenda/atendimentos";
 import { MENSAGEM_JA_CONCLUIDO, MENSAGEM_NAO_CONCLUIDO } from "@/modules/agenda/conclusao";
 import { atendimento, atendimentoItem } from "@/modules/agenda/schema";
 import { auditoria } from "@/modules/auditoria/schema";
+import { obterPet } from "@/modules/cadastros/pets";
+import { buscarTutores, obterTutor } from "@/modules/cadastros/tutores";
 import { criarServico } from "@/modules/catalogo/servicos";
 import { lancamento } from "@/modules/financeiro/schema";
 
@@ -40,7 +42,7 @@ const {
   editarServicosAcao,
   mudarStatusAcao,
 } = await import("@/app/(dona)/agenda/acoes");
-const { salvarPetAcao, salvarTutorAcao } = await import("@/app/(dona)/acoes");
+const { cadastrarClienteEPetAcao, salvarPetAcao, salvarTutorAcao } = await import("@/app/(dona)/acoes");
 const { default: PaginaAtendimento } = await import("@/app/(dona)/agenda/[id]/page");
 
 const SENHA = "senha-de-teste-123";
@@ -233,8 +235,10 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
   });
 
   it("agenda com dois serviços e vai para a agenda do dia; a mudança de status fica na auditoria com ela como autora", async () => {
-    expect(await destinoDoRedirect(agendarAcao(vazio, agendamento("09:00")))).toBe(`/agenda?dia=${DIA}`);
+    const destino = await destinoDoRedirect(agendarAcao(vazio, agendamento("09:00")));
     const [criado] = await idsDoDia(a);
+    // ?novo=<id>: a agenda mostra o aviso de sucesso e destaca o bloco novo.
+    expect(destino).toBe(`/agenda?dia=${DIA}&novo=${criado!.id}`);
     // 09:00 em São Paulo (fuso padrão da empresa) = 12:00 UTC; 60 + 30 min.
     expect([criado!.inicio.toISOString(), criado!.fim.toISOString()]).toEqual([
       "2026-12-01T12:00:00.000Z",
@@ -268,6 +272,24 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
     expect(cache.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("salvar horário, serviços ou observações volta ao atendimento com o aviso da parte salva (U7)", async () => {
+    // 14:00 em São Paulo, num dia sem outros atendimentos de A nesse horário.
+    const id = await novoAtendimentoDeA({ inicio: "2026-12-11T17:00:00Z" });
+    const horario = formulario({ id, dia: "2026-12-11", hora: "15:00", termino: "16:00" });
+    expect(await destinoDoRedirect(editarHorarioAcao(vazio, horario))).toBe(`/agenda/${id}?salvo=horario`);
+    const servicos = formulario({
+      id,
+      servico: [a.servicoId],
+      [`preco_${a.servicoId}`]: "50,00",
+      [`duracao_${a.servicoId}`]: "60",
+    });
+    expect(await destinoDoRedirect(editarServicosAcao(vazio, servicos))).toBe(`/agenda/${id}?salvo=servicos`);
+    const observacoes = formulario({ id, observacoes: "Toalha extra." });
+    expect(await destinoDoRedirect(editarObservacoesAcao(vazio, observacoes))).toBe(`/agenda/${id}?salvo=observacoes`);
+    const salvo = (await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!;
+    expect([salvo.inicio.toISOString(), salvo.observacoes]).toEqual(["2026-12-11T18:00:00.000Z", "Toalha extra."]);
+  });
+
   it("horário ocupado volta como aviso, com os dados digitados; confirmado, agenda", async () => {
     // 09:00–10:30 em São Paulo (fuso padrão da empresa).
     await novoAtendimentoDeA({ inicio: `${DIA_OCUPADO}T12:00:00Z`, minutos: 90 });
@@ -279,7 +301,7 @@ describe("a dona da empresa A, pelas ações da agenda", () => {
     const destino = await destinoDoRedirect(
       agendarAcao(aviso, agendamento("10:00", { dia: DIA_OCUPADO, horarioAvisado: aviso.horarioAvisado! })),
     );
-    expect(destino).toBe(`/agenda?dia=${DIA_OCUPADO}`);
+    expect(destino).toMatch(new RegExp(`^/agenda\\?dia=${DIA_OCUPADO}&novo=[0-9a-f-]{36}$`));
     expect(await idsDoDia(a, DIA_OCUPADO)).toHaveLength(2);
   });
 
@@ -441,7 +463,7 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
     expect((await daEmpresa(a, (tx) => obterAtendimento(tx, id)))!.status).toBe("concluido");
     expect(await receitasDoAtendimento(a, id)).toEqual([]);
 
-    const pagina = await PaginaAtendimento({ params: Promise.resolve({ id }) });
+    const pagina = await PaginaAtendimento({ params: Promise.resolve({ id }), searchParams: Promise.resolve({}) });
     expect(textoDe(pagina).replace(/\s/g, " ")).toContain("Concluído sem receita: o total era R$ 0,00.");
   });
 
@@ -466,37 +488,69 @@ describe("a dona conclui e desfaz a conclusão pelas ações", () => {
   });
 });
 
-describe("atalho: cadastrar tutor e pet e voltar para o agendamento", () => {
+describe("atalho: novo cliente e pet e a volta para o agendamento", () => {
   beforeEach(() => {
     requisicao.cookie = cookieDonaA;
   });
 
-  it("tutor novo segue para o pet, e o pet novo volta para o agendamento com ele escolhido", async () => {
-    const paraPet = await destinoDoRedirect(
-      salvarTutorAcao(
+  const clienteEPet = (campos: Record<string, string>) =>
+    formulario({ nome: "Clara Nunes", telefone: "(11) 97777-1212", pet_nome: "Mel", especie: "cao", porte: "P", ...campos });
+
+  it("cria cliente e pet numa transação e volta para o agendamento com o pet escolhido e o aviso", async () => {
+    const destino = await destinoDoRedirect(
+      cadastrarClienteEPetAcao({ erros: {}, valores: {} }, clienteEPet({ agendar: `${DIA}T14:30`, pet_observacoes: "Medrosa" })),
+    );
+    expect(destino).toMatch(new RegExp(`^/agenda/novo\\?dia=${DIA}&hora=14%3A30&pet=[0-9a-f-]{36}&salvo=cliente-e-pet$`));
+    const petId = new URLSearchParams(destino.split("?")[1]).get("pet")!;
+    const pet = await daEmpresa(a, (tx) => obterPet(tx, petId));
+    expect(pet).toMatchObject({ nome: "Mel", especie: "cao", porte: "P", observacoes: "Medrosa", empresaId: a.empresaId });
+    expect(await daEmpresa(a, (tx) => obterTutor(tx, pet!.tutorId))).toMatchObject({
+      nome: "Clara Nunes",
+      telefone: "+5511977771212",
+    });
+  });
+
+  it("com erro no pet, nada é gravado (nem o cliente) e o formulário volta com tudo o que foi digitado", async () => {
+    const estado = await cadastrarClienteEPetAcao(
+      { erros: {}, valores: {} },
+      clienteEPet({ nome: "Rui Sem Pet", telefone: "(11) 97777-5656", pet_nome: "", porte: "", agendar: DIA }),
+    );
+    expect(estado.erros).toMatchObject({ pet_nome: expect.any(String), porte: expect.any(String) });
+    expect(estado.valores).toMatchObject({ nome: "Rui Sem Pet", telefone: "(11) 97777-5656" });
+    expect(await daEmpresa(a, (tx) => buscarTutores(tx, "Rui Sem Pet"))).toEqual([]);
+  });
+
+  it("telefone já cadastrado: o erro diz de quem é, aponta o cliente e nada novo é gravado", async () => {
+    const estado = await cadastrarClienteEPetAcao(
+      { erros: {}, valores: {} },
+      clienteEPet({ nome: "Outra Pessoa", telefone: "(11) 97777-1212", pet_nome: "Pingo", agendar: DIA }),
+    );
+    expect(estado.erros.telefone).toContain("Clara Nunes");
+    expect(estado.tutorExistenteId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(await daEmpresa(a, (tx) => buscarTutores(tx, "Outra Pessoa"))).toEqual([]);
+  });
+
+  it("um endereço no lugar do dia é ignorado: vai para a ficha do cliente novo", async () => {
+    const destino = await destinoDoRedirect(
+      cadastrarClienteEPetAcao(
         { erros: {}, valores: {} },
-        formulario({ nome: "Clara Nunes", telefone: "(11) 97777-1212", agendar: `${DIA}T14:30` }),
+        clienteEPet({ nome: "Ruth", telefone: "(11) 97777-3434", pet_nome: "Tico", agendar: "https://exemplo.com/agenda" }),
       ),
     );
-    expect(paraPet).toMatch(new RegExp(`^/clientes/[0-9a-f-]{36}/pets/novo\\?agendar=${DIA}T14:30$`));
-    const tutorId = paraPet.split("/")[2]!;
+    expect(destino).toMatch(/^\/clientes\/[0-9a-f-]{36}\?salvo=cliente-e-pet$/);
+  });
 
+  it("o pet novo de um cliente que já existe também volta para o agendamento", async () => {
+    const tutor = await destinoDoRedirect(
+      salvarTutorAcao({ erros: {}, valores: {} }, formulario({ nome: "Lia Prado", telefone: "(11) 97777-9090" })),
+    );
+    const tutorId = tutor.split("/")[2]!.split("?")[0]!;
     const paraAgenda = await destinoDoRedirect(
       salvarPetAcao(
         { erros: {}, valores: {} },
-        formulario({ tutorId, nome: "Mel", especie: "cao", porte: "P", agendar: `${DIA}T14:30` }),
+        formulario({ tutorId, nome: "Bia", especie: "cao", porte: "P", agendar: `${DIA}T14:30` }),
       ),
     );
-    expect(paraAgenda).toMatch(new RegExp(`^/agenda/novo\\?dia=${DIA}&hora=14%3A30&pet=[0-9a-f-]{36}$`));
-  });
-
-  it("um endereço no lugar do dia é ignorado: o cadastro segue o caminho normal", async () => {
-    const destino = await destinoDoRedirect(
-      salvarTutorAcao(
-        { erros: {}, valores: {} },
-        formulario({ nome: "Ruth", telefone: "(11) 97777-3434", agendar: "https://exemplo.com/agenda" }),
-      ),
-    );
-    expect(destino).toMatch(/^\/clientes\/[0-9a-f-]{36}$/);
+    expect(paraAgenda).toMatch(new RegExp(`^/agenda/novo\\?dia=${DIA}&hora=14%3A30&pet=[0-9a-f-]{36}&salvo=pet$`));
   });
 });

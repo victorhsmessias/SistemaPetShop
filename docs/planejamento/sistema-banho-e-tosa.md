@@ -111,7 +111,7 @@ Aceite: a venda gera uma receita, paga ou a receber. O pet mostra o pacote ativo
 Aceite: duração e preço vêm do catálogo e podem ser editados. Horário ocupado gera aviso, não bloqueio. Se o pet tem pacote ativo, o atendimento já vem vinculado a ele. Dá para agendar todas as sessões do pacote de uma vez, a partir do intervalo sugerido.
 
 **H6.** Como dona, quero ver a agenda do dia e da semana no celular.
-Aceite: cada atendimento ocupa um bloco do tamanho da sua duração e mostra pet, serviços, status e observações de cuidado. Atendimentos no mesmo horário ficam lado a lado. Cancelados e faltas saem da grade e ficam numa lista à parte. Na semana, os blocos mostram a ocupação, e tocar num dia abre a agenda desse dia.
+Aceite: cada atendimento ocupa um bloco do tamanho da sua duração e mostra pet, serviços, status e observações de cuidado. Atendimentos no mesmo horário ficam lado a lado (no celular, até duas colunas, e os demais num "+N" que abre a lista do horário; ADR 0016). Cancelados e faltas saem da grade e ficam numa lista à parte. Na semana, os blocos mostram a ocupação, e tocar num dia abre a agenda desse dia.
 
 **H7.** Como dona, quero acompanhar o atendimento até o fim.
 Aceite: status agendado → confirmado → em atendimento → pronto → concluído, ou cancelado e faltou. Ela pode concluir a partir de qualquer status ativo, sem passar por todos. Um toque errado pode ser desfeito: o status volta ao anterior. Reabrir um cancelado ou uma falta também é desfazer: volta a confirmado se o tutor já tinha confirmado, senão a agendado. Concluir um atendimento avulso pede a forma de pagamento. Concluir uma sessão de pacote só consome a sessão.
@@ -310,6 +310,7 @@ flowchart LR
 | 0013 | Backup diário criptografado com age, enviado ao Cloudflare R2 | aceito |
 | 0014 | Deploy por imagem no GHCR com gatilho do EasyPanel e migration na subida do container | aceito |
 | 0015 | Credencial do migrador num arquivo legível só pelo root, com o container trocando para node depois de migrar | aceito |
+| 0016 | Agenda do dia: até duas colunas e "+N" na tela estreita | aceito |
 
 ## 5. Segurança e acesso
 
@@ -472,6 +473,6 @@ Não há sistema anterior: a agenda é de memória, e o cadastro cresce a cada a
 - [x] Autenticação, permissões, auditoria e pontos de LGPD estão decididos. Os documentos legais ficam para antes da 2ª empresa.
 - [x] Existe plano de deploy, backup e monitoramento, com custo estimado.
 - [x] Os marcos de entrega, riscos e estratégia de testes estão listados.
-- [x] Toda decisão relevante tem um ADR (0001 a 0015).
+- [x] Toda decisão relevante tem um ADR (0001 a 0016).
 
 **Conclusão:** pronto para codar o M1. O M2 espera a resposta da pergunta 1.

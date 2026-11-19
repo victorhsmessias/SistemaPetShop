@@ -16,7 +16,6 @@ function itemDoServico(page: Page, nome: string): Locator {
 async function servicosNoAgendamento(page: Page, tocar: Tocar): Promise<Locator> {
   await page.goto("/agenda/novo");
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill("mel");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: /Mel/ }));
   await expect(page.getByRole("heading", { level: 2, name: "Mel" })).toBeVisible();
   return page.getByRole("group", { name: "Serviços" });
@@ -39,12 +38,12 @@ test("a dona cadastra três serviços, um deles corrigido depois da mensagem de 
     await page.getByLabel("Duração (minutos)").fill(servico.duracao);
     if (servico.nome === "Banho P") {
       await page.getByLabel("Preço (R$)").fill("45.00");
-      await tocar(page.getByRole("button", { name: "Cadastrar serviço" }));
+      await tocar(page.getByRole("button", { name: "Salvar serviço" }));
       await expect(page.getByLabel("Preço (R$)")).toHaveAccessibleDescription(/Use vírgula para os centavos/);
-      await expect(page.getByRole("button", { name: "Cadastrar serviço" })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Salvar serviço" })).toBeEnabled();
     }
     await page.getByLabel("Preço (R$)").fill(servico.preco);
-    await tocar(page.getByRole("button", { name: "Cadastrar serviço" }));
+    await tocar(page.getByRole("button", { name: "Salvar serviço" }));
     await expect(page).toHaveURL(/\/servicos$/);
   }
 
@@ -62,7 +61,7 @@ test("a dona edita um serviço com erros que mantêm os dados, desativa (some do
   await page.getByLabel("Nome do serviço").fill("Tosa na tesoura");
   await page.getByLabel("Preço (R$)").fill("60,00");
   await page.getByLabel("Duração (minutos)").fill("uma hora");
-  const cadastrar = page.getByRole("button", { name: "Cadastrar serviço" });
+  const cadastrar = page.getByRole("button", { name: "Salvar serviço" });
   await tocar(cadastrar);
   await expect(page.getByLabel("Duração (minutos)")).toHaveAccessibleDescription(/Informe a duração em minutos/);
   await expect(page.getByLabel("Nome do serviço")).toHaveValue("Tosa na tesoura");
@@ -92,6 +91,7 @@ test("a dona edita um serviço com erros que mantêm os dados, desativa (some do
   await tocar(itemDoServico(page, "Tosa na tesoura completa").getByRole("link"));
   await tocar(page.getByRole("button", { name: "Desativar serviço" }));
   await expect(page).toHaveURL(/\/servicos\?inativos=1$/);
+  await expect(page.getByRole("status").filter({ hasText: "Serviço desativado." })).toBeVisible();
   await expect(itemDoServico(page, "Tosa na tesoura completa")).toContainText("inativo");
   const semOServico = await servicosNoAgendamento(page, tocar);
   await expect(semOServico).toContainText("Banho M");

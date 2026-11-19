@@ -12,7 +12,7 @@ async function cadastrarTutor(page: Page, tocar: Tocar, nome: string, telefone: 
   await page.goto("/clientes/novo");
   await page.getByLabel("Nome do tutor").fill(nome);
   await page.getByLabel("Telefone (WhatsApp)").fill(telefone);
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await expect(page.getByRole("heading", { level: 1, name: nome })).toBeVisible();
 }
 
@@ -23,11 +23,11 @@ async function cadastrarPet(
 ) {
   await tocar(page.getByRole("link", { name: "Novo pet" }));
   await page.getByLabel("Nome do pet").fill(pet.nome);
-  await page.getByLabel("Espécie").selectOption({ label: pet.especie });
-  await page.getByLabel("Porte").selectOption({ label: pet.porte });
+  await page.getByRole("radio", { name: pet.especie, exact: true }).check();
+  await page.getByRole("radio", { name: pet.porte, exact: true }).check();
   if (pet.raca) await page.getByLabel("Raça (opcional)").fill(pet.raca);
   if (pet.cuidados) await page.getByLabel("Cuidados: comportamento e alergias").fill(pet.cuidados);
-  await tocar(page.getByRole("button", { name: "Cadastrar pet" }));
+  await tocar(page.getByRole("button", { name: "Salvar pet" }));
   await expect(page.getByRole("heading", { level: 3, name: pet.nome })).toBeVisible();
 }
 
@@ -48,9 +48,12 @@ test("a dona cadastra um tutor com dois pets e encontra um pela busca", async ({
   await tocar(page.getByRole("link", { name: "Novo cliente" }));
   await page.getByLabel("Nome do tutor").fill("Joana Silvério");
   await page.getByLabel("Telefone (WhatsApp)").fill("21998765432");
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await expect(page.getByRole("heading", { level: 1, name: "Joana Silvério" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "(21) 99876-5432" })).toBeVisible();
+  // O telefone aparece formatado, e Ligar e WhatsApp usam o número normalizado (+55, DDD e número).
+  await expect(page.getByText("(21) 99876-5432")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ligar" })).toHaveAttribute("href", "tel:+5521998765432");
+  await expect(page.getByRole("link", { name: "WhatsApp" })).toHaveAttribute("href", "https://wa.me/5521998765432");
 
   // Dois pets, um com cuidados em destaque
   await cadastrarPet(page, tocar, {
@@ -66,12 +69,14 @@ test("a dona cadastra um tutor com dois pets e encontra um pela busca", async ({
   // Busca pelo pet, sem acento
   await tocar(navegacao.getByRole("link", { name: "Clientes" }));
   await page.getByLabel("Buscar por tutor, pet ou telefone").fill("pacoca");
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await expect(page).toHaveURL(/busca=pacoca/);
   const resultados = page.getByRole("list", { name: "Tutores" }).getByRole("listitem");
   await expect(resultados).toHaveCount(1);
   await expect(resultados.first()).toContainText("Joana Silvério");
   await expect(resultados.first()).toContainText("Paçoca");
+  // A linha fica numa faixa só (iniciais, pets e tutor, seta), não empilhada (U1 da revisão de UX).
+  const linha = await resultados.first().getByRole("link").boundingBox();
+  expect(linha!.height).toBeLessThan(80);
   await tocar(resultados.first().getByRole("link"));
   await expect(page.getByRole("heading", { level: 3, name: "Paçoca" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "Bóris" })).toBeVisible();
@@ -82,7 +87,7 @@ test("a dona edita o tutor e o pet, desativa o pet e o reativa pela lista de ina
   await cadastrarPet(page, tocar, { nome: "Fumaça", especie: "Gato", porte: "Pequeno (P)" });
 
   // Editar o tutor: nome e observações.
-  await tocar(page.getByRole("link", { name: "Editar tutor" }));
+  await tocar(page.getByRole("link", { name: "Editar cliente" }));
   await expect(page.getByRole("heading", { level: 1, name: "Editar cliente" })).toBeVisible();
   await expect(page.getByLabel("Nome do tutor")).toHaveValue("Marcos Lima");
   await page.getByLabel("Nome do tutor").fill("Marcos Lima Souza");
@@ -94,25 +99,29 @@ test("a dona edita o tutor e o pet, desativa o pet e o reativa pela lista de ina
   // Editar o pet: raça e porte.
   await tocar(cartaoDoPet(page, "Fumaça").getByRole("link", { name: "Editar" }));
   await expect(page.getByRole("heading", { level: 1, name: "Editar Fumaça" })).toBeVisible();
-  await expect(page.getByLabel("Espécie")).toHaveValue("gato");
+  await expect(page.getByRole("radio", { name: "Gato", exact: true })).toBeChecked();
   await page.getByLabel("Raça (opcional)").fill("Persa");
-  await page.getByLabel("Porte").selectOption({ label: "Médio (M)" });
+  await page.getByRole("radio", { name: "Médio (M)" }).check();
   await tocar(page.getByRole("button", { name: "Salvar alterações" }));
   await expect(cartaoDoPet(page, "Fumaça")).toContainText("Gato · Persa · Médio (M)");
 
-  // Desativar: some da lista; aparece em "Ver também os pets inativos", marcado como inativo.
-  await tocar(cartaoDoPet(page, "Fumaça").getByRole("button", { name: "Desativar" }));
+  // Desativar (na edição do pet): some da lista; aparece em "Ver também os pets inativos", marcado como inativo.
+  await tocar(cartaoDoPet(page, "Fumaça").getByRole("link", { name: "Editar" }));
+  await tocar(page.getByRole("button", { name: "Desativar pet" }));
   await expect(page).toHaveURL(/inativos=1/);
+  await expect(page.getByRole("status").filter({ hasText: "Pet desativado." })).toBeVisible();
   await expect(cartaoDoPet(page, "Fumaça")).toContainText("inativo");
   await tocar(page.getByRole("link", { name: "Mostrar só os ativos" }));
   await expect(page.getByText("Nenhum pet ativo.")).toBeVisible();
   await tocar(page.getByRole("link", { name: "Ver também os pets inativos" }));
 
-  // Reativar: volta para os ativos.
-  await tocar(cartaoDoPet(page, "Fumaça").getByRole("button", { name: "Reativar" }));
+  // Reativar (na edição do pet): volta para os ativos.
+  await tocar(cartaoDoPet(page, "Fumaça").getByRole("link", { name: "Editar" }));
+  await tocar(page.getByRole("button", { name: "Reativar pet" }));
   await expect(page).not.toHaveURL(/inativos=1/);
   await expect(cartaoDoPet(page, "Fumaça")).not.toContainText("inativo");
-  await expect(cartaoDoPet(page, "Fumaça").getByRole("button", { name: "Desativar" })).toBeVisible();
+  await tocar(cartaoDoPet(page, "Fumaça").getByRole("link", { name: "Editar" }));
+  await expect(page.getByRole("button", { name: "Desativar pet" })).toBeVisible();
 });
 
 test("o erro de um campo mantém o que foi digitado, e o telefone repetido leva ao tutor já cadastrado", async ({
@@ -126,7 +135,7 @@ test("o erro de um campo mantém o que foi digitado, e o telefone repetido leva 
   await page.getByLabel("Nome do tutor").fill("Carla Duarte Filha");
   await page.getByLabel("Telefone (WhatsApp)").fill("9912");
   await page.getByLabel("Observações").fill("Indicada pela mãe.");
-  const cadastrar = page.getByRole("button", { name: "Cadastrar tutor" });
+  const cadastrar = page.getByRole("button", { name: "Salvar cliente" });
   await tocar(cadastrar);
   const telefone = page.getByLabel("Telefone (WhatsApp)");
   await expect(telefone).toHaveAccessibleDescription(/Informe DDD e número/);
@@ -147,7 +156,7 @@ test("o erro de um campo mantém o que foi digitado, e o telefone repetido leva 
   await telefone.fill("+55 31 99123-4567");
   await tocar(cadastrar);
   await expect(telefone).toHaveAccessibleDescription(/Este telefone já é de Carla Duarte\./);
-  await tocar(page.getByRole("link", { name: "Abrir o tutor já cadastrado" }));
+  await tocar(page.getByRole("link", { name: "Abrir o cliente já cadastrado" }));
   await expect(page.getByRole("heading", { level: 1, name: "Carla Duarte" })).toBeVisible();
 });
 
@@ -162,12 +171,12 @@ test("o que a dona digita enquanto o formulário envia não é apagado quando vo
   await page.goto("/clientes/novo");
   await page.getByLabel("Nome do tutor").fill("Beatriz Envio");
   await page.getByLabel("Telefone (WhatsApp)").fill("9912");
-  await tocar(page.getByRole("button", { name: "Cadastrar tutor" }));
+  await tocar(page.getByRole("button", { name: "Salvar cliente" }));
   await expect(page.getByRole("button", { name: "Salvando…" })).toBeDisabled();
 
   await page.getByLabel("Observações").fill("Digitado enquanto enviava.");
   await expect(page.getByLabel("Telefone (WhatsApp)")).toHaveAccessibleDescription(/Informe DDD e número/);
-  await expect(page.getByRole("button", { name: "Cadastrar tutor" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Salvar cliente" })).toBeEnabled();
   await expect(page.getByLabel("Observações")).toHaveValue("Digitado enquanto enviava.");
   await expect(page.getByLabel("Nome do tutor")).toHaveValue("Beatriz Envio");
 });

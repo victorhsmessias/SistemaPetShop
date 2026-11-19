@@ -15,6 +15,9 @@ const inicial: EstadoFormulario = { tipo: "inicial" };
 
 const CLASSES = { erro: "mensagem-erro", ok: "mensagem-sucesso", parcial: "mensagem-aviso" } as const;
 
+// Formulários do painel com noValidate (regra 13, QA B6): sem a validação do navegador, as mensagens em português
+// vêm do servidor (módulo administracao), e o que foi digitado continua nos campos (enviarSemLimpar).
+
 /** Erro de um campo só (a senha): aparece no campo, não na mensagem do formulário. */
 function erroDaSenha(estado: EstadoFormulario): string | undefined {
   return estado.tipo === "erro" && estado.campo === "senha" ? estado.mensagem : undefined;
@@ -70,7 +73,7 @@ function CamposDona({ prefixo, estado }: { prefixo: string; estado: EstadoFormul
     <>
       <div className="campo">
         <label htmlFor={`${prefixo}-dona-nome`}>Nome da dona</label>
-        <input id={`${prefixo}-dona-nome`} name="donaNome" autoComplete="off" required />
+        <input id={`${prefixo}-dona-nome`} name="donaNome" autoComplete="off" />
       </div>
       <div className="campo">
         <label htmlFor={`${prefixo}-dona-email`}>E-mail da dona</label>
@@ -81,7 +84,6 @@ function CamposDona({ prefixo, estado }: { prefixo: string; estado: EstadoFormul
           inputMode="email"
           autoCapitalize="none"
           autoComplete="off"
-          required
         />
       </div>
       <div className="campo">
@@ -92,8 +94,6 @@ function CamposDona({ prefixo, estado }: { prefixo: string; estado: EstadoFormul
           type="text"
           autoComplete="new-password"
           autoCapitalize="none"
-          minLength={8}
-          required
           {...atributosDaSenha(senha, erro, `${senha}-dica`)}
         />
         <span id={`${senha}-dica`} className="dica">
@@ -110,10 +110,10 @@ export function FormularioNovaEmpresa({ fusos }: { fusos: { valor: string; nome:
   const formulario = useLimparAoConcluir(estado);
 
   return (
-    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario">
+    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <div className="campo">
         <label htmlFor="empresa-nome">Nome da empresa</label>
-        <input id="empresa-nome" name="nome" autoComplete="off" required />
+        <input id="empresa-nome" name="nome" autoComplete="off" />
       </div>
       <div className="campo">
         <label htmlFor="empresa-fuso">Fuso horário</label>
@@ -139,7 +139,7 @@ export function FormularioCriarDona({ empresaId }: { empresaId: string }) {
   const formulario = useLimparAoConcluir(estado);
 
   return (
-    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario">
+    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="empresaId" value={empresaId} />
       <CamposDona prefixo={empresaId} estado={estado} />
       <Mensagem estado={estado} />
@@ -155,7 +155,7 @@ export function FormularioRedefinirSenha({ usuarioId }: { usuarioId: string }) {
   const formulario = useLimparAoConcluir(estado);
 
   return (
-    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario">
+    <form ref={formulario} action={acao} onSubmit={enviarSemLimpar(acao)} className="formulario" noValidate>
       <input type="hidden" name="usuarioId" value={usuarioId} />
       <div className="campo">
         <label htmlFor={`senha-${usuarioId}`}>Nova senha</label>
@@ -165,8 +165,6 @@ export function FormularioRedefinirSenha({ usuarioId }: { usuarioId: string }) {
           type="text"
           autoComplete="new-password"
           autoCapitalize="none"
-          minLength={8}
-          required
           {...atributosDaSenha(`senha-${usuarioId}`, erroDaSenha(estado))}
         />
         <ErroDoCampo id={`senha-${usuarioId}`} erro={erroDaSenha(estado)} />

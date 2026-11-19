@@ -69,7 +69,6 @@ export async function agendar(
 ): Promise<void> {
   await page.goto(`/agenda/novo?dia=${dia}`);
   await page.getByLabel("Buscar pelo nome do pet ou do tutor").fill(busca);
-  await tocar(page.getByRole("button", { name: "Buscar" }));
   await tocar(page.getByRole("list", { name: "Pets" }).getByRole("link", { name: new RegExp(`^${pet}`) }));
   await page.getByLabel("Hora").fill(hora);
   for (const servico of servicos) await page.getByRole("checkbox", { name: new RegExp(servico) }).check();
@@ -82,9 +81,24 @@ export function blocoNaGrade(page: Page, pet: string): Locator {
   return page.getByRole("link", { name: new RegExp(`^${pet} · `) });
 }
 
-/** Status do atendimento na página dele (a etiqueta tem o nome acessível "Status: <status>", como "Status: Confirmado"). */
+/** Status do atendimento na página dele (o selo tem o nome acessível "Status: <status>", como "Status: Confirmado"). */
 export function statusAtual(page: Page): Locator {
   return page.getByRole("status", { name: /^Status: / });
+}
+
+/**
+ * Sai pela conta: no iPhone, o Sair fica no menu da conta (botão no topo); no desktop, no pé da barra lateral.
+ */
+export async function sair(page: Page, tocar: (alvo: Locator) => Promise<void>): Promise<void> {
+  const menu = page.getByRole("button", { name: "Menu da conta" });
+  if (await menu.isVisible()) await tocar(menu);
+  await tocar(page.getByRole("button", { name: "Sair" }));
+}
+
+/** Ação do menu "Mais ações" do atendimento (Cancelar, Marcar falta e o segundo próximo status): abre o menu e toca. */
+export async function acaoDoMenu(page: Page, tocar: (alvo: Locator) => Promise<void>, nome: string): Promise<void> {
+  await tocar(page.getByRole("button", { name: "Mais ações" }));
+  await tocar(page.getByRole("button", { name: nome, exact: true }));
 }
 
 /** Mensagem de erro geral do formulário (role="alert"), sem pegar o anunciador de rota do Next. */

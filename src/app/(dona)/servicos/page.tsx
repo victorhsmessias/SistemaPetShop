@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { textoDoAviso } from "@/app/(dona)/avisos";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
+import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
+import { EstadoVazio } from "@/app/componentes/estado-vazio";
+import { Icone } from "@/app/componentes/icone";
 import { listarServicos } from "@/modules/catalogo/servicos";
 import { formatarReais } from "@/modules/compartilhado/dinheiro";
 
 export const metadata: Metadata = { title: "Serviços · banho-e-tosa" };
 
-type Props = { searchParams: Promise<{ inativos?: string }> };
+type Props = { searchParams: Promise<{ inativos?: string; salvo?: string }> };
 
 export default async function PaginaServicos({ searchParams }: Props) {
-  const comInativos = (await searchParams).inativos === "1";
+  const pedido = await searchParams;
+  const comInativos = pedido.inativos === "1";
+  const aviso = textoDoAviso(pedido.salvo);
   const servicos = await naEmpresaDaDona((tx) => listarServicos(tx, comInativos));
 
   return (
@@ -18,12 +24,16 @@ export default async function PaginaServicos({ searchParams }: Props) {
       <header className="topo">
         <h1>Serviços</h1>
         <Link href="/servicos/novo" className="botao-link botao-primario">
+          <Icone nome="mais" />
           Novo serviço
         </Link>
       </header>
+      {aviso && <AvisoDeSucesso mensagem={aviso} parametros={["salvo"]} />}
 
       {servicos.length === 0 ? (
-        <p className="suave">Nenhum serviço cadastrado ainda.</p>
+        <EstadoVazio icone="servicos" titulo="Nenhum serviço cadastrado ainda.">
+          Cadastre o que você oferece (por exemplo Banho e Tosa): o preço e a duração entram sozinhos no agendamento.
+        </EstadoVazio>
       ) : (
         <ul className="lista-toque" aria-label="Serviços">
           {servicos.map((servico) => (
