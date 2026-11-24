@@ -4,13 +4,12 @@ import Link from "next/link";
 import { GradeDaSemana } from "@/app/(dona)/agenda/grade";
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
-import { Icone } from "@/app/componentes/icone";
 import { NavegacaoPeriodo } from "@/app/componentes/navegacao-periodo";
 import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { diasDaSemana, ehDia, hojeNoFuso, rotuloDiaMes, somarDias } from "@/modules/agenda/fuso";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
-export const metadata: Metadata = { title: "Semana · banho-e-tosa" };
+export const metadata: Metadata = { title: "Semana" };
 
 type Props = { searchParams: Promise<{ dia?: string }> };
 
@@ -30,7 +29,6 @@ export default async function PaginaSemana({ searchParams }: Props) {
       <header className="topo">
         <h1>Semana</h1>
         <Link href={urlDoDia(dia)} className="botao-link botao-secundario">
-          <Icone nome="agenda" />
           Dia
         </Link>
       </header>

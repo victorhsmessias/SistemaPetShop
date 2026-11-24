@@ -1,18 +1,8 @@
-import { Icone, type NomeDoIcone } from "@/app/componentes/icone";
 import { NOMES_DOS_STATUS, type StatusAtendimento } from "@/modules/agenda/status";
 
-// Selo do status do atendimento: fundo suave, texto escuro da mesma família (>= 4,5:1) e um ícone por status, para
-// a cor nunca ser a única pista. A cor cheia fica só na faixa do bloco da grade.
-
-const ICONES: Record<StatusAtendimento, NomeDoIcone> = {
-  agendado: "relogio",
-  confirmado: "calcheck",
-  em_atendimento: "gota",
-  pronto: "sino",
-  concluido: "checkcirc",
-  cancelado: "xcirc",
-  faltou: "proibido",
-};
+// Selo do status do atendimento: fundo suave e texto escuro da mesma família (>= 4,5:1). O nome do status está
+// sempre escrito, então a cor nunca é a única pista (o ícone saiu no plano "sem cara de IA"). A cor cheia fica só
+// na faixa do bloco da grade.
 
 /**
  * `anunciar`: na página do atendimento, o selo é uma região `role="status"` com o nome acessível "Status: …", e o
@@ -33,7 +23,6 @@ export function SeloDeStatus({
       className={`selo status-${status}${mini ? " selo-mini" : ""}`}
       {...(anunciar ? { role: "status", "aria-label": `Status: ${nome}` } : {})}
     >
-      <Icone nome={ICONES[status]} />
       {nome}
     </span>
   );

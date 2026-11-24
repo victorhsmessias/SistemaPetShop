@@ -1,5 +1,4 @@
 import { BotaoSair } from "@/app/botao-sair";
-import { Icone } from "@/app/componentes/icone";
 
 // Marca e conta da dona (nome da empresa, nome dela e Sair), em todas as telas: no celular, numa barra no topo
 // com o menu da conta; a partir de 1024 px, no alto e no pé da barra lateral. Só visual: os dados vêm do layout.
@@ -16,13 +15,7 @@ export function iniciais(nome: string): string {
 export function Marca({ empresa }: { empresa: string }) {
   return (
     <span className="marca-app">
-      <span className="marca-icone">
-        <Icone nome="pata" />
-      </span>
-      <span className="marca-texto">
-        <strong>{empresa}</strong>
-        <small>Banho e tosa</small>
-      </span>
+      <strong className="marca-texto">{empresa}</strong>
     </span>
   );
 }

@@ -9,7 +9,7 @@ import { Icone } from "@/app/componentes/icone";
 import { formatarTelefone } from "@/modules/cadastros/telefone";
 import { buscarTutores } from "@/modules/cadastros/tutores";
 
-export const metadata: Metadata = { title: "Clientes · banho-e-tosa" };
+export const metadata: Metadata = { title: "Clientes" };
 
 type Props = { searchParams: Promise<{ busca?: string | string[] }> };
 
@@ -21,7 +21,6 @@ export default async function PaginaClientes({ searchParams }: Props) {
   const tutores = await naEmpresaDaDona((tx) => buscarTutores(tx, busca));
   const novoCliente = (texto: string) => (
     <Link href="/clientes/novo" className="botao-link botao-secundario">
-      <Icone nome="mais" />
       {texto}
     </Link>
   );
@@ -31,7 +30,6 @@ export default async function PaginaClientes({ searchParams }: Props) {
       <header className="topo">
         <h1>Clientes</h1>
         <Link href="/clientes/novo" className="botao-link botao-primario">
-          <Icone nome="mais" />
           Novo cliente
         </Link>
       </header>
@@ -40,11 +38,11 @@ export default async function PaginaClientes({ searchParams }: Props) {
 
       {tutores.length === 0 ? (
         busca ? (
-          <EstadoVazio icone="busca" titulo={`Nada encontrado para "${busca}".`} acao={novoCliente("Cadastrar novo cliente")}>
-            Confira a grafia ou procure pelo nome do pet ou pelo telefone.
+          <EstadoVazio titulo={`Nada encontrado para "${busca}".`} acao={novoCliente("Cadastrar novo cliente")}>
+            Tente o nome do pet ou o telefone.
           </EstadoVazio>
         ) : (
-          <EstadoVazio icone="clientes" titulo="Nenhum cliente cadastrado ainda." acao={novoCliente("Cadastrar o primeiro cliente")} />
+          <EstadoVazio titulo="Nenhum cliente cadastrado ainda." acao={novoCliente("Cadastrar o primeiro cliente")} />
         )
       ) : (
         <ul className="lista-toque lista-clientes" aria-label="Tutores">

@@ -8,7 +8,6 @@ import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { EstadoVazio } from "@/app/componentes/estado-vazio";
 import { GrupoRecolhivel } from "@/app/componentes/grupo-recolhivel";
-import { Icone } from "@/app/componentes/icone";
 import { NavegacaoPeriodo } from "@/app/componentes/navegacao-periodo";
 import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { ocupaHorario } from "@/modules/agenda/calculos";
@@ -19,7 +18,7 @@ import { ehUuid } from "@/modules/compartilhado/validacao";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 import { recebidoNoPeriodo } from "@/modules/financeiro/resumo";
 
-export const metadata: Metadata = { title: "Agenda · banho-e-tosa" };
+export const metadata: Metadata = { title: "Agenda" };
 
 type Props = { searchParams: Promise<{ dia?: string; novo?: string }> };
 
@@ -56,7 +55,6 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       <header className="topo">
         <h1>Agenda</h1>
         <Link href={`/agenda/semana?dia=${dia}`} className="botao-link botao-secundario">
-          <Icone nome="semana" />
           Semana
         </Link>
       </header>
@@ -78,17 +76,16 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       />
 
       <Link href={urlDoAgendamento({ dia })} className="botao-link botao-primario botao-largo">
-        <Icone nome="mais" />
         Novo agendamento
       </Link>
 
       <div className="resumos">
-        <Link href="/financeiro" className="cartao resumo-mini recebido-hoje">
+        <Link href="/financeiro" className="resumo-mini recebido-hoje">
           <span className="suave">Recebido hoje</span>
           <strong>{formatarReais(recebidoHoje.totalCentavos)}</strong>
         </Link>
         {proximo && (
-          <Link href={`/agenda/${proximo.id}`} className="cartao resumo-mini">
+          <Link href={`/agenda/${proximo.id}`} className="resumo-mini">
             <span className="suave">Próximo</span>
             <strong>
               {noFuso(proximo.inicio, fuso).hora} · {proximo.pet.nome}
@@ -98,9 +95,7 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       </div>
 
       {atendimentos.length === 0 && (
-        <EstadoVazio icone="agenda" titulo="Nenhum atendimento neste dia.">
-          Toque num horário livre da grade ou em Novo agendamento.
-        </EstadoVazio>
+        <EstadoVazio titulo="Nenhum atendimento neste dia." />
       )}
 
       <section aria-label={`Atendimentos de ${rotuloDoDia(dia)}`}>

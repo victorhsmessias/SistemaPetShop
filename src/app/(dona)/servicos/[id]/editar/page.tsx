@@ -9,7 +9,7 @@ import { Voltar } from "@/app/componentes/voltar";
 import { obterServico } from "@/modules/catalogo/servicos";
 import { centavosParaTexto } from "@/modules/compartilhado/dinheiro";
 
-export const metadata: Metadata = { title: "Editar serviço · banho-e-tosa" };
+export const metadata: Metadata = { title: "Editar serviço" };
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -50,7 +50,6 @@ export default async function PaginaEditarServico({ params }: Props) {
             </button>
           ) : (
             <button type="submit" className="botao-secundario botao-largo">
-              <Icone nome="desfazer" />
               Reativar serviço
             </button>
           )}

@@ -17,7 +17,7 @@ import { formatarTelefone, linkDoWhatsApp } from "@/modules/cadastros/telefone";
 import { obterTutor } from "@/modules/cadastros/tutores";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
-export const metadata: Metadata = { title: "Cliente · banho-e-tosa" };
+export const metadata: Metadata = { title: "Cliente" };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ inativos?: string; salvo?: string }> };
 
@@ -53,22 +53,19 @@ export default async function PaginaCliente({ params, searchParams }: Props) {
       <Voltar href="/clientes" destino="Clientes" />
       <h1>{tutor.nome}</h1>
       {aviso && <AvisoDeSucesso mensagem={aviso} parametros={["salvo"]} />}
-      <section className="cartao ficha-cliente" aria-label="Contato">
+      <section className="secao ficha-cliente" aria-label="Contato">
         {tutor.telefone && (
           <>
             <p className="telefone-grande">
-              <Icone nome="fone" />
               {formatarTelefone(tutor.telefone)}
             </p>
             <div className="acoes">
               {whatsapp && (
                 <a className="botao-link botao-primario" href={whatsapp} target="_blank" rel="noopener noreferrer">
-                  <Icone nome="conversa" />
                   WhatsApp
                 </a>
               )}
               <a className="botao-link botao-secundario" href={`tel:${tutor.telefone}`}>
-                <Icone nome="fone" />
                 Ligar
               </a>
             </div>
@@ -81,23 +78,21 @@ export default async function PaginaCliente({ params, searchParams }: Props) {
           </>
         )}
         <Link href={`/clientes/${tutor.id}/editar`} className="botao-link botao-texto">
-          <Icone nome="lapis" />
           Editar cliente
         </Link>
       </section>
 
       <header className="secao-cab">
         <h2>
-          Pets <span className="contagem">{pets.length}</span>
+          Pets ({pets.length})
         </h2>
         <Link href={`/clientes/${tutor.id}/pets/novo`} className="botao-link botao-secundario">
-          <Icone nome="mais" />
           Novo pet
         </Link>
       </header>
 
       {pets.length === 0 ? (
-        <EstadoVazio icone="pata" titulo={comInativos ? "Nenhum pet cadastrado." : "Nenhum pet ativo."} />
+        <EstadoVazio titulo={comInativos ? "Nenhum pet cadastrado." : "Nenhum pet ativo."} />
       ) : (
         <ul className="lista-simples" aria-label="Pets">
           {pets.map((pet) => {
@@ -129,14 +124,12 @@ export default async function PaginaCliente({ params, searchParams }: Props) {
                   <div className="historico">
                     {h.proximo && (
                       <p>
-                        <Icone nome="agenda" />
                         <Link href={`/agenda/${h.proximo.id}`}>Próximo: {quando(h.proximo.inicio)}</Link>
                         <SeloDeStatus status={h.proximo.status} mini />
                       </p>
                     )}
                     {h.ultimo && (
                       <p>
-                        <Icone nome="checkcirc" />
                         <Link href={`/agenda/${h.ultimo.id}`}>Último: {quando(h.ultimo.inicio)}</Link>
                       </p>
                     )}
@@ -145,12 +138,10 @@ export default async function PaginaCliente({ params, searchParams }: Props) {
                 <div className="acoes">
                   {pet.ativo && (
                     <Link href={urlDoAgendamento({ dia: hoje, petId: pet.id })} className="botao-link botao-secundario">
-                      <Icone nome="calcheck" />
                       Agendar
                     </Link>
                   )}
                   <Link href={`/clientes/${tutor.id}/pets/${pet.id}/editar`} className="botao-link botao-secundario">
-                    <Icone nome="lapis" />
                     Editar
                   </Link>
                 </div>

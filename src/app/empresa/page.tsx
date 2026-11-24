@@ -2,15 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { BotaoSair } from "@/app/botao-sair";
-import { Aviso } from "@/app/componentes/aviso";
-import { Icone } from "@/app/componentes/icone";
 import { cabecalhosDaRequisicao } from "@/app/requisicao";
 import { whatsappDoSuporte } from "@/configuracao/ambiente";
 import { EmpresaIndisponivelError } from "@/db/com-empresa";
-import { MENSAGEM_EMPRESA_SUSPENSA } from "@/modules/acesso/auth";
 import { comEmpresaDaSessao, NaoAutenticadoError, SemEmpresaError } from "@/modules/acesso/sessao";
 
-export const metadata: Metadata = { title: "Empresa · banho-e-tosa" };
+export const metadata: Metadata = { title: "Empresa" };
 
 type Situacao = "ativa" | "sem-sessao" | "admin" | "suspensa";
 
@@ -38,18 +35,12 @@ export default async function PaginaEmpresa() {
 
   return (
     <main className="pagina pagina-estreita centralizada pagina-excecao">
-      <span className="excecao-icone">
-        <Icone nome="pata" />
-      </span>
       <h1>Acesso suspenso</h1>
-      {/* Conteúdo que já está na página quando ela abre (o h1 diz o que é): sem role="alert" (T17 da revisão). */}
-      <Aviso tipo="aviso">
-        {MENSAGEM_EMPRESA_SUSPENSA}
-      </Aviso>
-      <p className="suave">Seus dados continuam guardados.</p>
+      {/* O h1 já diz o que aconteceu: uma linha com o que fazer, sem repetir o título numa caixa (plano "sem cara de
+          IA", item 11). Conteúdo que já está na página quando ela abre: sem role="alert" (T17 da revisão). */}
+      <p>Fale com o suporte para reativar. Seus dados continuam guardados.</p>
       {whatsapp && (
         <a className="botao-link botao-primario botao-largo" href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">
-          <Icone nome="conversa" />
           WhatsApp do suporte
         </a>
       )}

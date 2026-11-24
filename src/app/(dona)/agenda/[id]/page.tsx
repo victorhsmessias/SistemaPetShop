@@ -11,7 +11,6 @@ import {
 } from "@/app/(dona)/agenda/formularios";
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { textoDoAviso } from "@/app/(dona)/avisos";
-import { iniciais } from "@/app/(dona)/conta";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { Icone } from "@/app/componentes/icone";
@@ -26,7 +25,7 @@ import { formatarReais } from "@/modules/compartilhado/dinheiro";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 import { listarFormasAtivas, receitaDoAtendimento } from "@/modules/financeiro/lancamentos";
 
-export const metadata: Metadata = { title: "Atendimento · banho-e-tosa" };
+export const metadata: Metadata = { title: "Atendimento" };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ salvo?: string }> };
 
@@ -93,11 +92,8 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
             </p>
             {ativo && <DesfazerStatus id={a.id} status={a.status} confirmado={a.confirmadoEm !== null} />}
 
-            <section className="cartao cartao-cliente" aria-label="Cliente">
+            <section className="secao cartao-cliente" aria-label="Cliente">
               <div className="cliente-linha">
-                <span className="avatar" aria-hidden="true">
-                  {iniciais(a.tutor.nome)}
-                </span>
                 <span className="cliente-nome">
                   <Link href={`/clientes/${a.tutor.id}`}>{a.tutor.nome}</Link>
                   {a.tutor.telefone && <span className="suave">{formatarTelefone(a.tutor.telefone)}</span>}
@@ -108,12 +104,10 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
                 <div className="acoes">
                   {whatsapp && (
                     <a className="botao-link botao-secundario" href={whatsapp} target="_blank" rel="noopener noreferrer">
-                      <Icone nome="conversa" />
                       WhatsApp
                     </a>
                   )}
                   <a className="botao-link botao-secundario" href={`tel:${a.tutor.telefone}`}>
-                    <Icone nome="fone" />
                     Ligar
                   </a>
                 </div>
@@ -129,7 +123,7 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
               )}
             </section>
 
-            <section className="cartao">
+            <section className="secao">
               <h2>Serviços</h2>
               <ul className="lista-itens" aria-label="Serviços do atendimento">
                 {a.itens.map((i) => (
@@ -149,13 +143,12 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
                 </>
               )}
               <Link href={`/agenda/${a.id}/editar`} className="botao-link botao-secundario botao-largo">
-                <Icone nome="lapis" />
                 {ativo ? "Editar serviços, horário e observações" : "Editar observações"}
               </Link>
             </section>
 
             {a.status === "concluido" && (
-              <section className="cartao" aria-labelledby="titulo-receita">
+              <section className="secao" aria-labelledby="titulo-receita">
                 <h2 id="titulo-receita">Receita</h2>
                 {receita ? (
                   <dl className="dados-receita">
@@ -180,7 +173,7 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
             )}
 
             {(a.status === "cancelado" || a.status === "faltou") && (
-              <section className="cartao" aria-label="Status do atendimento">
+              <section className="secao" aria-label="Status do atendimento">
                 <DesfazerStatus id={a.id} status={a.status} confirmado={a.confirmadoEm !== null} />
               </section>
             )}

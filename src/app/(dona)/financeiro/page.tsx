@@ -23,7 +23,7 @@ import { formatarReais } from "@/modules/compartilhado/dinheiro";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 import { listarReceitasDoPeriodo, recebidoNoPeriodo, type ReceitaDaLista } from "@/modules/financeiro/resumo";
 
-export const metadata: Metadata = { title: "Financeiro · banho-e-tosa" };
+export const metadata: Metadata = { title: "Financeiro" };
 
 type Props = { searchParams: Promise<{ mes?: string }> };
 
@@ -88,14 +88,14 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
 
       <div className="financeiro-colunas">
         <div className="financeiro-resumo">
-          <section className="cartao destaque" aria-labelledby="titulo-hoje">
+          <section className="secao destaque" aria-labelledby="titulo-hoje">
             <h2 id="titulo-hoje">Hoje</h2>
             <p className="suave">{rotuloDoDia(hoje)}</p>
             <p className="valor-destaque">{formatarReais(dados.recebidoHoje.totalCentavos)}</p>
             <p className="suave">{quantosConcluidos(dados.concluidosHoje)}</p>
           </section>
 
-          <section className="cartao resumo-mes" aria-labelledby="titulo-mes">
+          <section className="secao resumo-mes" aria-labelledby="titulo-mes">
             <NavegacaoPeriodo
               rotulo="Meses"
               titulo={rotulo}
@@ -114,8 +114,8 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
           <section aria-labelledby="titulo-receitas">
             <h2 id="titulo-receitas">Receitas</h2>
             {receitas.validas.length === 0 ? (
-              <EstadoVazio icone="financeiro" titulo={`Nenhuma receita em ${rotulo}.`}>
-                As receitas aparecem aqui quando você conclui um atendimento.
+              <EstadoVazio titulo={`Nenhuma receita em ${rotulo}.`}>
+                A receita entra quando você conclui um atendimento.
               </EstadoVazio>
             ) : (
               <ul className="lista-toque lista-receitas" aria-label={`Receitas de ${rotulo}`}>

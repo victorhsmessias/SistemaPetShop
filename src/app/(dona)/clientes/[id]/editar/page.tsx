@@ -7,7 +7,7 @@ import { Voltar } from "@/app/componentes/voltar";
 import { formatarTelefone } from "@/modules/cadastros/telefone";
 import { obterTutor } from "@/modules/cadastros/tutores";
 
-export const metadata: Metadata = { title: "Editar cliente · banho-e-tosa" };
+export const metadata: Metadata = { title: "Editar cliente" };
 
 type Props = { params: Promise<{ id: string }> };
 
