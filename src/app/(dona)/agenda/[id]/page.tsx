@@ -25,7 +25,7 @@ import { formatarReais } from "@/modules/compartilhado/dinheiro";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 import { listarFormasAtivas, receitaDoAtendimento } from "@/modules/financeiro/lancamentos";
 
-export const metadata: Metadata = { title: "Atendimento · banho-e-tosa" };
+export const metadata: Metadata = { title: "Atendimento" };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ salvo?: string }> };
 

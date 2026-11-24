@@ -8,7 +8,7 @@ import { EstadoVazio } from "@/app/componentes/estado-vazio";
 import { listarServicos } from "@/modules/catalogo/servicos";
 import { formatarReais } from "@/modules/compartilhado/dinheiro";
 
-export const metadata: Metadata = { title: "Serviços · banho-e-tosa" };
+export const metadata: Metadata = { title: "Serviços" };
 
 type Props = { searchParams: Promise<{ inativos?: string; salvo?: string }> };
 
@@ -30,7 +30,7 @@ export default async function PaginaServicos({ searchParams }: Props) {
 
       {servicos.length === 0 ? (
         <EstadoVazio titulo="Nenhum serviço cadastrado ainda.">
-          Cadastre o que você oferece (por exemplo Banho e Tosa): o preço e a duração entram sozinhos no agendamento.
+          Cadastre cada serviço com preço e duração.
         </EstadoVazio>
       ) : (
         <ul className="lista-toque" aria-label="Serviços">

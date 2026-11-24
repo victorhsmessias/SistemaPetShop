@@ -16,7 +16,7 @@ import { NOMES_DAS_ESPECIES, NOMES_DOS_PORTES } from "@/modules/cadastros/pets";
 import { listarServicos } from "@/modules/catalogo/servicos";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
-export const metadata: Metadata = { title: "Novo agendamento · banho-e-tosa" };
+export const metadata: Metadata = { title: "Novo agendamento" };
 
 type Props = { searchParams: Promise<{ dia?: string; hora?: string; pet?: string; busca?: string; salvo?: string }> };
 

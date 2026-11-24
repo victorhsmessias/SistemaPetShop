@@ -9,7 +9,7 @@ import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { diasDaSemana, ehDia, hojeNoFuso, rotuloDiaMes, somarDias } from "@/modules/agenda/fuso";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
-export const metadata: Metadata = { title: "Semana · banho-e-tosa" };
+export const metadata: Metadata = { title: "Semana" };
 
 type Props = { searchParams: Promise<{ dia?: string }> };
 

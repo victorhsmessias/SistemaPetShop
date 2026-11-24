@@ -6,7 +6,7 @@ import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { Voltar } from "@/app/componentes/voltar";
 import { opcoesDeEspecie, opcoesDePorte } from "@/modules/cadastros/pets";
 
-export const metadata: Metadata = { title: "Novo cliente · banho-e-tosa" };
+export const metadata: Metadata = { title: "Novo cliente" };
 
 type Props = { searchParams: Promise<{ agendar?: string }> };
 

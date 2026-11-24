@@ -12,7 +12,7 @@ import { atendimentoAtivo, NOMES_DOS_STATUS } from "@/modules/agenda/status";
 import { listarServicos } from "@/modules/catalogo/servicos";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
-export const metadata: Metadata = { title: "Editar atendimento · banho-e-tosa" };
+export const metadata: Metadata = { title: "Editar atendimento" };
 
 type Props = { params: Promise<{ id: string }> };
 

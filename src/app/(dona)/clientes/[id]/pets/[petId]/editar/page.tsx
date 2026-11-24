@@ -9,7 +9,7 @@ import { Voltar } from "@/app/componentes/voltar";
 import { obterPet, opcoesDeEspecie, opcoesDePorte } from "@/modules/cadastros/pets";
 import { obterTutor } from "@/modules/cadastros/tutores";
 
-export const metadata: Metadata = { title: "Editar pet · banho-e-tosa" };
+export const metadata: Metadata = { title: "Editar pet" };
 
 type Props = { params: Promise<{ id: string; petId: string }> };
 

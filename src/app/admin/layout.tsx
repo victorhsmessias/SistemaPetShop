@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { conferirAdminOuRedirecionar } from "@/app/admin/conferir-admin";
 import { BotaoSair } from "@/app/botao-sair";
 
-export const metadata: Metadata = { title: "Administração · banho-e-tosa" };
+export const metadata: Metadata = { title: "Administração" };
 
 // Primeira barreira de /admin. Não é a única: a página e cada ação conferem de novo no servidor
 // (o layout roda em paralelo com a página e não roda nas Server Actions).

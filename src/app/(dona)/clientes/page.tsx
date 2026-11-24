@@ -9,7 +9,7 @@ import { Icone } from "@/app/componentes/icone";
 import { formatarTelefone } from "@/modules/cadastros/telefone";
 import { buscarTutores } from "@/modules/cadastros/tutores";
 
-export const metadata: Metadata = { title: "Clientes · banho-e-tosa" };
+export const metadata: Metadata = { title: "Clientes" };
 
 type Props = { searchParams: Promise<{ busca?: string | string[] }> };
 
@@ -39,7 +39,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
       {tutores.length === 0 ? (
         busca ? (
           <EstadoVazio titulo={`Nada encontrado para "${busca}".`} acao={novoCliente("Cadastrar novo cliente")}>
-            Confira a grafia ou procure pelo nome do pet ou pelo telefone.
+            Tente o nome do pet ou o telefone.
           </EstadoVazio>
         ) : (
           <EstadoVazio titulo="Nenhum cliente cadastrado ainda." acao={novoCliente("Cadastrar o primeiro cliente")} />

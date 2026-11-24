@@ -3,7 +3,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "banho-e-tosa",
+  // A aba mostra só o nome da tela (cada página define o seu); a raiz só redireciona para a agenda ou o painel.
+  title: "Agenda",
   description: "Agenda, pacotes e financeiro para banho e tosa",
 };
 

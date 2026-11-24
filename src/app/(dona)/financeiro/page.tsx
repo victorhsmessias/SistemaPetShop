@@ -23,7 +23,7 @@ import { formatarReais } from "@/modules/compartilhado/dinheiro";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 import { listarReceitasDoPeriodo, recebidoNoPeriodo, type ReceitaDaLista } from "@/modules/financeiro/resumo";
 
-export const metadata: Metadata = { title: "Financeiro · banho-e-tosa" };
+export const metadata: Metadata = { title: "Financeiro" };
 
 type Props = { searchParams: Promise<{ mes?: string }> };
 
@@ -115,7 +115,7 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
             <h2 id="titulo-receitas">Receitas</h2>
             {receitas.validas.length === 0 ? (
               <EstadoVazio titulo={`Nenhuma receita em ${rotulo}.`}>
-                As receitas aparecem aqui quando você conclui um atendimento.
+                A receita entra quando você conclui um atendimento.
               </EstadoVazio>
             ) : (
               <ul className="lista-toque lista-receitas" aria-label={`Receitas de ${rotulo}`}>

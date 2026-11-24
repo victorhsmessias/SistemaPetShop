@@ -4,7 +4,7 @@ import { FormularioServico } from "@/app/(dona)/formularios";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { Voltar } from "@/app/componentes/voltar";
 
-export const metadata: Metadata = { title: "Novo serviço · banho-e-tosa" };
+export const metadata: Metadata = { title: "Novo serviço" };
 
 export default async function PaginaNovoServico() {
   await naEmpresaDaDona(async () => undefined);

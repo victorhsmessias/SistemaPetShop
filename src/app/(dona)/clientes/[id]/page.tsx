@@ -17,7 +17,7 @@ import { formatarTelefone, linkDoWhatsApp } from "@/modules/cadastros/telefone";
 import { obterTutor } from "@/modules/cadastros/tutores";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 
-export const metadata: Metadata = { title: "Cliente · banho-e-tosa" };
+export const metadata: Metadata = { title: "Cliente" };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ inativos?: string; salvo?: string }> };
 

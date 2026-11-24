@@ -5,7 +5,7 @@ import { FormularioLogin } from "@/app/login/formulario-login";
 import { cabecalhosDaRequisicao } from "@/app/requisicao";
 import { obterSessao } from "@/modules/acesso/sessao";
 
-export const metadata: Metadata = { title: "Entrar · banho-e-tosa" };
+export const metadata: Metadata = { title: "Entrar" };
 
 export default async function PaginaLogin() {
   if (await obterSessao(await cabecalhosDaRequisicao())) redirect("/");

@@ -18,7 +18,7 @@ import { ehUuid } from "@/modules/compartilhado/validacao";
 import { fusoDaEmpresa } from "@/modules/empresas/consultas";
 import { recebidoNoPeriodo } from "@/modules/financeiro/resumo";
 
-export const metadata: Metadata = { title: "Agenda · banho-e-tosa" };
+export const metadata: Metadata = { title: "Agenda" };
 
 type Props = { searchParams: Promise<{ dia?: string; novo?: string }> };
 
@@ -95,9 +95,7 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       </div>
 
       {atendimentos.length === 0 && (
-        <EstadoVazio titulo="Nenhum atendimento neste dia.">
-          Toque num horário livre da grade ou em Novo agendamento.
-        </EstadoVazio>
+        <EstadoVazio titulo="Nenhum atendimento neste dia." />
       )}
 
       <section aria-label={`Atendimentos de ${rotuloDoDia(dia)}`}>
