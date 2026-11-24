@@ -11,7 +11,6 @@ import {
   type EstadoCadastro,
 } from "@/app/(dona)/acoes";
 import { Campo, DICA_OBSERVACOES, ErroGeral } from "@/app/(dona)/campos";
-import { Icone } from "@/app/componentes/icone";
 import { Segmentado } from "@/app/componentes/segmentado";
 import { enviarSemLimpar } from "@/app/envio-sem-limpar";
 
@@ -47,7 +46,6 @@ export function FormularioTutor({ id, valores }: { id?: string; valores?: Valore
       </Campo>
       {estado.tutorExistenteId && (
         <Link href={`/clientes/${estado.tutorExistenteId}`} className="botao-link botao-secundario">
-          <Icone nome="clientes" />
           Abrir o cliente já cadastrado
         </Link>
       )}
@@ -94,7 +92,6 @@ export function FormularioClienteEPet({
           href={`/clientes/${estado.tutorExistenteId}/pets/novo?agendar=${agendar}`}
           className="botao-link botao-secundario"
         >
-          <Icone nome="pata" />
           Cadastrar o pet neste cliente
         </Link>
       )}

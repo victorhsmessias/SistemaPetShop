@@ -114,7 +114,7 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
           <section aria-labelledby="titulo-receitas">
             <h2 id="titulo-receitas">Receitas</h2>
             {receitas.validas.length === 0 ? (
-              <EstadoVazio icone="financeiro" titulo={`Nenhuma receita em ${rotulo}.`}>
+              <EstadoVazio titulo={`Nenhuma receita em ${rotulo}.`}>
                 As receitas aparecem aqui quando você conclui um atendimento.
               </EstadoVazio>
             ) : (

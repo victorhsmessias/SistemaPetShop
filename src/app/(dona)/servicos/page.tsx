@@ -5,7 +5,6 @@ import { textoDoAviso } from "@/app/(dona)/avisos";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { EstadoVazio } from "@/app/componentes/estado-vazio";
-import { Icone } from "@/app/componentes/icone";
 import { listarServicos } from "@/modules/catalogo/servicos";
 import { formatarReais } from "@/modules/compartilhado/dinheiro";
 
@@ -24,14 +23,13 @@ export default async function PaginaServicos({ searchParams }: Props) {
       <header className="topo">
         <h1>Serviços</h1>
         <Link href="/servicos/novo" className="botao-link botao-primario">
-          <Icone nome="mais" />
           Novo serviço
         </Link>
       </header>
       {aviso && <AvisoDeSucesso mensagem={aviso} parametros={["salvo"]} />}
 
       {servicos.length === 0 ? (
-        <EstadoVazio icone="servicos" titulo="Nenhum serviço cadastrado ainda.">
+        <EstadoVazio titulo="Nenhum serviço cadastrado ainda.">
           Cadastre o que você oferece (por exemplo Banho e Tosa): o preço e a duração entram sozinhos no agendamento.
         </EstadoVazio>
       ) : (

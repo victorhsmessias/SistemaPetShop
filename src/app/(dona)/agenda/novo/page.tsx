@@ -64,7 +64,6 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
               </div>
             )}
             <Link href={urlDoAgendamento({ dia, hora })} className="botao-link botao-texto">
-              <Icone nome="desfazer" />
               Trocar o pet
             </Link>
           </section>
@@ -93,7 +92,6 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
 
           {dados.pets.length === 0 ? (
             <EstadoVazio
-              icone="pata"
               titulo={busca ? `Nenhum pet ativo encontrado para "${busca}".` : "Nenhum pet ativo cadastrado."}
             >
               Cadastre o cliente e o pet aqui embaixo e volte direto para este agendamento.
@@ -118,7 +116,6 @@ export default async function PaginaNovoAgendamento({ searchParams }: Props) {
             href={`/clientes/novo?agendar=${parametroDeRetorno({ dia, hora })}`}
             className={`botao-link ${dados.pets.length === 0 ? "botao-primario" : "botao-secundario"} botao-largo`}
           >
-            <Icone nome="mais" />
             Novo cliente e pet
           </Link>
         </>

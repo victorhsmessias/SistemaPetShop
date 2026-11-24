@@ -378,13 +378,13 @@ export function FormularioObservacoes({ id, observacoes }: { id: string; observa
 }
 
 /**
- * Na barra de ação, rótulo curto e ícone, para caber numa linha com Concluir em 375 px (U2 da revisão). O nome
- * acessível continua o completo de ACOES_DOS_STATUS e contém o texto visível.
+ * Na barra de ação, rótulo curto, para caber numa linha com Concluir em 375 px (U2 da revisão). O nome acessível
+ * continua o completo de ACOES_DOS_STATUS e contém o texto visível.
  */
-const NA_BARRA: Partial<Record<StatusAtendimento, { rotulo: string; icone: "calcheck" | "gota" | "sino" }>> = {
-  confirmado: { rotulo: "Confirmar", icone: "calcheck" },
-  em_atendimento: { rotulo: "Começar", icone: "gota" },
-  pronto: { rotulo: "Pronto", icone: "sino" },
+const NA_BARRA: Partial<Record<StatusAtendimento, string>> = {
+  confirmado: "Confirmar",
+  em_atendimento: "Começar",
+  pronto: "Pronto",
 };
 
 /**
@@ -414,8 +414,7 @@ export function BotoesDeStatus({ id, status }: { id: string; status: StatusAtend
           aria-label={ACOES_DOS_STATUS[principal]}
           disabled={enviando}
         >
-          {NA_BARRA[principal] && <Icone nome={NA_BARRA[principal].icone} />}
-          {NA_BARRA[principal]?.rotulo ?? ACOES_DOS_STATUS[principal]}
+          {NA_BARRA[principal] ?? ACOES_DOS_STATUS[principal]}
         </button>
       )}
       {(outros.length > 0 || encerrar.length > 0) && (
@@ -432,7 +431,6 @@ export function BotoesDeStatus({ id, status }: { id: string; status: StatusAtend
           <div id={menu} popover="auto" className="menu-flutuante">
             {outros.map((para) => (
               <button key={para} type="submit" name="para" value={para} className="menu-item" disabled={enviando}>
-                <Icone nome={para === "confirmado" ? "calcheck" : para === "pronto" ? "sino" : "gota"} />
                 {ACOES_DOS_STATUS[para]}
               </button>
             ))}
@@ -478,7 +476,6 @@ export function DesfazerStatus({
         className={reabrir ? "botao-secundario botao-largo" : "botao-texto botao-desfazer"}
         disabled={enviando}
       >
-        <Icone nome="desfazer" />
         {reabrir ? `Reabrir como ${NOMES_DOS_STATUS[anterior]}` : `Desfazer: voltar para ${NOMES_DOS_STATUS[anterior]}`}
       </button>
     </form>
@@ -486,14 +483,6 @@ export function DesfazerStatus({
 }
 
 export type OpcaoFormaPagamento = { id: string; nome: string };
-
-/** Ícone da forma de pagamento pelo nome (as padrão nascem com a empresa: Pix, Dinheiro, cartões). */
-function iconeDaForma(nome: string) {
-  const n = nome.toLocaleLowerCase("pt-BR");
-  if (n.includes("pix")) return "pix" as const;
-  if (n.includes("dinheiro")) return "dinheiro" as const;
-  return "cartao" as const;
-}
 
 /**
  * Concluir (H7): o botão mostra o total; ao tocar, aparecem as formas de pagamento, e um toque numa delas
@@ -531,7 +520,6 @@ export function FormularioConcluir({
         </>
       ) : !escolhendo ? (
         <button type="button" className="botao-primario botao-grande botao-concluir" onClick={() => setEscolhendo(true)}>
-          <Icone nome="check" />
           Concluir · {total}
         </button>
       ) : (
@@ -543,7 +531,6 @@ export function FormularioConcluir({
           <div className="formas-pagamento-opcoes">
             {formas.map((f) => (
               <button key={f.id} type="submit" name="formaPagamentoId" value={f.id} className="botao-secundario botao-grande">
-                <Icone nome={iconeDaForma(f.nome)} />
                 {f.nome}
               </button>
             ))}

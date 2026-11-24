@@ -60,7 +60,6 @@ export default async function PaginaEditarPet({ params }: Props) {
             </button>
           ) : (
             <button type="submit" className="botao-secundario botao-largo">
-              <Icone nome="desfazer" />
               Reativar pet
             </button>
           )}

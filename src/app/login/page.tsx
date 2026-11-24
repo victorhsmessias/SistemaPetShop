@@ -11,7 +11,7 @@ export default async function PaginaLogin() {
   if (await obterSessao(await cabecalhosDaRequisicao())) redirect("/");
 
   return (
-    <main className="pagina pagina-estreita centralizada">
+    <main className="pagina pagina-estreita centralizada pagina-login">
       <h1>Acesse sua agenda</h1>
       <FormularioLogin />
       <p className="suave">Esqueceu a senha? Peça uma nova ao suporte.</p>

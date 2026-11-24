@@ -180,6 +180,15 @@ p {
   justify-content: center;
 }
 
+/* Login sem cartão: respiro entre o título, os campos e a dica da senha. */
+.pagina-login h1 {
+  margin-bottom: 20px;
+}
+
+.pagina-login > .suave {
+  margin: 16px 0 0;
+}
+
 .topo {
   display: flex;
   align-items: center;
@@ -339,7 +348,7 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 10px 3px 7px;
+  padding: 3px 8px;
   border-radius: var(--raio-selo);
   background: var(--st-fundo);
   color: var(--st-texto);
@@ -349,20 +358,9 @@ button:disabled {
   white-space: nowrap;
 }
 
-.selo .ic {
-  width: 16px;
-  height: 16px;
-}
-
 .selo-mini {
   font-size: 12px;
-  padding: 1px 7px 1px 5px;
-  gap: 3px;
-}
-
-.selo-mini .ic {
-  width: 13px;
-  height: 13px;
+  padding: 1px 6px;
 }
 
 /* Grupo recolhível (componentes/grupo-recolhivel.tsx): seta explícita, que gira ao abrir. */
@@ -479,21 +477,6 @@ details.grupo {
   text-align: left;
 }
 
-.excecao-icone {
-  display: grid;
-  place-items: center;
-  width: 72px !important;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--primaria-suave);
-  color: var(--primaria);
-}
-
-.excecao-icone .ic {
-  width: 36px;
-  height: 36px;
-}
-
 .pagina-excecao .botao-largo {
   margin: 0;
 }
@@ -574,31 +557,12 @@ details[open] summary {
   min-width: 0;
 }
 
-.marca-icone {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: var(--primaria);
-  color: var(--primaria-texto);
-}
-
+/* Só o nome da empresa, em texto (sem ícone nem "Banho e tosa" embaixo). */
 .marca-texto {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
-  line-height: 1.2;
-}
-
-.marca-texto strong {
-  font-size: var(--fs-p);
-}
-
-.marca-texto small {
-  font-size: var(--fs-mini);
-  color: var(--suave);
+  font-size: 1rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .avatar,
@@ -959,12 +923,6 @@ textarea::placeholder {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.historico .ic {
-  width: 18px;
-  height: 18px;
-  color: var(--suave);
 }
 
 .historico a {
@@ -1475,12 +1433,6 @@ textarea[aria-invalid="true"] {
   margin: 0;
 }
 
-.estado-vazio-icone {
-  width: 40px;
-  height: 40px;
-  color: var(--suave);
-}
-
 .estado-vazio-titulo {
   font-weight: 700;
   font-size: 17px;
@@ -1859,9 +1811,9 @@ textarea[aria-invalid="true"] {
   padding: 0 12px;
 }
 
-/* No celular, com o "⋯" (agendado e confirmado), os ícones do próximo status e do Concluir saem para os três caberem
-   numa linha em 375 px (medido: 338 de 351 px com "R$ 90,00"). Um valor maior ainda cabe até uns R$ 150,00; acima
-   disso, o Concluir desce para a linha de baixo sem quebrar o texto. */
+/* No celular, a barra cabe numa linha em 375 px nos quatro status, com o "⋯" e até "Concluir · R$ 180,00" (medido
+   depois da troca para a fonte do sistema). Um valor maior faz o Concluir descer para a linha de baixo, sem quebrar
+   o texto. */
 @media (max-width: 1023px) {
   .barra-acao .botao-grande {
     font-size: 16px;
@@ -1869,11 +1821,6 @@ textarea[aria-invalid="true"] {
 
   .barra-acao .botao-icone {
     width: var(--toque);
-  }
-
-  .barra-acao:has(.botao-icone) .botoes-status > button:first-of-type:not(.botao-icone) .ic,
-  .barra-acao:has(.botao-icone) .botao-concluir .ic {
-    display: none;
   }
 }
 

@@ -8,7 +8,6 @@ import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { EstadoVazio } from "@/app/componentes/estado-vazio";
 import { GrupoRecolhivel } from "@/app/componentes/grupo-recolhivel";
-import { Icone } from "@/app/componentes/icone";
 import { NavegacaoPeriodo } from "@/app/componentes/navegacao-periodo";
 import { listarAgenda } from "@/modules/agenda/atendimentos";
 import { ocupaHorario } from "@/modules/agenda/calculos";
@@ -56,7 +55,6 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       <header className="topo">
         <h1>Agenda</h1>
         <Link href={`/agenda/semana?dia=${dia}`} className="botao-link botao-secundario">
-          <Icone nome="semana" />
           Semana
         </Link>
       </header>
@@ -78,7 +76,6 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       />
 
       <Link href={urlDoAgendamento({ dia })} className="botao-link botao-primario botao-largo">
-        <Icone nome="mais" />
         Novo agendamento
       </Link>
 
@@ -98,7 +95,7 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       </div>
 
       {atendimentos.length === 0 && (
-        <EstadoVazio icone="agenda" titulo="Nenhum atendimento neste dia.">
+        <EstadoVazio titulo="Nenhum atendimento neste dia.">
           Toque num horário livre da grade ou em Novo agendamento.
         </EstadoVazio>
       )}

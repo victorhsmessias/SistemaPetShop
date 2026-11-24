@@ -11,7 +11,6 @@ import {
 } from "@/app/(dona)/agenda/formularios";
 import { urlDoDia } from "@/app/(dona)/agenda/retorno";
 import { textoDoAviso } from "@/app/(dona)/avisos";
-import { iniciais } from "@/app/(dona)/conta";
 import { naEmpresaDaDona } from "@/app/(dona)/sessao-da-dona";
 import { AvisoDeSucesso } from "@/app/componentes/aviso-de-sucesso";
 import { Icone } from "@/app/componentes/icone";
@@ -95,9 +94,6 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
 
             <section className="cartao cartao-cliente" aria-label="Cliente">
               <div className="cliente-linha">
-                <span className="avatar" aria-hidden="true">
-                  {iniciais(a.tutor.nome)}
-                </span>
                 <span className="cliente-nome">
                   <Link href={`/clientes/${a.tutor.id}`}>{a.tutor.nome}</Link>
                   {a.tutor.telefone && <span className="suave">{formatarTelefone(a.tutor.telefone)}</span>}
@@ -108,12 +104,10 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
                 <div className="acoes">
                   {whatsapp && (
                     <a className="botao-link botao-secundario" href={whatsapp} target="_blank" rel="noopener noreferrer">
-                      <Icone nome="conversa" />
                       WhatsApp
                     </a>
                   )}
                   <a className="botao-link botao-secundario" href={`tel:${a.tutor.telefone}`}>
-                    <Icone nome="fone" />
                     Ligar
                   </a>
                 </div>
@@ -149,7 +143,6 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
                 </>
               )}
               <Link href={`/agenda/${a.id}/editar`} className="botao-link botao-secundario botao-largo">
-                <Icone nome="lapis" />
                 {ativo ? "Editar serviços, horário e observações" : "Editar observações"}
               </Link>
             </section>
