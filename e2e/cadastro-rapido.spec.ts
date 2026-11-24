@@ -57,6 +57,9 @@ test("do horário vazio, Novo cliente e pet: o telefone repetido mantém os dado
   await expect(page).not.toHaveURL(/[?&](novo|salvo)=/);
   await page.reload();
   await expect(blocoNaGrade(page, "Pingo")).toBeVisible();
+  // A região do aviso só vem no HTML quando o servidor recebe o parâmetro: o texto entra 150 ms depois, então
+  // conferir só o texto passaria de qualquer jeito (N1 da conferência).
+  await expect(page.locator(".regiao-do-aviso")).toHaveCount(0);
   await expect(aviso).toHaveCount(0);
 });
 
@@ -72,6 +75,7 @@ test("salvar um cliente mostra o aviso, que não volta ao recarregar", { tag: "@
   await expect(page).not.toHaveURL(/[?&](novo|salvo)=/);
   await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Davi Aviso" })).toBeVisible();
+  await expect(page.locator(".regiao-do-aviso")).toHaveCount(0);
   await expect(aviso).toHaveCount(0);
 
   // Voltar leva à tela anterior sem aviso, e avançar de novo também não o traz de volta (T5 da revisão).
@@ -79,6 +83,8 @@ test("salvar um cliente mostra o aviso, que não volta ao recarregar", { tag: "@
   await expect(page.getByRole("heading", { level: 1, name: "Novo cliente" })).toBeVisible();
   await page.goForward();
   await expect(page.getByRole("heading", { level: 1, name: "Davi Aviso" })).toBeVisible();
+  await expect(page).not.toHaveURL(/[?&](novo|salvo)=/);
+  await expect(page.locator(".regiao-do-aviso")).toHaveCount(0);
   await expect(aviso).toHaveCount(0);
 });
 

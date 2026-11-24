@@ -14,7 +14,9 @@ test("a dona edita o horário (o término acompanha o início), os serviços (fi
   await expect(page.getByText("10:00–11:00")).toBeVisible();
   await tocar(page.getByRole("link", { name: "Editar serviços, horário e observações" }));
   await expect(page.getByRole("heading", { level: 1, name: "Editar atendimento" })).toBeVisible();
-  await expect(page.getByText(/^Cada parte salva separadamente/)).toBeVisible();
+  await expect(
+    page.getByText(/^Cada parte tem o seu botão e salva só ela\. Ao salvar, você volta ao atendimento\.$/),
+  ).toBeVisible();
 
   // Mudar o início leva o término junto (mantém a duração).
   const inicio = page.getByLabel("Início");

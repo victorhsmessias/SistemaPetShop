@@ -40,7 +40,7 @@ export default async function PaginaEditarAtendimento({ params }: Props) {
         <Voltar href={`/agenda/${a.id}`} destino={a.pet.nome} />
         <h1>Editar atendimento</h1>
         {/* Três formulários, cada um com o seu botão (U7 da revisão): a dica evita perder o que mudou noutro cartão. */}
-        <p className="suave">Cada parte salva separadamente: salve uma antes de mudar a outra.</p>
+        <p className="suave">Cada parte tem o seu botão e salva só ela. Ao salvar, você volta ao atendimento.</p>
         <AvisoDaPagina />
 
         {ativo ? (
