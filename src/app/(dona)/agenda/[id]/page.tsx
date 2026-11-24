@@ -92,7 +92,7 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
             </p>
             {ativo && <DesfazerStatus id={a.id} status={a.status} confirmado={a.confirmadoEm !== null} />}
 
-            <section className="cartao cartao-cliente" aria-label="Cliente">
+            <section className="secao cartao-cliente" aria-label="Cliente">
               <div className="cliente-linha">
                 <span className="cliente-nome">
                   <Link href={`/clientes/${a.tutor.id}`}>{a.tutor.nome}</Link>
@@ -123,7 +123,7 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
               )}
             </section>
 
-            <section className="cartao">
+            <section className="secao">
               <h2>Serviços</h2>
               <ul className="lista-itens" aria-label="Serviços do atendimento">
                 {a.itens.map((i) => (
@@ -148,7 +148,7 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
             </section>
 
             {a.status === "concluido" && (
-              <section className="cartao" aria-labelledby="titulo-receita">
+              <section className="secao" aria-labelledby="titulo-receita">
                 <h2 id="titulo-receita">Receita</h2>
                 {receita ? (
                   <dl className="dados-receita">
@@ -173,7 +173,7 @@ export default async function PaginaAtendimento({ params, searchParams }: Props)
             )}
 
             {(a.status === "cancelado" || a.status === "faltou") && (
-              <section className="cartao" aria-label="Status do atendimento">
+              <section className="secao" aria-label="Status do atendimento">
                 <DesfazerStatus id={a.id} status={a.status} confirmado={a.confirmadoEm !== null} />
               </section>
             )}

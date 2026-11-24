@@ -88,14 +88,14 @@ export default async function PaginaFinanceiro({ searchParams }: Props) {
 
       <div className="financeiro-colunas">
         <div className="financeiro-resumo">
-          <section className="cartao destaque" aria-labelledby="titulo-hoje">
+          <section className="secao destaque" aria-labelledby="titulo-hoje">
             <h2 id="titulo-hoje">Hoje</h2>
             <p className="suave">{rotuloDoDia(hoje)}</p>
             <p className="valor-destaque">{formatarReais(dados.recebidoHoje.totalCentavos)}</p>
             <p className="suave">{quantosConcluidos(dados.concluidosHoje)}</p>
           </section>
 
-          <section className="cartao resumo-mes" aria-labelledby="titulo-mes">
+          <section className="secao resumo-mes" aria-labelledby="titulo-mes">
             <NavegacaoPeriodo
               rotulo="Meses"
               titulo={rotulo}

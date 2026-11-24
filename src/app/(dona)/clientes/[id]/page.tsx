@@ -53,7 +53,7 @@ export default async function PaginaCliente({ params, searchParams }: Props) {
       <Voltar href="/clientes" destino="Clientes" />
       <h1>{tutor.nome}</h1>
       {aviso && <AvisoDeSucesso mensagem={aviso} parametros={["salvo"]} />}
-      <section className="cartao ficha-cliente" aria-label="Contato">
+      <section className="secao ficha-cliente" aria-label="Contato">
         {tutor.telefone && (
           <>
             <p className="telefone-grande">

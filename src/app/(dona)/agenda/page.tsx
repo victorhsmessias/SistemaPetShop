@@ -80,12 +80,12 @@ export default async function PaginaAgenda({ searchParams }: Props) {
       </Link>
 
       <div className="resumos">
-        <Link href="/financeiro" className="cartao resumo-mini recebido-hoje">
+        <Link href="/financeiro" className="resumo-mini recebido-hoje">
           <span className="suave">Recebido hoje</span>
           <strong>{formatarReais(recebidoHoje.totalCentavos)}</strong>
         </Link>
         {proximo && (
-          <Link href={`/agenda/${proximo.id}`} className="cartao resumo-mini">
+          <Link href={`/agenda/${proximo.id}`} className="resumo-mini">
             <span className="suave">Próximo</span>
             <strong>
               {noFuso(proximo.inicio, fuso).hora} · {proximo.pet.nome}
