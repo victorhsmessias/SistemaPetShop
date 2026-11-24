@@ -12,11 +12,9 @@ export default async function PaginaLogin() {
 
   return (
     <main className="pagina pagina-estreita centralizada">
-      <h1>Entrar</h1>
-      <p className="suave">Use o e-mail e a senha que você recebeu.</p>
-      <div className="cartao">
-        <FormularioLogin />
-      </div>
+      <h1>Acesse sua agenda</h1>
+      <FormularioLogin />
+      <p className="suave">Esqueceu a senha? Peça uma nova ao suporte.</p>
     </main>
   );
 }
